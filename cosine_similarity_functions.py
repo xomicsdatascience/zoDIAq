@@ -3,40 +3,16 @@ from pyteomics import mzxml
 from bisect import bisect
 import pickle
 from sklearn.metrics.pairwise import cosine_similarity
-pd.set_option("display.max_rows", None, "display.max_columns", None)
-
-
-'''
-# full list
-temp_df = pd.read_csv('Part 2/consensus_transitions_lowres_decoys.tsv', sep='\t')
-
-# for sequences
-lib_df = temp_df.loc[temp_df['FullUniModPeptideName']=='APIIAVTR']
-
-# for ranges
-#lib_df = temp_df.query( 'FullUniModPeptideName == 418 and PrecursorMz < 423' )
-
-# write to file
-lib_df.to_csv('Part 2/condensed_APIIAVTR.csv')
-'''
 
 def dot(A,B):
     return (sum(a*b for a,b in zip(A,B)))
 
 def cosine_similarity_manual(a,b):
-#    print('DF:-----------------------')
-#    print('AxB sum: '+str(dot(a,b)))
-#    print('A magnitude '+str(dot(a,a)**.5))
-#    print('B magnitude: '+str(dot(b,b)**.5))
     return dot(a,b) / ( (dot(a,a)**.5) * (dot(b,b)**.5) )
 
 def cosine_between_rows(fullSpec,i1,i2):
     return cosine_similarity_manual(list(fullSpec.iloc[i1].values),list(fullSpec.iloc[i2].values))
 
-# Tolerance should be a user-determined value
-#   They should enter a ppm, which you then multiply by 1e-6
-#   This may be the second "mode" referred to in the MSPLIT code
-#   "new" tolerance = x*ppm, x = experimental mass
 def approx(x, y, tol=0.005):
     return abs(x-y) <= tol
 
@@ -57,17 +33,11 @@ def cosine_similarity_msplit(lib_spect, exp_mz, exp_i):
         p = i + 0
         while (p < len(lib_mz)):
             product += lib_i[p]*exp_i[j]
-#            lib_mag += lib_i[p]**2
             exp_mag += exp_i[j]**2
             p += 1
             if p==len(lib_mz) or not approx(lib_mz[p], exp_mz[j]): break
         j += 1
-#    print('Function:-------------------')
-#    print('AxB sum: '+str(product))
-#    print('A magnitude: '+str(lib_mag))
-#    print('B magnitude: '+str(exp_mag**0.5))
     magnitude = lib_mag * (exp_mag**0.5)
-#    magnitude = (lib_mag**0.5) * (exp_mag**0.5)
     return (product / magnitude if magnitude else 0)
 
 def cosine_similarity_df_generator(lib_mz, lib_i, exp_mz, exp_i):
@@ -107,7 +77,6 @@ def tramlFileConversionCSV(file_name):
     added = set()
     previous_id = 0
     for index, row in lib_df.iterrows():
-        #id = row['transition_group_id']
         id = (row['PrecursorMz'], row['FullUniModPeptideName'])
         if id not in added:
             temp = { 'precursorMz':float(row['PrecursorMz']), 'seq':row['FullUniModPeptideName'], 'precursorCharge':int(row['PrecursorCharge']), 'm/z array':[ float(row['ProductMz']) ], 'intensity array':[ float(row['LibraryIntensity']) ], 'decoy':bool(row['decoy']), 'name':row['transition_group_id'], 'protein':row['ProteinName'] }
@@ -123,8 +92,6 @@ def tramlFileConversionCSV(file_name):
         lib[key]['magnitude'] = dot(value['intensity array'], value['intensity array'])**.5
     return lib
 
-# check to see if the decoy column in the traml corresponds to actual decoys (see it in it's name)
-# print how long it takes to reach certain points in the program, esp. 1) loading the full traml df, 2) converting it to a dictionary, and 3) the spectra comparison
 def cosineDataFrame(content):
     df = pd.DataFrame(content, columns = [
         'fileName', # Name of the experimental SWATH spectrum file
@@ -140,33 +107,14 @@ def cosineDataFrame(content):
         '#Peak(Query)', # I assume the number of peaks in the experimental spectrum.
         '#Peaks(Match)', # I assume the number of peaks in the library spectrum.
         'shared', # I assume the number of peaks that matched between experimental spectrum/library spectrum
-        'ionCount', #??I presume 'totIonCurrent' from experimental spectra file
+        'ionCount', # Sum of experimental spectrum intensities, excluding possible duplicates
         'CompensationVoltage', #the compensation voltage of the experimental SWATH spectrum
         'totalWindowWidth' # width of m/z that was captured in the experimental SWATH spectrum. Corresponds to MzSWATH
     ])
     return df
 
-
-'''
-with open('spec_2420.pkl','rb') as f:
-    spec = pickle.load(f)
-lib_keys = libWindowMassMatch( spec , all_lib_keys)
-x = lib_keys[0]
-cos = cosine_similarity_msplit(lib[x], spec['m/z array'][:], spec['intensity array'][:])
-df2 = cosine_similarity_df_generator(lib[x]['m/z array'], lib[x]['intensity array'], spec['m/z array'][:], spec['intensity array'][:])
-
-cos2 = cosine_between_rows(df2,0,1)
-cos2 = cosine_similarity(df2[0:1],df2[1:])
-
-prod = 0
-print(cos)
-print(cos2[0][0])
-print(cos2)
-'''
-
 def expSpectraAnalysis( expSpectraFile, lib ):
     all_lib_keys = sorted(lib)
-
     final_df_content = []
 
     with mzxml.read(expSpectraFile) as spectra:
@@ -174,11 +122,6 @@ def expSpectraAnalysis( expSpectraFile, lib ):
             lib_keys = libWindowMassMatch( spec , all_lib_keys)
             for x in lib_keys:
                 cos_df = cosine_similarity_df_generator(lib[x]['m/z array'], lib[x]['intensity array'], spec['m/z array'][:], spec['intensity array'][:])
-#               print(spec['num'])
-#               cos = cosine_between_rows(cos_df,0,1)
-#               print(cos)
-#               print(cos_df)
-#               print(" ")
                 temp = [
                     expSpectraFile, #fileName
                     spec['num'], #scan#
