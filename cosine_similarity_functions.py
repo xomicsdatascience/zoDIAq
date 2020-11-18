@@ -146,9 +146,6 @@ def cosineDataFrame(content):
     ])
     return df
 
-# Main
-lib = tramlFileConversionCSV('Part 2/condensed_APIIAVTR.csv')
-all_lib_keys = sorted(lib)
 
 '''
 with open('spec_2420.pkl','rb') as f:
@@ -166,7 +163,6 @@ print(cos)
 print(cos2[0][0])
 print(cos2)
 '''
-exp_spectra_file = "Part 2/20190411_DI2A_1to16_n1b.mzXML"
 
 def expSpectraAnalysis( expSpectraFile, lib ):
     all_lib_keys = sorted(lib)
@@ -184,7 +180,7 @@ def expSpectraAnalysis( expSpectraFile, lib ):
 #               print(cos_df)
 #               print(" ")
                 temp = [
-                    exp_spectra_file, #fileName
+                    expSpectraFile, #fileName
                     spec['num'], #scan#
                     spec['precursorMz'][0]['precursorMz'], #MzEXP
                     spec['precursorMz'][0]['precursorCharge'], #zEXP
@@ -203,6 +199,3 @@ def expSpectraAnalysis( expSpectraFile, lib ):
                 ]
                 final_df_content.append(temp)
     return(cosineDataFrame(final_df_content))
-
-final_df = expSpectraAnalysis( exp_spectra_file, lib )
-final_df.to_csv( 'Part 2/output.csv' )
