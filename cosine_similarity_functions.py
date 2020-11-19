@@ -3,6 +3,8 @@ from pyteomics import mzxml
 from bisect import bisect
 import pickle
 from sklearn.metrics.pairwise import cosine_similarity
+from timeit import default_timer as timer
+from datetime import timedelta
 
 def dot(A,B):
     return (sum(a*b for a,b in zip(A,B)))
@@ -73,6 +75,7 @@ def tramlFileConversionCSV(file_name):
         lib_df = pd.read_csv(file_name, sep='\t')
     else:
         lib_df = pd.read_csv(file_name)
+    print(timedelta(seconds=timer()))
     lib = {}
     added = set()
     previous_id = 0
@@ -114,31 +117,39 @@ def cosineDataFrame(content):
     return df
 
 def expSpectraAnalysis( expSpectraFile, lib ):
+    count = 0
     all_lib_keys = sorted(lib)
     final_df_content = []
 
     with mzxml.read(expSpectraFile) as spectra:
         for spec in spectra:
+            count += 1
+            if count % 1000 == 0:
+                print(count)
+                print(timedelta(seconds=timer()))
             lib_keys = libWindowMassMatch( spec , all_lib_keys)
             for x in lib_keys:
                 cos_df = cosine_similarity_df_generator(lib[x]['m/z array'], lib[x]['intensity array'], spec['m/z array'][:], spec['intensity array'][:])
-                temp = [
-                    expSpectraFile, #fileName
-                    spec['num'], #scan#
-                    spec['precursorMz'][0]['precursorMz'], #MzEXP
-                    spec['precursorMz'][0]['precursorCharge'], #zEXP
-                    lib[x]['seq'], #peptide
-                    lib[x]['protein'], #protein
-                    lib[x]['precursorMz'], #MzLIB
-                    lib[x]['precursorCharge'], #zLIB
-                    cosine_similarity(cos_df[0:1],cos_df[1:])[0][0], #cosine
-                    lib[x]['name'], #name
-                    len(spec['m/z array']), ##Peak(Query)
-                    len(lib[x]['m/z array']), ##Peaks(Match)
-                    len(cos_df.columns), #shared
-                    sum(list(cos_df.iloc[1].values)), #ionCount
-                    spec['compensationVoltage'], #compensationVoltage
-                    spec['precursorMz'][0]['windowWideness'] #totalWindowWidth
-                ]
-                final_df_content.append(temp)
+                if(len(cos_df)>9):
+                    temp = [
+                        expSpectraFile, #fileName
+                        spec['num'], #scan#
+                        spec['precursorMz'][0]['precursorMz'], #MzEXP
+                        spec['precursorMz'][0]['precursorCharge'], #zEXP
+                        lib[x]['seq'], #peptide
+                        lib[x]['protein'], #protein
+                        lib[x]['precursorMz'], #MzLIB
+                        lib[x]['precursorCharge'], #zLIB
+                        cosine_between_rows(cos_df,0,1),
+                        #cosine_similarity(cos_df[0:1],cos_df[1:])[0][0], #cosine
+                        lib[x]['name'], #name
+                        len(spec['m/z array']), ##Peak(Query)
+                        len(lib[x]['m/z array']), ##Peaks(Match)
+                        len(cos_df.columns), #shared
+                        sum(list(cos_df.iloc[1].values)), #ionCount
+                        spec['compensationVoltage'], #compensationVoltage
+                        spec['precursorMz'][0]['windowWideness'] #totalWindowWidth
+                    ]
+                    final_df_content.append(temp)
+    print(count)
     return(cosineDataFrame(final_df_content))

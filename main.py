@@ -1,6 +1,8 @@
 import pandas as pd
 import cosine_similarity_functions as csf
 pd.set_option("display.max_rows", None, "display.max_columns", None)
+from timeit import default_timer as timer
+from datetime import timedelta
 
 '''
 #  For slicing the library spectra into smaller files
@@ -20,6 +22,16 @@ lib_df.to_csv('Part 2/condensed_APIIAVTR.csv')
 lib_file = 'condensed_APIIAVTR.csv'
 exp_file = '20190411_DI2A_1to16_n1b.mzXML'
 
+
+t0 = timer()
+print('Enter lib upload/conversion:')
+print(timedelta(seconds=t0))
 lib = csf.tramlFileConversionCSV(lib_file)
+t1 = timer()
+print('enter spectra comparison:')
+print(timedelta(seconds=t1))
 final_df = csf.expSpectraAnalysis( exp_file, lib )
-final_df.to_csv( 'Data/cosine_output1.csv' )
+t2 = timer()
+print('done')
+print(timedelta(seconds=t2))
+final_df.to_csv( 'Data/cosine_output_full.csv' )
