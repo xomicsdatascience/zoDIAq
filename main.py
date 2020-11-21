@@ -20,7 +20,9 @@ lib_df.to_csv('Part 2/condensed_APIIAVTR.csv')
 '''
 
 lib_file = 'condensed_APIIAVTR.csv'
+lib_file2 = 'consensus_transitions_lowres_decoys.tsv'
 exp_file = '20190411_DI2A_1to16_n1b.mzXML'
+out_file = 'Data/output2_APIIAVTR_fullSpect_directWrite-removeDf.csv'
 
 
 t0 = timer()
@@ -30,8 +32,8 @@ lib = csf.tramlFileConversionCSV(lib_file)
 t1 = timer()
 print('enter spectra comparison:')
 print(timedelta(seconds=t1))
-final_df = csf.expSpectraAnalysis( exp_file, lib )
+final_df = csf.expSpectraAnalysis( exp_file, out_file, lib )
 t2 = timer()
 print('done')
 print(timedelta(seconds=t2))
-final_df.to_csv( 'Data/cosine_output_full.csv' )
+#final_df.to_csv( 'Data/cosine_output2.csv' )
