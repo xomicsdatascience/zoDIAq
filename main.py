@@ -22,13 +22,13 @@ lib_df.to_csv('Part 2/condensed_APIIAVTR.csv')
 lib_file = 'condensed_APIIAVTR.csv'
 lib_file2 = 'consensus_transitions_lowres_decoys.tsv'
 exp_file = '20190411_DI2A_1to16_n1b.mzXML'
-out_file = 'Data/output2_APIIAVTR_fullSpect_directWrite-removeDf.csv'
+out_file = 'Data/output2_fullLib_fullSpect_directWrite-removeDf.csv'
 
 
 t0 = timer()
 print('Enter lib upload/conversion:')
 print(timedelta(seconds=t0))
-lib = csf.tramlFileConversionCSV(lib_file)
+lib = csf.tramlFileConversionCSV(lib_file2)
 t1 = timer()
 print('enter spectra comparison:')
 print(timedelta(seconds=t1))
