@@ -19,9 +19,11 @@ def cosine_between_rows(fullSpec,i1,i2):
 def approx(x, y, tol=0.005):
     return abs(x-y) <= tol
 
-def cosine_similarity_msplit(lib_mz, lib_i, exp_mz, exp_i):
+def cosine_similarity_msplit(lib_mz, lib_i, exp_mz1, exp_i1):
     i, j, count, shared_count = 0, 0, 0, 0
     lib_mag, product, exp_mag, ion_count = 0.0, 0.0, 0.0, 0.0
+
+    exp_mz, exp_i = exp_mz1[:20], exp_i1[:20]
 
     while i < len(lib_mz) and j < len(exp_mz):
         if not approx(lib_mz[i],exp_mz[j]):
@@ -59,6 +61,8 @@ def tramlFileConversionCSV(file_name):
         lib_df = pd.read_csv(file_name, sep='\t')
     else:
         lib_df = pd.read_csv(file_name)
+    print("Enter library dictionary upload: ")
+    print(timedelta(seconds=timer()))
     lib_df = lib_df.loc[:, lib_df.columns.intersection(['PrecursorMz','FullUniModPeptideName','PrecursorCharge','ProductMz','LibraryIntensity','decoy','transition_group_id','ProteinName'])]
     lib_df['ID'] = list(zip(lib_df['PrecursorMz'].tolist(),lib_df['FullUniModPeptideName'].tolist()))
     mz_dict = lib_df.groupby("ID")['ProductMz'].apply(list).to_dict()
@@ -95,15 +99,25 @@ def expSpectraAnalysis( expSpectraFile, outFile, lib ):
         count = 0
         all_lib_keys = sorted(lib)
 
+        time = timer()
+        prevtime = time
+        print("Index,TimeElapsed,NumPeaks,ExpPrecursorMz,NumLibrarySpectra")
         with mzxml.read(expSpectraFile) as spectra:
             for spec in spectra:
+#                spec['m/z array'], spec['intensity array'] = querySpectrumFilter(spec['m/z array'],spec['intensity array'],3,25.0)
                 count += 1
-                if count % 10 == 0:
-                    print(count)
-                    print(timedelta(seconds=timer()))
+                time = timer()
+
+#                if count % 10 == 0:
+#                    print(count)
+#                    print(timedelta(seconds=timer()))
                 lib_keys = libWindowMassMatch( spec , all_lib_keys)
+
+                print(str(count)+','+str(time-prevtime)+','+str(len(spec['m/z array']))+','+str(spec['precursorMz'][0]['precursorMz'])+','+str(len(lib_keys)))
+                prevtime = time
+
                 for x in lib_keys:
-                    cos, shared, ion = cosine_similarity_msplit(lib[x]['m/z array'][:], lib[x]['intensity array'][:], spec['m/z array'][:], spec['intensity array'][:])
+                    cos, shared, ion = cosine_similarity_msplit(lib[x]['m/z array'], lib[x]['intensity array'], spec['m/z array'], spec['intensity array'])
 
                     if shared > 9:
                         temp = [
@@ -128,4 +142,54 @@ def expSpectraAnalysis( expSpectraFile, outFile, lib ):
                         writer.writerow(temp)
         print(count)
     pass
-    #return(cosineDataFrame(final_df_content))
+
+def querySpectrumFilter(specMz, specIntensity, maxNum, ppmTol):
+    neighs, remove, left, right = [0], [], 0, 0
+#    print()
+#    print('original length: '+str(len(specMz)))
+    original = len(specMz)
+    check = False
+    for i in range(len(specMz)):
+        for j in range(left,i):
+            if not approx(specMz[i], specMz[j], tol=ppmTol):
+#                print(neighs)
+                neighs.remove(j)
+                left = j+1
+
+        if i < len(specMz)-1:
+            for j in range(right+1,len(specMz)):
+                if not approx(specMz[j], specMz[i], tol=ppmTol):
+                    right = j-1
+                    break
+                neighs.append(j)
+
+#        print('left: '+str(left))
+#        print('current: '+str(i))
+#        print('right: '+str(right))
+
+        count = 0
+        for j in [ i for _,i in sorted(zip(specIntensity,neighs),reverse=True) ]:
+            if j == i: break
+            if count > maxNum: remove.append(j)
+            break
+            count += 1
+    if len(neighs) > maxNum:
+        check = True
+    tuples = sorted(zip(specMz,specIntensity))
+    if len(remove) > 0:
+        print('original list: ')
+        for x in tuples: print(x)
+        print('to be removed: ')
+        for j in remove: print(tuples[j])
+    for j in sorted(remove, reverse=True): del tuples[j]
+#    print('final length: '+str(len(tuples)))
+#    print()
+    if check:
+        print("here")
+    return map(list,zip(*tuples))
+
+def querySpectrumMerge():
+    pass
+
+def libSpectrumFilter():
+    pass
