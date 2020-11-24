@@ -19,29 +19,31 @@ def cosine_between_rows(fullSpec,i1,i2):
 def approx(x, y, tol=0.005):
     return abs(x-y) <= tol
 
-def cosine_similarity_msplit(lib_mz, lib_i, exp_mz1, exp_i1):
-    i, j, count, shared_count = 0, 0, 0, 0
-    lib_mag, product, exp_mag, ion_count = 0.0, 0.0, 0.0, 0.0
+def cosine_similarity_msplit(libSpectrum, libKeys, exp_mz, exp_i):
+    libDict = {k: [0.0, 0.0, 0.0, 0] for k in libKeys} #product, query magnitude, library magnitude, count, #ion_count
 
-    exp_mz, exp_i = exp_mz1[:20], exp_i1[:20]
+    i, j = 0, 0
 
-    while i < len(lib_mz) and j < len(exp_mz):
-        if not approx(lib_mz[i],exp_mz[j]):
-            if lib_mz[i] > exp_mz[j]: j += 1; continue
-            if lib_mz[i] < exp_mz[j]: i += 1; continue
+    while i < len(libSpectrum) and j < len(exp_mz):
+        if not approx(libSpectrum[i][0],exp_mz[j]):
+            if libSpectrum[i][0] > exp_mz[j]: j += 1; continue
+            if libSpectrum[i][0] < exp_mz[j]: i += 1; continue
         p = i + 0
-        while (p < len(lib_mz)):
-            product += lib_i[p]*exp_i[j]
-            exp_mag += exp_i[j]**2
-            lib_mag += lib_i[p]**2
-            shared_count += 1
-
+        while (p < len(libSpectrum)):
+            libDict[libSpectrum[p][2]][0] += libSpectrum[p][1]*exp_i[j]
+            libDict[libSpectrum[p][2]][1] += exp_i[j]**2
+            libDict[libSpectrum[p][2]][2] += libSpectrum[p][1]**2
+            libDict[libSpectrum[p][2]][3] += 1
             p += 1
-            if p==len(lib_mz) or not approx(lib_mz[p], exp_mz[j]): break
-        ion_count += exp_i[j]
+            if p==len(libSpectrum) or not approx(libSpectrum[p][0], exp_mz[j]): break
+        #ion_count += exp_i[j]
         j += 1
-    magnitude = (lib_mag**0.5) * (exp_mag**0.5)
-    return (product / magnitude if magnitude else 0), shared_count, ion_count
+    return([calculateCosine(key, libDict[key]) for key in libDict.keys()])
+
+def calculateCosine(key, row):
+    product = row[0]
+    magnitude = (row[1]**0.5) * (row[2]**0.5)
+    return [key, (product / magnitude if magnitude else 0), row[3]]
 
 def libWindowMassMatch( spec, sorted_lib_keys ):
     temp = sorted_lib_keys[:]
@@ -71,8 +73,16 @@ def tramlFileConversionCSV(file_name):
     lib_df.set_index("ID", drop=True, inplace=True)
     lib = lib_df.to_dict(orient="index")
     for key in lib:
-        lib[key]['m/z array'], lib[key]['intensity array'] = (list(t) for t in zip(*sorted(zip(mz_dict[key], intensity_dict[key]))))
+        #lib[key]['m/z array'], lib[key]['intensity array'] = (list(t) for t in zip(*sorted(zip(mz_dict[key], intensity_dict[key]))))
+        mz, intensity = (list(t) for t in zip(*sorted(zip(mz_dict[key], intensity_dict[key]))))
+        keyList = [key for i in range(len(mz))]
+        lib[key]['Peaks'] = list(tuple(zip(mz,intensity,keyList)))
     return lib
+
+def extractLibSpectra(lib, libKeys):
+    finalList = []
+    for key in libKeys: finalList += lib[key]['Peaks']
+    return sorted(finalList)
 
 def expSpectraAnalysis( expSpectraFile, outFile, lib ):
     columns = [
@@ -106,36 +116,39 @@ def expSpectraAnalysis( expSpectraFile, outFile, lib ):
             for spec in spectra:
 #                spec['m/z array'], spec['intensity array'] = querySpectrumFilter(spec['m/z array'],spec['intensity array'],3,25.0)
                 count += 1
-                time = timer()
+#                time = timer()
 
-#                if count % 10 == 0:
+
+                lib_keys = libWindowMassMatch( spec , all_lib_keys)
+                if count % 100 == 0:
+                    time = timer()
+                    print(str(count)+','+str(time-prevtime)+','+str(len(spec['m/z array']))+','+str(spec['precursorMz'][0]['precursorMz'])+','+str(len(lib_keys)))
+                    prevtime = time
 #                    print(count)
 #                    print(timedelta(seconds=timer()))
-                lib_keys = libWindowMassMatch( spec , all_lib_keys)
+#                print(str(count)+','+str(time-prevtime)+','+str(len(spec['m/z array']))+','+str(spec['precursorMz'][0]['precursorMz'])+','+str(len(lib_keys)))
+#                prevtime = time
 
-                print(str(count)+','+str(time-prevtime)+','+str(len(spec['m/z array']))+','+str(spec['precursorMz'][0]['precursorMz'])+','+str(len(lib_keys)))
-                prevtime = time
-
-                for x in lib_keys:
-                    cos, shared, ion = cosine_similarity_msplit(lib[x]['m/z array'], lib[x]['intensity array'], spec['m/z array'], spec['intensity array'])
-
-                    if shared > 9:
+                if len(lib_keys) != 0: cosineList = cosine_similarity_msplit(extractLibSpectra(lib, lib_keys), lib_keys, spec['m/z array'], spec['intensity array'])
+                else: continue
+                for cos in cosineList:
+                    if cos[2] > 9:
                         temp = [
                             expSpectraFile, #fileName
                             spec['num'], #scan#
                             spec['precursorMz'][0]['precursorMz'], #MzEXP
                             spec['precursorMz'][0]['precursorCharge'], #zEXP
-                            lib[x]['FullUniModPeptideName'], #peptide
-                            lib[x]['ProteinName'], #protein
-                            lib[x]['PrecursorMz'], #MzLIB
-                            lib[x]['PrecursorCharge'], #zLIB
-                            cos,#cosine_between_rows(cos_df,0,1),
+                            lib[cos[0]]['FullUniModPeptideName'], #peptide
+                            lib[cos[0]]['ProteinName'], #protein
+                            lib[cos[0]]['PrecursorMz'], #MzLIB
+                            lib[cos[0]]['PrecursorCharge'], #zLIB
+                            cos[1],#cosine_between_rows(cos_df,0,1), #cosine
                             #cosine_similarity(cos_df[0:1],cos_df[1:])[0][0], #cosine
-                            lib[x]['transition_group_id'], #name
+                            lib[cos[0]]['transition_group_id'], #name
                             len(spec['m/z array']), ##Peak(Query)
-                            len(lib[x]['m/z array']), ##Peaks(Match)
-                            shared,#len(cos_df.columns), #shared
-                            ion,#sum(list(cos_df.iloc[1].values)), #ionCount
+                            len(lib[cos[0]]['Peaks']), ##Peaks(Match)
+                            cos[2],#len(cos_df.columns), #shared
+                            0,#sum(list(cos_df.iloc[1].values)), #ionCount
                             spec['compensationVoltage'], #compensationVoltage
                             spec['precursorMz'][0]['windowWideness'] #totalWindowWidth
                         ]
