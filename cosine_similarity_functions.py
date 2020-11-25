@@ -65,8 +65,8 @@ def tramlFileConversionCSV(file_name):
         lib_df = pd.read_csv(file_name)
     print("Enter library dictionary upload: ")
     print(timedelta(seconds=timer()))
-    lib_df = lib_df.loc[:, lib_df.columns.intersection(['PrecursorMz','FullUniModPeptideName','PrecursorCharge','ProductMz','LibraryIntensity','decoy','transition_group_id','ProteinName'])]
-    lib_df['ID'] = list(zip(lib_df['PrecursorMz'].tolist(),lib_df['FullUniModPeptideName'].tolist()))
+    lib_df = lib_df.loc[:, lib_df.columns.intersection(['PrecursorMz','FullUniModPeptideName','PrecursorCharge','ProductMz','LibraryIntensity','transition_group_id','ProteinName'])]
+    lib_df['ID'] = list(zip(lib_df['PrecursorMz'].tolist(),lib_df['FullUniModPeptideName'].tolist(),lib_df['ProteinName'].tolist()))
     mz_dict = lib_df.groupby("ID")['ProductMz'].apply(list).to_dict()
     intensity_dict = lib_df.groupby("ID")['LibraryIntensity'].apply(list).to_dict()
     lib_df.drop_duplicates(subset="ID",inplace=True)
@@ -132,7 +132,7 @@ def expSpectraAnalysis( expSpectraFile, outFile, lib ):
                 if len(lib_keys) != 0: cosineList = cosine_similarity_msplit(extractLibSpectra(lib, lib_keys), lib_keys, spec['m/z array'], spec['intensity array'])
                 else: continue
                 for cos in cosineList:
-                    if cos[2] > 9:
+                    if cos[2] > 3:
                         temp = [
                             expSpectraFile, #fileName
                             spec['num'], #scan#
