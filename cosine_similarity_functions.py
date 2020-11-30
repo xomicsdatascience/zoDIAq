@@ -263,8 +263,8 @@ def query_spectra_analysis( expSpectraFile, outFile, lib, numPeakMatch, ppm):
         'zLIB', # precursor charge for the library spectrum corresponding to this row.
         'cosine', # cosine score comparing the library spectrum corresponding to this row with the query spectrum.
         'name', # Title - corresponds to the column "transition_group_id," a library spectrum identifier.
-        '#Peak(Query)', # The number of peaks in the query spectrum.
-        '#Peaks(Match)', # The number of peaks in the library spectrum.
+        'Peak(Query)', # The number of peaks in the query spectrum.
+        'Peaks(Library)', # The number of peaks in the library spectrum.
         'shared', # The number of peaks that matched between query spectrum/library spectrum.
         'ionCount', # Sum of query spectrum intensities, excluding possible duplicates - currently uncalculated, set to 0.
         'CompensationVoltage', #the compensation voltage of the query spectrum.
@@ -325,8 +325,8 @@ def query_spectra_analysis( expSpectraFile, outFile, lib, numPeakMatch, ppm):
                             lib[cos[0]]['PrecursorCharge'], #zLIB
                             cos[1], #cosine
                             lib[cos[0]]['transition_group_id'], #name
-                            len(spec['m/z array']), ##Peak(Query)
-                            len(lib[cos[0]]['Peaks']), ##Peaks(Match)
+                            len(spec['m/z array']), #Peaks(Query)
+                            len(lib[cos[0]]['Peaks']), #Peaks(Library)
                             cos[2], #shared
                             cos[3], #ionCount
                             spec['compensationVoltage'], #compensationVoltage
