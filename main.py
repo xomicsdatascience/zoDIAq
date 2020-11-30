@@ -23,7 +23,7 @@ lib_df.to_csv('condensed_422to423.csv')
 lib_file = 'condensed_APIIAVTR_PLAEGTPR.csv'
 lib_file2 = 'iproph-speclib_con_decoys31.tsv'
 exp_file = '20190411_DI2A_1to16_n1b.mzXML'
-out_file = 'Data/fullOutput_lib31_m3_ppm10.csv'
+out_file = 'Data/fullOutput_lib31_match3_ppm10.csv'
 
 t0 = timer()
 print('#Enter lib upload/conversion:')

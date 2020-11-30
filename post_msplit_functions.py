@@ -20,6 +20,8 @@ def fdr_calculation(df, cutoff=0.01):
             numDecoys += 1
         new = numDecoys/(i+1)
         if new > cutoff:
+            if len(fdr) < 1/cutoff:
+                return []
             return fdr
         fdr.append(new)
     return fdr
@@ -29,13 +31,18 @@ def match_fdrSat_graph(df, fdrMax, outFile):
 
     fdrSat = []
     numPeaks = []
+    cosine = []
     for m in matches:
         tempDf = df[df['shared'] >= m].reset_index(drop=True)
         fdr = fdr_calculation(tempDf)
         numPeaks.append(len(tempDf))
         fdrSat.append(len(fdr))
+        if len(fdr) != 0: cos = df['cosine'].loc[len(fdr)-1]
+        else: cos = 0
+        cosine.append(cos)
 
-    graphDf = pd.DataFrame({'matches':matches, 'FDRCutoff': fdrSat, 'total': numPeaks})
+
+    graphDf = pd.DataFrame({'matches':matches, 'FDRCutoff': fdrSat, 'total': numPeaks, 'cosine': cosine})
     graphDf.to_csv(outFile, index=False)
 
 match_fdrSat_graph(overallDf, 0.01, 'Data/Figures/FDRGraph_lib31_overall.csv')
