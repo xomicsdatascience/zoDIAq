@@ -1,6 +1,6 @@
 import pandas as pd
 
-overallDf = pd.read_csv('Data/fullOutput_lib31_match3_ppm10_sqrt.csv').sort_values('cosine', ascending=False)
+overallDf = pd.read_csv('Data/fullOutput_lib31_match3_ppm10.csv').sort_values('cosine', ascending=False)
 #peptideDf.to_csv('delete.csv')
 #peptideDf = pd.read_csv('delete.csv')
 overallDf = overallDf.reset_index(drop=True)
@@ -41,7 +41,7 @@ def match_fdrSat_graph(df, fdrMax, outFile):
         fdrSat.append(len(fdr))
         subsetDecoys.append(dec)
         totalDecoys.append(len( [ x for x in list(tempDf['protein']) if 'DECOY' in x ] ))
-        if len(fdr) != 0: cos = df['cosine'].loc[len(fdr)-1]
+        if len(fdr) != 0: cos = tempDf['cosine'].loc[len(fdr)-1]
         else: cos = 0
         cosine.append(cos)
 
@@ -49,9 +49,9 @@ def match_fdrSat_graph(df, fdrMax, outFile):
     graphDf = pd.DataFrame({'matches':matches, 'FDRCutoff': fdrSat, 'total': numPeaks, 'cosine': cosine, 'FDRDecoys': subsetDecoys, 'totalDecoys': totalDecoys})
     graphDf.to_csv(outFile, index=False)
 
-match_fdrSat_graph(overallDf, 0.01, 'Data/Figures/FDRGraph_lib31_overall_sqrt.csv')
-match_fdrSat_graph(peptideDf, 0.01, 'Data/Figures/FDRGraph_lib31_peptide_sqrt.csv')
-match_fdrSat_graph(proteinDf, 0.01, 'Data/Figures/FDRGraph_lib31_protein_sqrt.csv')
+match_fdrSat_graph(overallDf, 0.01, 'Data/Figures/FDRGraph_lib31_overall.csv')
+match_fdrSat_graph(peptideDf, 0.01, 'Data/Figures/FDRGraph_lib31_peptide.csv')
+match_fdrSat_graph(proteinDf, 0.01, 'Data/Figures/FDRGraph_lib31_protein.csv')
 
 
 #overallDf['FDR'] = fdr_calculation(overallDf)
