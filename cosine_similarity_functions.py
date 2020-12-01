@@ -52,6 +52,9 @@ def traml_library_upload_csv(fileName):
     # Unneeded columns are removed from the dataframe
     lib_df = lib_df.loc[:, lib_df.columns.intersection(['PrecursorMz','FullUniModPeptideName','PrecursorCharge','ProductMz','LibraryIntensity','transition_group_id','ProteinName'])]
 
+    # TEMP - Normalize intensities by finding their square root
+    lib_df['LibraryIntensity'] = [x**0.5 for x in list(lib_df['LibraryIntensity'])]
+
     # ID created to become the key of the resulting dictionary
     lib_df['ID'] = list(zip(lib_df['PrecursorMz'].tolist(),lib_df['FullUniModPeptideName'].tolist()))
 
@@ -292,6 +295,9 @@ def query_spectra_analysis( expSpectraFile, outFile, lib, numPeakMatch, ppm):
         with mzxml.read(expSpectraFile) as spectra:
             for spec in spectra:
 
+                # TEMP - Normalize intensities by finding their square root
+                spec['intensity array'] = [x**0.5 for x in spec['intensity array']]
+                
                 # Printing time taken to analyze every 100 spectra in csv format.
                 count += 1
                 if count % 100 == 0:
