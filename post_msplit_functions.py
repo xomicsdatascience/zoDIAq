@@ -1,8 +1,6 @@
 import pandas as pd
 
 overallDf = pd.read_csv('Data/fullOutput_lib31_match3_ppm10.csv').sort_values('cosine', ascending=False)
-#peptideDf.to_csv('delete.csv')
-#peptideDf = pd.read_csv('delete.csv')
 overallDf = overallDf.reset_index(drop=True)
 
 peptideDf = overallDf.drop_duplicates(subset='peptide', keep='first')
