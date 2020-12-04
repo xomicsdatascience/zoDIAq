@@ -1,6 +1,9 @@
 import pandas as pd
+import re
 
-overallDf = pd.read_csv('Data/fullOutput_lib31_match3_ppm10.csv').sort_values('cosine', ascending=False)
+inFile = 'Data/Output/csodiaq_lib-iproph1-31peaks_exp-n1b_corrected1.csv'
+
+overallDf = pd.read_csv(inFile).sort_values('cosine', ascending=False)
 overallDf = overallDf.reset_index(drop=True)
 
 peptideDf = overallDf.drop_duplicates(subset='peptide', keep='first')
@@ -8,7 +11,6 @@ peptideDf = peptideDf.reset_index(drop=True)
 
 proteinDf = overallDf.drop_duplicates(subset='protein', keep='first')
 proteinDf = proteinDf.reset_index(drop=True)
-
 
 def fdr_calculation(df, cutoff=0.01):
     fdr = []
@@ -47,9 +49,15 @@ def match_fdrSat_graph(df, fdrMax, outFile):
     graphDf = pd.DataFrame({'matches':matches, 'FDRCutoff': fdrSat, 'total': numPeaks, 'cosine': cosine, 'FDRDecoys': subsetDecoys, 'totalDecoys': totalDecoys})
     graphDf.to_csv(outFile, index=False)
 
-match_fdrSat_graph(overallDf, 0.01, 'Data/Figures/FDRGraph_lib31_overall.csv')
-match_fdrSat_graph(peptideDf, 0.01, 'Data/Figures/FDRGraph_lib31_peptide.csv')
-match_fdrSat_graph(proteinDf, 0.01, 'Data/Figures/FDRGraph_lib31_protein.csv')
+
+outFileSpectrum = re.sub('Data/(Output/)(.*).csv', r'Data/Figures/\2_FDRGraph_spectral.csv', inFile)
+outFilePeptide = re.sub('Data/(Output/)(.*).csv', r'Data/Figures/\2_FDRGraph_peptide.csv', inFile)
+outFileProtein = re.sub('Data/(Output/)(.*).csv', r'Data/Figures/\2_FDRGraph_protein.csv', inFile)
+
+
+match_fdrSat_graph(overallDf, 0.01, outFileSpectrum)
+match_fdrSat_graph(peptideDf, 0.01, outFilePeptide)
+match_fdrSat_graph(proteinDf, 0.01, outFileProtein)
 
 
 #overallDf['FDR'] = fdr_calculation(overallDf)
