@@ -1,5 +1,6 @@
 import pandas as pd
-import menu as menu
+import csodiaq_menu_functions as menu
+import csodiaq_figure_functions as figure
 import os
 
 
@@ -11,8 +12,8 @@ expFile = 'Data/Input/20190411_DI2A_1to16_n1b.mzXML'
 #outFile = 'Data/Output/csodiaq_lib-iproph1-31peaks-APIIAVTR-PLAEGTPR_exp-n1b_sqrt.csv'
 
 # full - 31
-libFile = 'Data/Input/iproph-speclib_con_decoys31.tsv'
-outFile = 'Data/Output/csodiaq_lib-iproph1-31peaks_exp-n1b_sqrt_dumbTest.csv'
+libFile = 'Data/Input/iproph-speclib_con_decoys20.tsv'
+outFile = 'Data/Output/csodiaq_lib-iproph1-20peaks_exp-n1b_sqrt.csv'
 
 # full - 20
 #libFile = 'Data/Input/iproph-speclib_con_decoys20.tsv'
@@ -25,7 +26,7 @@ menu.write_csodiaq_output(libFile, expFile, outFile, 3)
 menu.filter_optimal_match_csodiaq_output(outFile)
 menu.write_ppm_spread(outFile)
 menu.write_ppm_offset_sd(outFile)
-menu.draw_histogram(outFile)
+figure.draw_histogram(outFile)
 
 
 c=1
@@ -33,4 +34,4 @@ menu.write_csodiaq_output(libFile, expFile, outFile, 3, correctedNumSD=c)
 menu.filter_optimal_match_csodiaq_output(outFile, correctedNumSD=c)
 menu.write_ppm_spread(outFile, correctedNumSD=c)
 menu.write_ppm_offset_sd(outFile, correctedNumSD=c)
-menu.draw_histogram(outFile, correctedNumSD=c)
+figure.draw_histogram(outFile, correctedNumSD=c)

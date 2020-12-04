@@ -23,7 +23,7 @@ Purpose: Given a traml file in .tsv or .csv format representing the library spec
             need to be sorted and chosen by precursor mass, so identifiers already included in the library
             spectra were explicitly not used as keys.
 Parameters:
-    fileName - string representing the path to the library spectra file (required traml .tsv or .csv format).
+    'fileName' - string representing the path to the library spectra file (required traml .tsv or .csv format).
 Returns:
     dictionary 'lib'
         key - (float, string) tuple.
@@ -54,7 +54,7 @@ def traml_library_upload_csv(fileName):
     # Unneeded columns are removed from the dataframe
     lib_df = lib_df.loc[:, lib_df.columns.intersection(['PrecursorMz','FullUniModPeptideName','PrecursorCharge','ProductMz','LibraryIntensity','transition_group_id','ProteinName'])]
 
-    # TEMP - Normalize intensities by finding their square root
+    # Normalize intensities by finding their square root
     lib_df['LibraryIntensity'] = [x**0.5 for x in list(lib_df['LibraryIntensity'])]
 
     # ID created to become the key of the resulting dictionary
@@ -84,9 +84,9 @@ Purpose: This function determines which library spectra fit within the baseline 
             experimental spectrum. This significantly reduces the time complexity of the overall analysis by eliminating
             all irrelevant library spectra from consideration, the vast majority of them.
 Parameters:
-    spec - dictionary corresponding to pyteomics.mzxml.read() values. This variable contains all data corresponding
+    'spec' - dictionary corresponding to pyteomics.mzxml.read() values. This variable contains all data corresponding
         to the query spectrum in question.
-    sortedLibKeys - a list of (float, string) tuples. List represents all keys of the dictionary 'lib' from
+    'sortedLibKeys' - a list of (float, string) tuples. List represents all keys of the dictionary 'lib' from
         traml_library_upload_csv(). See dictionary 'lib' key explanation in function traml_library_upload_csv().
 Returns:
     A list of (float, string) tuples. Represents the section of values from the 'sortedLibKeys' parameter that
@@ -121,8 +121,8 @@ Purpose: Given a list of library spectra (represented by a list of library keys)
             is generated and returned, representing the pooled peaks of several library spectra. This variable
             signifincantly reduces the time complexity of the algorithm.
 Parameters:
-    lib - dictionary as returned by the traml_library_upload_csv() function.
-    libKeys - list of keys corresponding to the 'lib' parameter as returned by the lib_mz_match_query_window()
+    'lib' - dictionary as returned by the traml_library_upload_csv() function.
+    'libKeys' - list of keys corresponding to the 'lib' parameter as returned by the lib_mz_match_query_window()
         function.
 Returns:
     A list of (float, float, tuple) tuples. Represents spectrum peaks - see 'Peaks' key explanation in function
@@ -137,13 +137,16 @@ def pool_lib_spectra(lib, libKeys):
 '''
 Function: approx()
 Purpose: Given two float values, this function returns a float value indicating the difference between two peaks m/z.
-            If the difference is outside the provided tolerance, 0 is returned instead.
+            Note that ppm is proportional, not static. For example, the ppm calculated for a difference between 1 and 2
+            will be much higher than a ppm calculated for a difference between 1,000,000 and 1,000,001, even though
+            statically the difference is identical.
 Parameters:
-    x - first float value, corresponding to the theoretical mass (library mz).
-    y - second float value, corresponding to the experimental mass (query mz).
-    ppm - ppm used to determine tolerance.
+    'x' - first float value, corresponding to the theoretical mass (library mz).
+    'y' - second float value, corresponding to the experimental mass (query mz).
+    'ppmTol' - ppm used to determine tolerance.
 Returns:
-    boolean - True indicates the two values are approximately equal, False otherwise.
+    float - Returns the difference (in ppm) of the two values if the difference is less than the provided tolerance.
+            If the difference is outside the provided tolerance, 0 is returned instead for conditional purposes.
 '''
 def approx(x, y, ppmTol):
     ppmDiff = ((x-y)*1000000)/x
@@ -151,35 +154,62 @@ def approx(x, y, ppmTol):
 
 
 '''
-Function: peak_comparison_for_cosine()
-Purpose: This function determines peaks that are within a sufficiently close tolerance to one another as to be included
-            in the cosine similarity score calculation. Specifically, this function iterates over peaks of the
-            pooled library spectrum and the experimental spectrum in an O(n+m) manner. The cosine score is not explicitly
-            calculated in this function - that occurs in the cosine_similarity() function. Rather, this function
-            provides the variables necessary for the cosine similarity score to be calculated.
+Function: ppm_offset()
+Purpose: Given a peak mz value and a ppm offset value, this function calculates the mz offset that would need to be
+            subtracted from the mz value to align the final spread of ppm differences around 0.
 Parameters:
-    libSpectrum - list of (float, float, tuple) tuples. Represents spectrum peaks - see 'Peaks' key explanation in function
-        traml_library_upload_csv().
-    libKeys - (float, string) tuple. See dictionary 'lib' key explanation in function traml_library_upload_csv().
-    expMz - list of floats. Corresponds to m/z values from the experimental spectrum being analyzed. Matched by index
-        with the 'expIntensity' parameter.
-    expIntensity -list of floats. Corresponds to intensity values from the experimental spectrum being analyzed. Matched
-        by index with the 'expMz' parameter.
-    ppm - see 'ppm' parameter description for function approx().
+    'mz' - Mz value of a given peak (generally a query peak)
+    'ppm' - Ppm offset value. This is generally calculated from an uncorrected csodiaq output. During the uncorrected
+        csodiaq output generation, this value is generally 0, which in turn makes the returned mz offset 0.
 Returns:
-    dictionary 'libDict'
+    float - Mz offset value.
+'''
+def ppm_offset(mz, ppm):
+    return (mz*ppm)/1000000
+
+
+'''
+Function: peak_comparison()
+Purpose: This function determines peaks that are within a sufficiently close tolerance to one another. Various functions
+            requiring peak comparison then take place inside this function, including compiling data for a cosine
+            similarity score. The specifics of the various functions can be found in the return values below.
+Parameters:
+    'libSpectrum' - list of (float, float, tuple) tuples. Represents spectrum peaks - see 'Peaks' key explanation in function
+        traml_library_upload_csv().
+    'libKeys' - (float, string) tuple. See dictionary 'lib' key explanation in function traml_library_upload_csv().
+    'expMz' - list of floats. Corresponds to m/z values from the experimental spectrum being analyzed. Matched by index
+        with the 'expIntensity' parameter.
+    'expIntensity' -list of floats. Corresponds to intensity values from the experimental spectrum being analyzed. Matched
+        by index with the 'expMz' parameter.
+    'ppmTol' - see 'ppmTol' parameter description for function approx().
+    'ppmYOffset' - The value in ppm that should be subtracted from the query peak m/z. This is the average ppm difference
+        of an uncorrected csodiaq output, being applied to the experimental spectra to generate a corrected
+        csodiaq calculation output.
+Returns:
+    dictionary 'cosDict'
         key - (float, string) tuple. See dictionary 'lib' key explanation in function traml_library_upload_csv().
-        value - list of various values.
+        value - list of floats
             float - sum of products of intensities between matched library and query peaks. In context of the cosine
                 similarity score algorithm, this is the "A*B" sum.
             float - sum of squared query peak intensities when matched to a library peaks. In context of the cosine
                 similarity score algorithm, this is the "B^2" sum.
             float - sum of squared library peak intensities when matched to a query peaks. In context of the cosine
                 similarity score algorithm, this is the "A^2" sum.
-            int - representing the number of matched peaks. This value will be the 'shared' column value in the output file.
-            set - Representing the indices of the query peaks that matched the library spectrum represented in this
+    dictionary 'countDict'
+        key - (float, string) tuple. See dictionary 'lib' key explanation in function traml_library_upload_csv().
+        value - int
+            Representing the number of matched peaks. This value will be the 'shared' column value in the output file.
+    dictionary 'ionDict'
+        key - (float, string) tuple. See dictionary 'lib' key explanation in function traml_library_upload_csv().
+        value - set representing the indices of the query peaks that matched the library spectrum represented in this
                 dictionary value. The sum of these query peak intensities will be returned as the 'ionCount' column
                 value in the output file.
+    dictionary 'ppmDict'
+        key - (float, string) tuple. See dictionary 'lib' key explanation in function traml_library_upload_csv().
+        value - list of floats represents the ppm difference of all peak matches that were within the given ppm tolerance. This is
+                most directly used for determining the ppm offset and standard deviation of an uncorrected
+                csodiaq output to be used in generating a corrected csodiaq output. For a corrected csodiaq output,
+                it is primarily used for figure generation to compare with uncorrected csodiaq output.
 '''
 def peak_comparison(libSpectrum, libKeys, expMz, expIntensity, ppmTol, ppmYOffset):
     # final dictionary returned is initialized. See function description for details on contents.
@@ -234,22 +264,12 @@ def peak_comparison(libSpectrum, libKeys, expMz, expIntensity, ppmTol, ppmYOffse
 
 '''
 Function: cosine_similarity()
-Purpose: Provided the output of the peak_comparison_for_cosine() function, this function explicitly calculates the
-            cosine similarity score and returns it. To save on time, this function also takes in output from the
-            peak_comparison_for_cosine() corresponding to the number of matched peaks and the ion count and returns
-            them with the cosine score.
+Purpose: Provided a value of the 'cosDict' dictionary output of the peak_comparison() function, this function
+            explicitly calculates the cosine similarity score and returns it.
 Parameters:
-    key - (float, string) tuple. See dictionary 'lib' key explanation in function traml_library_upload_csv().
-    row - list of various values. See dictionary 'libDict' value explanation in function peak_comparison_for_cosine().
-    expIntensity - list of floats. See 'expIntensity' parameter explanation in function peak_comparison_for_cosine().
+    'row' - list of various values. See dictionary 'cosDict' value explanation in function peak_comparison().
 Returns:
-    a list of various values.
-        (float, string) tuple - see dictionary 'lib' key explanation in function traml_library_upload_csv().
-        float - corresponds to the final cosine similarity score between library spectrum indicated by the 'key'
-            paramter/first return value and the experimental spectrum being analyzed.
-        int - representing the number of matched peaks. This value will be the 'shared' column value in the output file.
-        float - representing the sum of the matched query peak intensities. This value will be returned as the
-        'ionCount' column value in the output file.
+    float - represents the cosine similarity score of a library and query spectrum comparison.
 '''
 def cosine_similarity(row):
     magnitude = (row[1]**0.5) * (row[2]**0.5) # (sqrt(sum(A^2))*sqrt(sum(B^2)))
@@ -257,15 +277,27 @@ def cosine_similarity(row):
 
 '''
 Function: query_spectra_analysis()
-Purpose: This function loops through all query spectra and calculates the cosine similarity score between
-            it and every library spectra with a precursor m/z value within its designated window.
+Purpose: This function loops through all query spectra and calculates the cosine similarity score and other
+            values between it and every library spectra with a precursor m/z value within its designated window.
+            For an explanation of each column in the output (references as the csodiaq output file in other
+            comments), see the comments alongside the 'column' value in the function.
 Parameters:
-    expSpectraFile - string representing the path to the query spectra file (required .mzXML format).
-    outFile - string representing the path to the output/results file.
-    lib - dictionary as returned by the traml_library_upload_csv() function.
+    'expSpectraFile' - string representing the path to the query spectra file (required .mzXML format).
+    'outFile' - string representing the path to the output/results file.
+    'ppmFile' - a string representing the path to the ppm difference results file. The first three columns
+        are used for creating a key that corresponds to rows in the outFile output. This ppm file is used
+        to compile a comprehensive list of ppm differences used in calculating the ppm offset and ppm
+        standard deviation of an uncorrected csodiaq output. Such calculations are done after the optimal
+        minimum peak matching number is determined and applied as a filter to the data.
+    'lib' - dictionary as returned by the traml_library_upload_csv() function.
+    'numPeakMatch' - int representing the minimum number of allowed peak matches. This number is generally 3
+        to catch a wide number of matches that can later be filtered for the optimal number of minimum
+        allowed peak matches.
+    'ppmTol' - see 'ppmTol' parameter description for function approx().
+    'ppmYOffset' - see 'ppmYOffset' parameter description for function peak_comparison().
 Returns:
-    No Return Value. Results are written directly to the output file. The description of specific columns of output
-        file are provided in the function comments.
+    No Return Value. Results are written directly to the output file and ppm file (outFile and ppmFile,
+        respectively). The description of specific columns of output file are provided in the function comments.
 '''
 def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, numPeakMatch, ppmTol, ppmYOffset):
     # Column headers for the output file are initialized.
@@ -278,13 +310,13 @@ def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, numPeakMatch,
         'protein', # Protein name the peptide corresponds to, also derived from the library spectrum corresponding to this row.
         'MzLIB', # precursor m/z for the library spectrum corresponding to this row.
         'zLIB', # precursor charge for the library spectrum corresponding to this row.
-        'cosine', # cosine score comparing the library spectrum corresponding to this row with the query spectrum.
+        'cosine', # Cosine score comparing the library spectrum corresponding to this row with the query spectrum.
         'name', # Title - corresponds to the column "transition_group_id," a library spectrum identifier.
         'Peak(Query)', # The number of peaks in the query spectrum.
         'Peaks(Library)', # The number of peaks in the library spectrum.
         'shared', # The number of peaks that matched between query spectrum/library spectrum.
         'ionCount', # Sum of query spectrum intensities, excluding possible duplicates - currently uncalculated, set to 0.
-        'CompensationVoltage', #the compensation voltage of the query spectrum.
+        'CompensationVoltage', # The compensation voltage of the query spectrum.
         'totalWindowWidth' # width of m/z that was captured in the query spectrum. Corresponds to MzEXP.
     ]
 
@@ -362,49 +394,130 @@ def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, numPeakMatch,
         # Prints the final number of experimental spectra analyzed.
         print('#'+str(count))
 
-def fdr_calculation(df, FDRCutoff=0.01):
-    fdr = []
+'''
+Function: fdr_calculation()
+Purpose: Given the output of the query_spectra_analysis() function as contained in a csodiaq output file and an
+            FDR cutoff point, this function returns the number of rows in the dataframe above the FDR cutoff
+            point. Note that this function is usually applied to various subsets of the actual csodiaq output
+            file after filtering for minimum allowed peak matches. A higher return value from this function
+            indicates a more optimal minimum allowed peak match number.
+Parameters:
+    'df' - Pandas Data Frame representing the contents of a csodiaq output file.
+    'FDRCutoff' - float representing the minumum allowed FDR of the csodiaq output.
+Returns:
+    'fdr' - int representing number of rows in dataframe 'df' that are above the 'FDRCutoff' FDR cutoff point.
+    'numDecoys' - int representing the number of rows represented by decoys specifically. NOTE: This return
+        value is not currently used by the program, but is being kept here for possible future use.
+'''
+def fdr_calculation(df, FDRCutoff):
+    # initializing the two return values at 0
+    fdrRows = 0
     numDecoys = 0
+
+    # for every row in the dataframe
     for i in range(len(df)):
+
+        # current criteria for 'decoys' is to have 'decoy' in the protein name. This may change in the future.
         if 'DECOY' in df.loc[i]['protein']:
             numDecoys += 1
-        newFDR = numDecoys/(i+1)
-        if newFDR > FDRCutoff:
-            if len(fdr) < 1/FDRCutoff:
-                return [], 0
-            return fdr, numDecoys-1
-        fdr.append(newFDR)
-    return fdr, numDecoys-1
 
+        # calculates the FDR up to this point in the data frame.
+        curFDR = numDecoys/(i+1)
+
+        # conditional statement comparing the current FDR to the FDR Cutoff. If larger, function values are returned.
+        if curFDR > FDRCutoff:
+
+            # if the number of rows has not yet reached the minimum number that allows for the FDR cutoff, 0 is returned instead.
+            if fdrRows < 1/FDRCutoff:
+                return 0, 0
+            return fdrRows, numDecoys-1
+        fdrRows += 1
+    return fdrRows, numDecoys-1
+
+
+'''
+Function: find_best_matchNum_fdr()
+Purpose: Given the output of the query_spectra_analysis() function as contained in a csodiaq output file and an
+            FDR cutoff point, this function determines the optimal minimum allowed peak number of the output.
+            It also provides the number of rows available after filtering for peak number and FDR cutoff,
+            allowing for easy filtering of the pandas dataframe later.
+Parameters:
+    'df' - Pandas Data Frame representing the contents of a csodiaq output file.
+    'FDRCutoff' - float representing the minumum allowed FDR of the csodiaq output.
+Returns:
+    'bestMatchNum' - int representing the optimal minimum allowed peak number.
+    'bestFDR' - int representing the number of rows that are kept after filtering for both peak matches equal to
+        and above bestMatchNum and values above the FDR cutoff.
+'''
 def find_best_matchNum_fdr(df, FDRCutoff):
+    # list is created representing every unique number of matches represented in the dataframe
     matches = sorted(list(set(df['shared'])))
     bestMatchNum = 0
     bestFDR = 0
+
+    # loops over every unique number of matches represented in the dataframe.
     for m in matches:
+
+        # Temporary dataframe created, representing the overall data set filtered for the number of matches in question
         tempDf = df[df['shared'] >= m].reset_index(drop=True)
-        fdr, decoys = fdr_calculation(tempDf, FDRCutoff=FDRCutoff)
-        if len(fdr) > bestFDR:
+
+        # The number of rows kept after filtering for the FDR cutoff is calculated.
+        fdrLength, decoys = fdr_calculation(tempDf, FDRCutoff=FDRCutoff)
+
+        # The number of matches with the highest number of kept rows is considered the optimal number of matches allowed.
+        if fdrLength > bestFDR:
             bestMatchNum = m
-            bestFDR = len(fdr)
+            bestFDR = fdrLength
     return bestMatchNum, bestFDR
 
+'''
+Function:read_ppm_file_to_dict()
+Purpose: After filtering the csodiaq output for the optimal minimum allowed peak match number, the returned
+            dictionary is then used to create a comprehensive list of ppm differences of the output, which is
+            then in turn used to calculate the ppm difference mean (offset) and ppm standard deviation (ppm
+            tolerance) for future calculations, as well as generate relevant figures.
+Parameters:
+    'ppmFile' - string corresponding to the 'ppmFile' parameter of the query_spectra_analysis() function.
+Returns:
+    'ppmDict' - dictionary representing the ppm differences of a given row in the csodiaq output.
+'''
 def read_ppm_file_to_dict(ppmFile):
     ppmDict = {}
     with open(ppmFile, 'r') as r:
         csvReader = csv.reader(r)
         for row in csvReader:
+
+            # The first three rows correspond to elements of a 'key', and everything after that is ppm differences.
             ppmDict[(int(row[0]),row[1],row[2])] = row[3:]
     return ppmDict
 
+
+'''
+Function: write_ppm_spread()
+Purpose: Given an csodiaq output file and a ppm output file (both products of the query_spectra_analysis()
+            function), the comprehensive list of ppm differences or "ppm spread" list is created and written
+            to a file. This accounts for filtering for the optimal number of allowed matched peaks.
+Parameters:
+    'cosFile' - corresponds to 'outFile' parameter of query_spectra_analysis() function, AFTER having been
+        filtered for the optimal minimum allowed number of peak matches.
+    'ppmFile' - corresponds to 'ppmFile' parameter of query_spectra_analysis() function.
+    'outFile' - a string representing the path to the ppm spread file.
+Returns:
+    No Return Value. Results are written directly to the output file ('outFile').
+'''
 def write_ppm_spread(cosFile, ppmFile, outFile):
+    # Data is read in.
     df = pd.read_csv(cosFile)
     ppmDict = read_ppm_file_to_dict(ppmFile)
+
+    # list of keys corresponding to ppmDict are generated from the csodiaq data frame.
     listOfKeys = [(df['scan'].loc[i],df['peptide'].loc[i],df['protein'].loc[i]) for i in range(len(df))]
+
+    # all values from the ppmFile corresponding to those keys are saved into a single list.
     ppmList = []
     for key in listOfKeys: ppmList += ppmDict[key]
+
+    # CSV file is written with the ppm spread. It's essentially one long row of ppm difference values.
     with open(outFile, 'w', newline='') as csvFile:
         writer = csv.writer(csvFile)
         writer.writerow(ppmList)
-
-def ppm_offset(mz, ppm):
-    return (mz*ppm)/1000000
