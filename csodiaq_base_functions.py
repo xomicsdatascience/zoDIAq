@@ -6,6 +6,8 @@ from datetime import timedelta
 import csv
 import statistics
 import matplotlib.pyplot as plt
+import numpy as np
+from pyteomics import mgf
 
 # Template for function descriptions
 '''
@@ -299,7 +301,7 @@ Returns:
     No Return Value. Results are written directly to the output file and ppm file (outFile and ppmFile,
         respectively). The description of specific columns of output file are provided in the function comments.
 '''
-def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, numPeakMatch, ppmTol, ppmYOffset):
+def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, ppmTol, ppmYOffset):
     # Column headers for the output file are initialized.
     columns = [
         'fileName', # Name of the query spectra file.
@@ -369,7 +371,7 @@ def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, numPeakMatch,
                     cosine = cosine_similarity(cosDict[key])
                     ionCount = sum([ spec['intensity array'][j]+ppm_offset(spec['intensity array'][j],ppmYOffset) for j in ionDict[key] ])
                     # Library spectra that had too few matching peaks are excluded. numPeakMatch variable determines the threshold.
-                    if countDict[key] > numPeakMatch:
+                    if countDict[key] > 3:
                         temp = [
                             expSpectraFile, #fileName
                             spec['num'], #scan
@@ -389,7 +391,7 @@ def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, numPeakMatch,
                             spec['precursorMz'][0]['windowWideness'] #totalWindowWidth
                         ]
                         writer.writerow(temp)
-                        ppmWriter.writerow([spec['num'], key[1], lib[key]['ProteinName']] + ppmDict[key])
+                        ppmWriter.writerow([spec['num'], key[1], lib[key]['ProteinName']] + sorted(ppmDict[key]))
 
         # Prints the final number of experimental spectra analyzed.
         print('#'+str(count))
@@ -413,7 +415,7 @@ def fdr_calculation(df, FDRCutoff):
     # initializing the two return values at 0
     fdrRows = 0
     numDecoys = 0
-
+    df.fillna("nan",inplace=True)
     # for every row in the dataframe
     for i in range(len(df)):
 
@@ -508,6 +510,8 @@ Returns:
 def write_ppm_spread(cosFile, ppmFile, outFile):
     # Data is read in.
     df = pd.read_csv(cosFile)
+    df.fillna('',inplace=True)
+
     ppmDict = read_ppm_file_to_dict(ppmFile)
 
     # list of keys corresponding to ppmDict are generated from the csodiaq data frame.
@@ -521,3 +525,164 @@ def write_ppm_spread(cosFile, ppmFile, outFile):
     with open(outFile, 'w', newline='') as csvFile:
         writer = csv.writer(csvFile)
         writer.writerow(ppmList)
+
+def find_offset_tol(data, histFile):
+    hist, bins = np.histogram(data, bins=200)
+
+    # Threshold frequency
+    freq = sum(hist)/len(hist)
+
+    hist2 = [x for x in hist]
+    # Zero out low values
+    hist[np.where(hist <= freq)] = 0
+
+    # Plot
+    width = 0.7 * (bins[1] - bins[0])
+    center = (bins[:-1] + bins[1:]) / 2
+    index_max = max(range(len(hist)), key=hist.__getitem__)
+
+    min_i = 0
+    max_i = 0
+    for i in range(len(hist)):
+        if hist[i] != 0: min_i = i; break
+    for i in range(min_i, len(hist)):
+        if hist[i] == 0: max_i = i-1; break
+
+    offset = center[index_max]
+    tolerance = (center[max_i] - center[min_i])/2
+    if histFile:
+        plt.bar(center, hist2, align='center', width=width)
+        plt.title("Gaussian Histogram")
+        plt.xlabel("Value")
+        plt.ylabel("Frequency")
+        plt.axvline(x=offset, color='black', linestyle = 'dashed')
+        plt.axvline(x=offset-tolerance, color='red', linestyle = 'dashed')
+        plt.axvline(x=offset+tolerance, color='red', linestyle = 'dashed')
+        plt.savefig(histFile)
+    return offset, tolerance
+
+def write_ppm_spread_decoy(cosFile, ppmFile, outFile):
+    # Data is read in.
+    print(1)
+    df = pd.read_csv(cosFile)
+    print(2)
+    ppmDict = read_ppm_file_to_dict(ppmFile)
+    print(3)
+    # list of keys corresponding to ppmDict are generated from the csodiaq data frame.
+    listOfKeys = [(df['scan'].loc[i],df['peptide'].loc[i],df['protein'].loc[i]) for i in range(len(df))]
+
+    # all values from the ppmFile corresponding to those keys are saved into a single list.
+    ppmList = []
+    decoyList = []
+    for key in listOfKeys:
+        if 'DECOY' not in key[2]:
+            ppmList += ppmDict[key]
+#            ppmList.append(sum([float(x) for x in ppmDict[key]])/len(ppmDict[key]))
+
+    print(4)
+    for key in listOfKeys:
+        if 'DECOY' in key[2]:
+            decoyList += ppmDict[key]
+#            decoyList.append(sum([float(x) for x in ppmDict[key]])/len(ppmDict[key]))
+    print(5)
+
+    # CSV file is written with the ppm spread. It's essentially one long row of ppm difference values.
+    with open(outFile, 'w', newline='') as csvFile:
+        writer = csv.writer(csvFile)
+        writer.writerow(ppmList)
+        writer.writerow(decoyList)
+
+def mgf_library_upload(fileName):
+    #['PrecursorMz','FullUniModPeptideName','PrecursorCharge','ProductMz','LibraryIntensity','transition_group_id','ProteinName', 'Peaks'] #Peaks is a tuple of (mz, intensity, key)
+    #['pepmass', 'seq', None, ]
+    libMGF = mgf.read(fileName)
+    print('#Enter library dictionary upload: ')
+    print('#'+str(timedelta(seconds=timer())))
+    libDict = {}
+    for spec in libMGF:
+#        print(spec)
+
+        key = (spec['params']['pepmass'][0], spec['params']['seq'])
+        charge = spec['params']['charge'][0]
+        name = spec['params']['title']
+        if 'protein' in spec['params']: protein = spec['params']['protein']
+        else: protein = ''
+        mz = spec['m/z array']
+        intensity = spec['intensity array']
+        intensity = [x**0.5 for x in intensity]
+        keyList = [key for x in mz]
+        peaks = list(tuple(zip(mz,intensity,keyList)))
+        peaks.sort(key=lambda x:x[1])
+        peaks = peaks[:31]
+        peaks.sort(key=lambda x:x[0])
+        tempDict = {
+            'PrecursorCharge':charge,
+            'transition_group_id':name,
+            'ProteinName':protein,
+            'Peaks':peaks
+        }
+        libDict[key] = tempDict
+    return libDict
+
+def library_file_to_dict(inFile):
+    fileType = inFile.split('.')[-1]
+    if fileType == 'mgf':
+        lib = mgf_library_upload(inFile)
+    else:
+        lib = traml_library_upload_csv(inFile)
+    return lib
+'''
+    dictionary 'lib'
+        key - (float, string) tuple.
+            float - corresponding to the precursor m/z value of the library spectrum.
+            string - corresponding to the full UniMode peptide name/sequence represented by the library
+                    spectrum.
+        value - dictionary
+            'PrecursorCharge': int indicating the charge of the library spectrum.
+            'transition_group_id': string indicating library spectrum identifier.
+            'ProteinName': string indicating the name of the protein this peptide corresponds to
+            'Peaks': list of (float, float, tuple) tuples.
+                float 1 - representing the m/z of the peak.
+                float 2 - representing the intensity of the peak.
+                tuple - equal to the corresponding key in the 'lib' dictionary. This is to identify the
+                    library this peak belongs to, as they will be mixed with peaks from other libraries.
+'''
+#mgf_library_upload('Data/Input/human.faims.fixed.decoy.mgf')
+'''
+
+    # Library spectra file is read as a pandas dataframe - conditional statement allows for both .tsv and .csv files to be uploaded.
+    if fileName.endswith('.tsv'):
+        lib_df = pd.read_csv(fileName, sep='\t')
+    else:
+        lib_df = pd.read_csv(fileName)
+
+    # Print statement for timing the program
+    print("#Enter library dictionary upload: ")
+    print('#'+str(timedelta(seconds=timer())))
+
+    # Unneeded columns are removed from the dataframe
+    lib_df = lib_df.loc[:, lib_df.columns.intersection(['PrecursorMz','FullUniModPeptideName','PrecursorCharge','ProductMz','LibraryIntensity','transition_group_id','ProteinName'])]
+
+    # Normalize intensities by finding their square root
+    lib_df['LibraryIntensity'] = [x**0.5 for x in list(lib_df['LibraryIntensity'])]
+
+    # ID created to become the key of the resulting dictionary
+    lib_df['ID'] = list(zip(lib_df['PrecursorMz'].tolist(),lib_df['FullUniModPeptideName'].tolist()))
+
+    # M/z and intensity columns are grouped by ID to be later combined as a list of peaks included in the dictionary
+    mz_dict = lib_df.groupby("ID")['ProductMz'].apply(list).to_dict()
+    intensity_dict = lib_df.groupby("ID")['LibraryIntensity'].apply(list).to_dict()
+
+    # Dataframe is prepared for and converted to a dictionary
+    lib_df.drop_duplicates(subset="ID",inplace=True)
+    lib_df = lib_df.loc[:, lib_df.columns.intersection(['ID','PrecursorCharge','transition_group_id','ProteinName'])]
+    lib_df.set_index("ID", drop=True, inplace=True)
+    lib = lib_df.to_dict(orient="index")
+
+    # Peaks list is created and attached to the dictionary
+    for key in lib:
+        mz, intensity = (list(t) for t in zip(*sorted(zip(mz_dict[key], intensity_dict[key]))))
+        keyList = [key for i in range(len(mz))]
+        lib[key]['Peaks'] = list(tuple(zip(mz,intensity,keyList)))
+    return lib
+'''
