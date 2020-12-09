@@ -5,13 +5,12 @@ import os
 import pandas as pd
 import re
 
-os.chdir('./Part 1/')
 random.seed(0)
 '''
 #Reading MGF file, selecting 10 random (non-Decoy)
 mg = {}
 count = 0
-with mgf.read('human.faims.fixed.decoy.mgf') as reader:
+with mgf.read('Data/Input/human.faims.fixed.decoy.mgf') as reader:
     for spectrum in reader:
         if count % 10000 == 0:
             print(count)
@@ -23,23 +22,24 @@ mg2 = {}
 for x in cond: mg2[x] = mg[x]
 
 print(mg2.keys())
-with open('mgf_condensed_500.pkl','wb') as f:
+with open('Data/Input/mgf_condensed_500.pkl','wb') as f:
     pickle.dump(mg2,f)
 for i in mg2:
     print(mg2[i]['params']['seq'])
 '''
 
 #Loading in condensed MGF
-with open('mgf_condensed_500.pkl','rb') as f:
+with open('Data/Input/mgf_condensed_500.pkl','rb') as f:
     mg = pickle.load(f)
 
+'''
 #Reading big TRAML file, writing small TRAML file
 seqs = []
 charges = []
 for key in mg:
     seqs.append(mg[key]['params']['seq'])
     charges.append(int(mg[key]['params']['charge'][0]))
-ts = pd.read_csv("consensus_transitions_lowres_decoys.tsv", sep='\t')
+ts = pd.read_csv("Data/Input/iproph-speclib_con_decoys31.tsv", sep='\t')
 ts2 = ts[ts['FullUniModPeptideName'].isin(seqs) ]
 #ts2.to_csv('condensed_seq.csv')
 #ts2 = pd.read_csv('condensed_seq.csv')
@@ -48,11 +48,13 @@ temp = [ temp[i][ temp[i]['PrecursorCharge'] == charges[i] ] for i in range(len(
 
 ts3 = pd.concat(temp)
 
-ts3.to_csv('condensed_500.csv')
+ts3.to_csv('Data/Input/condensed_500.csv')
 
 '''
+
 #Reading small TRAML file
-ts = pd.read_csv("condensed.csv")
+ts = pd.read_csv("Data/Input/condensed_500.csv")
+count = 0
 for x in mg:
     seq = mg[x]['params']['seq']
     print(seq)
@@ -93,4 +95,3 @@ for x in mg:
 # Graph
 def plot_spec(SPECTRA, COLOR):
     plt.vlines(SPECTRA.columns, np.repeat(0, len(SPECTRA.columns)), SPECTRA, colors=COLOR)
-'''
