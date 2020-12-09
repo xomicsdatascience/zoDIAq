@@ -613,7 +613,7 @@ def mgf_library_upload(fileName):
         keyList = [key for x in mz]
         peaks = list(tuple(zip(mz,intensity,keyList)))
         peaks.sort(key=lambda x:x[1])
-        peaks = peaks[:31]
+        peaks = peaks[-31:]
         peaks.sort(key=lambda x:x[0])
         tempDict = {
             'PrecursorCharge':charge,
