@@ -21,7 +21,7 @@ def write_meta_analysis_files(inFile):
     outFileProtein = re.sub('Data/Output/(.*).csv', r'Data/Figures/FDRGraphs/\1_FDRGraph_protein.csv', inFile)
     match_fdrSat_graph(overallDf, 0.01, outFileSpectrum)
     match_fdrSat_graph(overallDf, 0.01, outFilePeptide)
-    match_fdrSat_graph(overallDf, 0.01, outFileProtein, DEBUG=True)
+    match_fdrSat_graph(overallDf, 0.01, outFileProtein)
 '''
     peptideDf = overallDf.copy()
     peptideDf = peptideDf.drop_duplicates(subset='peptide', keep='first')
@@ -44,6 +44,11 @@ Returns:
 def match_fdrSat_graph(df, fdrMax, outFile, DEBUG=False):
     matches = sorted(list(set(df['shared'])))
 
+    if DEBUG:
+        print('****************************************')
+
+        print(outFile)
+        print('****************************************')
     fdrSat = []
     numPeaks = []
     cosine = []
@@ -51,9 +56,12 @@ def match_fdrSat_graph(df, fdrMax, outFile, DEBUG=False):
     totalDecoys = []
     for m in matches:
         tempDf = df[df['shared'] >= m].reset_index(drop=True)
+
         if 'peptide' in outFile: tempDf = tempDf.drop_duplicates(subset='peptide', keep='first'); tempDf = tempDf.reset_index(drop=True)
         elif 'protein' in outFile: tempDf = tempDf.drop_duplicates(subset='protein', keep='first'); tempDf = tempDf.reset_index(drop=True)
+
         fdrRows, dec = cbf.fdr_calculation(tempDf, 0.01)
+
         numPeaks.append(len(tempDf))
         fdrSat.append(fdrRows)
         subsetDecoys.append(dec)
@@ -63,6 +71,9 @@ def match_fdrSat_graph(df, fdrMax, outFile, DEBUG=False):
         cosine.append(cos)
 
     graphDf = pd.DataFrame({'matches':matches, 'FDRCutoff': fdrSat, 'total': numPeaks, 'cosine': cosine, 'FDRDecoys': subsetDecoys, 'totalDecoys': totalDecoys})
+    if DEBUG:
+        print('----------------------------')
+        print(graphDf)
     graphDf.to_csv(outFile, index=False)
 
 '''

@@ -15,7 +15,7 @@ Purpose:
 Parameters:
 Returns:
 '''
-def write_csodiaq_output(libFile, expFile, outFile, corrected=False ):
+def write_csodiaq_output(libFile, expFile, outFile, corrected=False, numLibPeaks=31 ):
     print('#Enter lib upload/conversion:')
     print('#'+str(timedelta(seconds=timer())))
     if corrected:
@@ -27,8 +27,9 @@ def write_csodiaq_output(libFile, expFile, outFile, corrected=False ):
     else:
         ppmTol=10,
         ppmOffset=0
+    if numLibPeaks > 31: print("Number of library peaks cannot exceed 30, reducing to 30"); numLibPeaks = 30
     ppmFile = re.sub('(.*).csv', r'\1_unfilteredPpmPerRow.csv', outFile)
-    lib = cbf.library_file_to_dict(libFile)
+    lib = cbf.library_file_to_dict(libFile, numLibPeaks)
     print('#enter spectra comparison:')
     print('#'+str(timedelta(seconds=timer())))
     cbf.query_spectra_analysis( expFile,
@@ -56,6 +57,7 @@ def filter_optimal_match_csodiaq_output(inFile, corrected=0):
     bestMatchNum, bestFDR = cbf.find_best_matchNum_fdr(df, 0.01)
 
     outFile = re.sub('(.*).csv', r'\1_filteredBestMatch'+str(bestMatchNum)+'.csv', inFile)
+    df = df[df['shared'] >= bestMatchNum].reset_index(drop=True)
     df.iloc[:bestFDR].to_csv(outFile, index=False)
 
     print('#Complete')
@@ -73,10 +75,14 @@ def write_ppm_spread(inFile, corrected=0):
     print('#'+str(timedelta(seconds=timer())))
     if corrected: inFile = re.sub('(.*).csv', r'\1_corrected.csv', inFile)
 
-    tag = re.sub('Data/Output/(.*).csv', r'\1', inFile)
-    r = re.compile(tag+'_filteredBestMatch')
+
     ppmFile = re.sub('(.*).csv', r'\1_unfilteredPpmPerRow.csv', inFile)
     outFile = re.sub('(.*).csv', r'\1_ppmSpread.csv', inFile)
+    tag = re.sub('Data/Output/(.*).csv', r'\1_filteredBestMatch', inFile)
+    files = list(os.listdir('Data/Output'))
+    for x in files:
+        if tag in x: inFile = 'Data/Output/'+x
+    print(inFile)
     cbf.write_ppm_spread(inFile, ppmFile, outFile)
     print('#Complete')
     print('#'+str(timedelta(seconds=timer())))
@@ -114,3 +120,6 @@ def write_ppm_spread_decoy(inFile):
     cbf.write_ppm_spread_decoy(inFile, ppmFile, decoyFile)
     print('#Complete')
     print('#'+str(timedelta(seconds=timer())))
+
+def write_csodiaq_fdr_outputs(inFile):
+    cbf.write_csodiaq_fdr_outputs(inFile)

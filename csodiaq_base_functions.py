@@ -42,7 +42,7 @@ Returns:
                 tuple - equal to the corresponding key in the 'lib' dictionary. This is to identify the
                     library this peak belongs to, as they will be mixed with peaks from other libraries.
 '''
-def traml_library_upload_csv(fileName):
+def traml_library_upload_csv(fileName, numLibPeaks):
     # Library spectra file is read as a pandas dataframe - conditional statement allows for both .tsv and .csv files to be uploaded.
     if fileName.endswith('.tsv'):
         lib_df = pd.read_csv(fileName, sep='\t')
@@ -57,7 +57,7 @@ def traml_library_upload_csv(fileName):
     lib_df = lib_df.loc[:, lib_df.columns.intersection(['PrecursorMz','FullUniModPeptideName','PrecursorCharge','ProductMz','LibraryIntensity','transition_group_id','ProteinName'])]
 
     # Normalize intensities by finding their square root
-    lib_df['LibraryIntensity'] = [x**0.5 for x in list(lib_df['LibraryIntensity'])]
+#    lib_df['LibraryIntensity'] = [x**0.5 for x in list(lib_df['LibraryIntensity'])]
 
     # ID created to become the key of the resulting dictionary
     lib_df['ID'] = list(zip(lib_df['PrecursorMz'].tolist(),lib_df['FullUniModPeptideName'].tolist()))
@@ -76,7 +76,11 @@ def traml_library_upload_csv(fileName):
     for key in lib:
         mz, intensity = (list(t) for t in zip(*sorted(zip(mz_dict[key], intensity_dict[key]))))
         keyList = [key for i in range(len(mz))]
-        lib[key]['Peaks'] = list(tuple(zip(mz,intensity,keyList)))
+        peaks = list(tuple(zip(mz,intensity,keyList)))
+        peaks.sort(key=lambda x:x[1],reverse=True)
+        peaks = peaks[:numLibPeaks]
+        peaks.sort(key=lambda x:x[0])
+        lib[key]['Peaks'] = peaks
     return lib
 
 
@@ -348,7 +352,7 @@ def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, ppmTol, ppmYO
             for spec in spectra:
 
                 # TEMP - Normalize intensities by finding their square root
-                spec['intensity array'] = [x**0.5 for x in spec['intensity array']]
+#                spec['intensity array'] = [x**0.5 for x in spec['intensity array']]
 
                 # Printing time taken to analyze every 100 spectra in csv format.
                 count += 1
@@ -592,16 +596,13 @@ def write_ppm_spread_decoy(cosFile, ppmFile, outFile):
         writer.writerow(ppmList)
         writer.writerow(decoyList)
 
-def mgf_library_upload(fileName):
-    #['PrecursorMz','FullUniModPeptideName','PrecursorCharge','ProductMz','LibraryIntensity','transition_group_id','ProteinName', 'Peaks'] #Peaks is a tuple of (mz, intensity, key)
-    #['pepmass', 'seq', None, ]
+def mgf_library_upload(fileName, numLibPeaks):
+
     libMGF = mgf.read(fileName)
     print('#Enter library dictionary upload: ')
     print('#'+str(timedelta(seconds=timer())))
     libDict = {}
     for spec in libMGF:
-#        print(spec)
-
         key = (spec['params']['pepmass'][0], spec['params']['seq'])
         charge = spec['params']['charge'][0]
         name = spec['params']['title']
@@ -609,11 +610,11 @@ def mgf_library_upload(fileName):
         else: protein = ''
         mz = spec['m/z array']
         intensity = spec['intensity array']
-        intensity = [x**0.5 for x in intensity]
+#        intensity = [x**0.5 for x in intensity]
         keyList = [key for x in mz]
         peaks = list(tuple(zip(mz,intensity,keyList)))
-        peaks.sort(key=lambda x:x[1])
-        peaks = peaks[-31:]
+        peaks.sort(key=lambda x:x[1],reverse=True)
+        peaks = peaks[:numLibPeaks]
         peaks.sort(key=lambda x:x[0])
         tempDict = {
             'PrecursorCharge':charge,
@@ -624,65 +625,28 @@ def mgf_library_upload(fileName):
         libDict[key] = tempDict
     return libDict
 
-def library_file_to_dict(inFile):
+def library_file_to_dict(inFile, numLibPeaks):
     fileType = inFile.split('.')[-1]
     if fileType == 'mgf':
-        lib = mgf_library_upload(inFile)
+        lib = mgf_library_upload(inFile, numLibPeaks)
     else:
-        lib = traml_library_upload_csv(inFile)
+        lib = traml_library_upload_csv(inFile, numLibPeaks)
     return lib
-'''
-    dictionary 'lib'
-        key - (float, string) tuple.
-            float - corresponding to the precursor m/z value of the library spectrum.
-            string - corresponding to the full UniMode peptide name/sequence represented by the library
-                    spectrum.
-        value - dictionary
-            'PrecursorCharge': int indicating the charge of the library spectrum.
-            'transition_group_id': string indicating library spectrum identifier.
-            'ProteinName': string indicating the name of the protein this peptide corresponds to
-            'Peaks': list of (float, float, tuple) tuples.
-                float 1 - representing the m/z of the peak.
-                float 2 - representing the intensity of the peak.
-                tuple - equal to the corresponding key in the 'lib' dictionary. This is to identify the
-                    library this peak belongs to, as they will be mixed with peaks from other libraries.
-'''
-#mgf_library_upload('Data/Input/human.faims.fixed.decoy.mgf')
-'''
 
-    # Library spectra file is read as a pandas dataframe - conditional statement allows for both .tsv and .csv files to be uploaded.
-    if fileName.endswith('.tsv'):
-        lib_df = pd.read_csv(fileName, sep='\t')
-    else:
-        lib_df = pd.read_csv(fileName)
+def write_csodiaq_fdr_outputs(inFile):
+    overallDf = pd.read_csv(inFile).sort_values('cosine', ascending=False).reset_index(drop=True)
+    decoyIndices = overallDf[overallDf['protein'].str.contains('DECOY')].index.tolist()
+    if len(decoyIndices < 10): print('all values above FDR 0.01'); pass
+    numDecoys = [0 for 0 in range(decoyIndices[0])]
+    for i in range(1,len(decoyIndices)): numDecoys += [i for j in range(decoyIndices[i]-decoyIndices[i-1])]
+    numDecoys.append()
+    FDRList = []
+    oldFDR = 0
+    oldI = 0
+    for ii in range(len(decoyIndices)):
 
-    # Print statement for timing the program
-    print("#Enter library dictionary upload: ")
-    print('#'+str(timedelta(seconds=timer())))
-
-    # Unneeded columns are removed from the dataframe
-    lib_df = lib_df.loc[:, lib_df.columns.intersection(['PrecursorMz','FullUniModPeptideName','PrecursorCharge','ProductMz','LibraryIntensity','transition_group_id','ProteinName'])]
-
-    # Normalize intensities by finding their square root
-    lib_df['LibraryIntensity'] = [x**0.5 for x in list(lib_df['LibraryIntensity'])]
-
-    # ID created to become the key of the resulting dictionary
-    lib_df['ID'] = list(zip(lib_df['PrecursorMz'].tolist(),lib_df['FullUniModPeptideName'].tolist()))
-
-    # M/z and intensity columns are grouped by ID to be later combined as a list of peaks included in the dictionary
-    mz_dict = lib_df.groupby("ID")['ProductMz'].apply(list).to_dict()
-    intensity_dict = lib_df.groupby("ID")['LibraryIntensity'].apply(list).to_dict()
-
-    # Dataframe is prepared for and converted to a dictionary
-    lib_df.drop_duplicates(subset="ID",inplace=True)
-    lib_df = lib_df.loc[:, lib_df.columns.intersection(['ID','PrecursorCharge','transition_group_id','ProteinName'])]
-    lib_df.set_index("ID", drop=True, inplace=True)
-    lib = lib_df.to_dict(orient="index")
-
-    # Peaks list is created and attached to the dictionary
-    for key in lib:
-        mz, intensity = (list(t) for t in zip(*sorted(zip(mz_dict[key], intensity_dict[key]))))
-        keyList = [key for i in range(len(mz))]
-        lib[key]['Peaks'] = list(tuple(zip(mz,intensity,keyList)))
-    return lib
-'''
+        tempFDRList = [oldFDR for f in range(oldI, decoyIndices[ii])]
+        FDRList += tempFDRList
+        oldFDR =
+    print(len(decoyIndices))
+    print(decoyIndices[:10])
