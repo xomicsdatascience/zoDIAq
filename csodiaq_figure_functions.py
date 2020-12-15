@@ -21,7 +21,7 @@ def write_meta_analysis_files(inFile):
     outFileProtein = re.sub('Data/Output/(.*).csv', r'Data/Figures/FDRGraphs/\1_FDRGraph_protein.csv', inFile)
     match_fdrSat_graph(overallDf, 0.01, outFileSpectrum)
     match_fdrSat_graph(overallDf, 0.01, outFilePeptide)
-    match_fdrSat_graph(overallDf, 0.01, outFileProtein)
+    match_fdrSat_graph(overallDf, 0.01, outFileProtein, DEBUG=True)
 '''
     peptideDf = overallDf.copy()
     peptideDf = peptideDf.drop_duplicates(subset='peptide', keep='first')
@@ -46,7 +46,6 @@ def match_fdrSat_graph(df, fdrMax, outFile, DEBUG=False):
 
     if DEBUG:
         print('****************************************')
-
         print(outFile)
         print('****************************************')
     fdrSat = []

@@ -8,6 +8,8 @@ import statistics
 import matplotlib.pyplot as plt
 import numpy as np
 from pyteomics import mgf
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
 
 # Template for function descriptions
 '''
@@ -57,7 +59,7 @@ def traml_library_upload_csv(fileName, numLibPeaks):
     lib_df = lib_df.loc[:, lib_df.columns.intersection(['PrecursorMz','FullUniModPeptideName','PrecursorCharge','ProductMz','LibraryIntensity','transition_group_id','ProteinName'])]
 
     # Normalize intensities by finding their square root
-#    lib_df['LibraryIntensity'] = [x**0.5 for x in list(lib_df['LibraryIntensity'])]
+    lib_df['LibraryIntensity'] = [x**0.5 for x in list(lib_df['LibraryIntensity'])]
 
     # ID created to become the key of the resulting dictionary
     lib_df['ID'] = list(zip(lib_df['PrecursorMz'].tolist(),lib_df['FullUniModPeptideName'].tolist()))
@@ -352,7 +354,7 @@ def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, ppmTol, ppmYO
             for spec in spectra:
 
                 # TEMP - Normalize intensities by finding their square root
-#                spec['intensity array'] = [x**0.5 for x in spec['intensity array']]
+                spec['intensity array'] = [x**0.5 for x in spec['intensity array']]
 
                 # Printing time taken to analyze every 100 spectra in csv format.
                 count += 1
@@ -415,9 +417,9 @@ Returns:
     'numDecoys' - int representing the number of rows represented by decoys specifically. NOTE: This return
         value is not currently used by the program, but is being kept here for possible future use.
 '''
-def fdr_calculation(df, FDRCutoff):
+def fdr_calculation(df, FDRCutoff, fdrList=False):
     # initializing the two return values at 0
-    fdrRows = 0
+    fdrValues = []
     numDecoys = 0
     df.fillna("nan",inplace=True)
     # for every row in the dataframe
@@ -434,12 +436,14 @@ def fdr_calculation(df, FDRCutoff):
         if curFDR > FDRCutoff:
 
             # if the number of rows has not yet reached the minimum number that allows for the FDR cutoff, 0 is returned instead.
-            if fdrRows < 1/FDRCutoff:
-                return 0, 0
-            return fdrRows, numDecoys-1
-        fdrRows += 1
-    return fdrRows, numDecoys-1
-
+            if len(fdrValues) < 1/FDRCutoff:
+                if fdrList: return [], 0
+                else: return 0, 0
+            if fdrList: return fdrValues, numDecoys-1
+            else: return len(fdrValues), numDecoys-1
+        fdrValues.append(curFDR)
+    if fdrList: return fdrValues, numDecoys-1
+    else: return len(fdrValues), numDecoys-1
 
 '''
 Function: find_best_matchNum_fdr()
@@ -531,6 +535,7 @@ def write_ppm_spread(cosFile, ppmFile, outFile):
         writer.writerow(ppmList)
 
 def find_offset_tol(data, histFile):
+
     hist, bins = np.histogram(data, bins=200)
 
     # Threshold frequency
@@ -552,9 +557,13 @@ def find_offset_tol(data, histFile):
     for i in range(min_i, len(hist)):
         if hist[i] == 0: max_i = i-1; break
 
-    offset = center[index_max]
-    tolerance = (center[max_i] - center[min_i])/2
+    offset2 = center[index_max]
+    tolerance2 = (center[max_i] - center[min_i])/2
+
+    offset = sum(data)/len(data)
+    tolerance = statistics.pstdev(data)*2
     if histFile:
+        plt.clf()
         plt.bar(center, hist2, align='center', width=width)
         plt.title("Gaussian Histogram")
         plt.xlabel("Value")
@@ -610,7 +619,7 @@ def mgf_library_upload(fileName, numLibPeaks):
         else: protein = ''
         mz = spec['m/z array']
         intensity = spec['intensity array']
-#        intensity = [x**0.5 for x in intensity]
+        intensity = [x**0.5 for x in intensity]
         keyList = [key for x in mz]
         peaks = list(tuple(zip(mz,intensity,keyList)))
         peaks.sort(key=lambda x:x[1],reverse=True)
@@ -633,20 +642,59 @@ def library_file_to_dict(inFile, numLibPeaks):
         lib = traml_library_upload_csv(inFile, numLibPeaks)
     return lib
 
-def write_csodiaq_fdr_outputs(inFile):
+def write_csodiaq_fdr_outputs(inFile, specFile, pepFile, protFile):
     overallDf = pd.read_csv(inFile).sort_values('cosine', ascending=False).reset_index(drop=True)
-    decoyIndices = overallDf[overallDf['protein'].str.contains('DECOY')].index.tolist()
-    if len(decoyIndices < 10): print('all values above FDR 0.01'); pass
-    numDecoys = [0 for 0 in range(decoyIndices[0])]
-    for i in range(1,len(decoyIndices)): numDecoys += [i for j in range(decoyIndices[i]-decoyIndices[i-1])]
-    numDecoys.append()
-    FDRList = []
-    oldFDR = 0
-    oldI = 0
-    for ii in range(len(decoyIndices)):
 
-        tempFDRList = [oldFDR for f in range(oldI, decoyIndices[ii])]
-        FDRList += tempFDRList
-        oldFDR =
-    print(len(decoyIndices))
-    print(decoyIndices[:10])
+    spectralDf = add_fdr_to_csodiaq_output(overallDf)
+
+    proteinDf = add_fdr_to_csodiaq_output(overallDf, filterType='protein')
+
+    proteinBestNum = min(set(proteinDf['shared']))
+    tempPeptideDf = add_fdr_to_csodiaq_output(overallDf, filterType='peptide', bestMatchNum=proteinBestNum)
+    peptideDf = add_fdr_to_csodiaq_output(overallDf, filterType='peptide')
+
+    proteinDict = proteinDf.set_index('protein').T.to_dict()
+    proteinDf = tempPeptideDf.copy()
+    proteinCosine = []
+    proteinFDR = []
+    removables = []
+    for i in range(len(proteinDf)):
+        protein = proteinDf['protein'].loc[i]
+        if protein in proteinDict:
+            proteinCosine.append(proteinDict[protein]['cosine'])
+            proteinFDR.append(proteinDict[protein]['proteinFDR'])
+        else:
+            removables.append(i)
+
+    proteinDf = proteinDf.drop(proteinDf.index[removables]).reset_index(drop=True)
+    proteinDf['proteinCosine'] = proteinCosine
+    proteinDf['proteinFDR'] = proteinFDR
+
+    proteinDf = proteinDf.sort_values(['proteinCosine','protein', 'cosine'], ascending=[False,False,False]).reset_index(drop=True)
+    tempDf = proteinDf.drop_duplicates(subset='protein', keep='first').reset_index(drop=True)
+
+    spectralDf.to_csv(specFile)
+    peptideDf.to_csv(pepFile)
+    proteinDf.to_csv(protFile)
+
+def add_fdr_to_csodiaq_output(df, filterType='spectral', bestMatchNum=0, DEBUG=True):
+
+    if not bestMatchNum:
+        matches = sorted(list(set(df['shared'])))
+        matchNumHits = []
+        for m in matches:
+            tempDf = df[df['shared'] >= m].reset_index(drop=True)
+            if filterType != 'spectral': tempDf = tempDf.drop_duplicates(subset=filterType, keep='first').reset_index(drop=True)
+            fdrRows, dec = fdr_calculation(tempDf, 0.01)
+            matchNumHits.append(fdrRows)
+        bestMatchNum = matches[matchNumHits.index(max(matchNumHits))]
+
+    tempDf = df[df['shared'] >= bestMatchNum].reset_index(drop=True)
+    if filterType != 'spectral': tempDf = tempDf.drop_duplicates(subset=filterType, keep='first').reset_index(drop=True)
+
+    fdrList, decoyNum = fdr_calculation(tempDf, 0.01, fdrList=True)
+    tempDf = tempDf.truncate(after=len(fdrList)-1)
+    tempDf[filterType + 'FDR'] = fdrList
+    tempDf = tempDf.reset_index(drop=True)
+
+    return tempDf

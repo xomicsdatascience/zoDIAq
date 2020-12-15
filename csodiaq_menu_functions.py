@@ -82,7 +82,6 @@ def write_ppm_spread(inFile, corrected=0):
     files = list(os.listdir('Data/Output'))
     for x in files:
         if tag in x: inFile = 'Data/Output/'+x
-    print(inFile)
     cbf.write_ppm_spread(inFile, ppmFile, outFile)
     print('#Complete')
     print('#'+str(timedelta(seconds=timer())))
@@ -121,5 +120,10 @@ def write_ppm_spread_decoy(inFile):
     print('#Complete')
     print('#'+str(timedelta(seconds=timer())))
 
-def write_csodiaq_fdr_outputs(inFile):
-    cbf.write_csodiaq_fdr_outputs(inFile)
+def write_csodiaq_fdr_outputs(inFile, corrected=False):
+    if corrected: inFile = re.sub('(.*).csv', r'\1_corrected_2SD.csv', inFile)
+    spectralFile = re.sub('(.*).csv', r'\1_spectralFDR.csv', inFile)
+    peptideFile = re.sub('(.*).csv', r'\1_peptideFDR.csv', inFile)
+    proteinFile = re.sub('(.*).csv', r'\1_proteinFDR.csv', inFile)
+
+    cbf.write_csodiaq_fdr_outputs(inFile, spectralFile, peptideFile, proteinFile)
