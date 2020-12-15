@@ -122,8 +122,8 @@ def write_ppm_spread_decoy(inFile):
 
 def write_csodiaq_fdr_outputs(inFile, corrected=False):
     if corrected: inFile = re.sub('(.*).csv', r'\1_corrected_2SD.csv', inFile)
-    spectralFile = re.sub('(.*).csv', r'\1_spectralFDR.csv', inFile)
-    peptideFile = re.sub('(.*).csv', r'\1_peptideFDR.csv', inFile)
-    proteinFile = re.sub('(.*).csv', r'\1_proteinFDR.csv', inFile)
+    spectralFile = re.sub('(.*).csv', r'\1_spectralFDR_delete.csv', inFile)
+    peptideFile = re.sub('(.*).csv', r'\1_peptideFDR_delete.csv', inFile)
+    proteinFile = re.sub('(.*).csv', r'\1_proteinFDR_delete.csv', inFile)
 
     cbf.write_csodiaq_fdr_outputs(inFile, spectralFile, peptideFile, proteinFile)

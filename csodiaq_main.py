@@ -95,13 +95,13 @@ menu.write_ppm_offset_tolerance(outFile, corrected=True, hist=True)
 
 #menu.write_csodiaq_fdr_outputs(outFile, corrected=True)
 
-caleb_peptide_df = pd.read_csv('Data/Output/csodiaq_lib-human-5peaks-noloss-pt2mz-400to2000_exp-n1b_corrected_2SD_peptideFDR.csv')
-caleb_protein_df = pd.read_csv('Data/Output/csodiaq_lib-human-5peaks-noloss-pt2mz-400to2000_exp-n1b_corrected_2SD_proteinFDR.csv')
+caleb_peptide_df = pd.read_csv('Data/Output/csodiaq_lib-human-5peaks-noloss-pt2mz-400to2000_exp-n1b_corrected_2SD_peptideFDR_delete.csv')
+caleb_protein_df = pd.read_csv('Data/Output/csodiaq_lib-human-5peaks-noloss-pt2mz-400to2000_exp-n1b_corrected_2SD_proteinFDR_delete.csv')
 jesse_peptide_df = pd.read_csv('Data/Input/peptide_matches_Jesse.csv')
 jesse_protein_df = pd.read_csv('Data/Input/protein_matches_Jesse.csv')
 
 caleb_peptides = sorted(list(caleb_peptide_df['peptide']))
-caleb_proteins = sorted(list(set(caleb_protein_df['protein'])),reverse=True)
+caleb_proteins = sorted(list(set(caleb_protein_df['leadingProtein'])),reverse=True)
 jesse_peptides = sorted(list(jesse_peptide_df['Peptide']))
 jesse_proteins = sorted(list(jesse_protein_df['Protein']))
 
@@ -131,12 +131,11 @@ for i in range(len(jesse_peptides)):
 
 print(len(caleb_proteins))
 print(len(set(caleb_proteins)))
+caleb_proteins = [re.sub('(DECOY_0_)?(sp\|\w{6}\|)', r'\1\2', x) for x in caleb_proteins]
+jesse_proteins = [re.sub('(.*)(DECOY_0_)?(sp\|\w{6}\|)(.*)', r'\2\3', x) for x in jesse_proteins]
+for x in sorted(caleb_proteins): print(x)
 
-caleb_proteins = [re.sub('(.*)\|(.*)\|(.*_HUMAN)(.*)', r'\2_\3', x) for x in caleb_proteins]
-jesse_proteins = [re.sub('(.*)\|(.*)\|(.*_HUMAN)(.*)', r'\2_\3', x) for x in jesse_proteins]
-
-print(caleb_proteins[4])
-
+print('--------------------')
 protDict = {}
 for x in caleb_proteins:
     if x not in protDict:

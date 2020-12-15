@@ -8,6 +8,9 @@ import statistics
 import matplotlib.pyplot as plt
 import numpy as np
 from pyteomics import mgf
+import idpicker as idp
+import re
+
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 
@@ -645,30 +648,69 @@ def library_file_to_dict(inFile, numLibPeaks):
 def write_csodiaq_fdr_outputs(inFile, specFile, pepFile, protFile):
     overallDf = pd.read_csv(inFile).sort_values('cosine', ascending=False).reset_index(drop=True)
 
+    count = 0
+
+
+    print(1)
     spectralDf = add_fdr_to_csodiaq_output(overallDf)
 
-    proteinDf = add_fdr_to_csodiaq_output(overallDf, filterType='protein')
-
-    proteinBestNum = min(set(proteinDf['shared']))
-    tempPeptideDf = add_fdr_to_csodiaq_output(overallDf, filterType='peptide', bestMatchNum=proteinBestNum)
+    print(2)
     peptideDf = add_fdr_to_csodiaq_output(overallDf, filterType='peptide')
 
-    proteinDict = proteinDf.set_index('protein').T.to_dict()
+    print(3)
+    # getting valid proteins
+    peptideProteinConnections = []
+    for i in range(len(peptideDf)):
+        peptide = peptideDf['peptide'].loc[i]
+        proteinGroup = peptideDf['protein'].loc[i]
+        proteins = re.findall('(DECOY_0_)?(sp\|\w{6}\|)', proteinGroup)
+        for pro in proteins:
+            protein = pro[0] + pro[1]
+            peptideProteinConnections.append((peptide,protein))
+    verifiedProteinList = idp.find_valid_proteins(peptideProteinConnections)
+
+    print(len(verifiedProteinList))
+
+
+    print(4)
+    # for each protein in the verified list, add it to a new dataframe with the protein in the "leading protein" column
+    tempProtDf = add_leading_protein_column(peptideDf, verifiedProteinList)
+    tempProtDf.to_csv(protFile)
+
+    print(5)
+    proteinDf = add_fdr_to_csodiaq_output(tempProtDf, filterType='leadingProtein', DEBUG=True)
+
+    print(6)
+    proteinBestNum = min(set(proteinDf['shared']))
+    tempPeptideDf = add_fdr_to_csodiaq_output(overallDf, filterType='peptide', bestMatchNum=proteinBestNum)
+
+    proteinDict = proteinDf.set_index('leadingProtein').T.to_dict()
     proteinDf = tempPeptideDf.copy()
+    proteinDf = add_leading_protein_column(proteinDf, verifiedProteinList)
+    print(7)
+    proteinDf.to_csv(protFile)
+
     proteinCosine = []
     proteinFDR = []
     removables = []
     for i in range(len(proteinDf)):
-        protein = proteinDf['protein'].loc[i]
+        protein = proteinDf['leadingProtein'].loc[i]
+        print('--------------')
+        print('protein: ' + str(protein))
+        print('index: '+str(i))
+
         if protein in proteinDict:
             proteinCosine.append(proteinDict[protein]['cosine'])
-            proteinFDR.append(proteinDict[protein]['proteinFDR'])
+            proteinFDR.append(proteinDict[protein]['leadingProteinFDR'])
+            print('cosine: '+str(proteinDict[protein]['cosine']))
+            print('leadingProteinFDR: '+str(proteinDict[protein]['leadingProteinFDR']))
         else:
             removables.append(i)
 
     proteinDf = proteinDf.drop(proteinDf.index[removables]).reset_index(drop=True)
     proteinDf['proteinCosine'] = proteinCosine
-    proteinDf['proteinFDR'] = proteinFDR
+    proteinDf['leadingProteinFDR'] = proteinFDR
+    print(8)
 
     proteinDf = proteinDf.sort_values(['proteinCosine','protein', 'cosine'], ascending=[False,False,False]).reset_index(drop=True)
     tempDf = proteinDf.drop_duplicates(subset='protein', keep='first').reset_index(drop=True)
@@ -676,6 +718,21 @@ def write_csodiaq_fdr_outputs(inFile, specFile, pepFile, protFile):
     spectralDf.to_csv(specFile)
     peptideDf.to_csv(pepFile)
     proteinDf.to_csv(protFile)
+
+def add_leading_protein_column(df, verifiedProteins):
+    tempDf = pd.DataFrame(columns = df.columns)
+    leadingProteins = []
+    for i in range(len(df)):
+        proteinGroup = df['protein'].loc[i]
+        proteins = re.findall('(DECOY_0_)?(sp\|\w{6}\|)', proteinGroup)
+        for pro in proteins:
+            protein = pro[0] + pro[1]
+            if protein in verifiedProteins:
+                tempDf = tempDf.append(df.loc[i])
+                leadingProteins.append(protein)
+    tempDf['leadingProtein'] = leadingProteins
+    tempDf = tempDf.reset_index(drop=True)
+    return tempDf
 
 def add_fdr_to_csodiaq_output(df, filterType='spectral', bestMatchNum=0, DEBUG=True):
 
@@ -698,3 +755,15 @@ def add_fdr_to_csodiaq_output(df, filterType='spectral', bestMatchNum=0, DEBUG=T
     tempDf = tempDf.reset_index(drop=True)
 
     return tempDf
+
+
+'''
+    for x in verifiedProteinList:
+        if 'DECOY' not in x:
+            count += 1
+            if count < 10: print(x)
+        if 'DECOY' in x:
+            decoyCount += 1
+            if decoyCount < 10: print(x)
+        if decoyCount > 10 and count > 10: break
+'''
