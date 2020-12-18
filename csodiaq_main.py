@@ -75,12 +75,12 @@ outFile = 'Data/Output/csodiaq_lib-human-5peaks-noloss-pt2mz-400to2000_exp-n1b.c
 ##libFile = 'Data/Input/human_31peaks_noloss_400to2000_pt2mz.tsv'
 ##outFile = 'Data/Output/csodiaq_lib-human-31peaks-noloss-pt2mz-400to2000_exp-n1b.csv'
 
-## full - 31 to 20 test - no loss, pt2mz, 400to2000
-##libFile = 'Data/Input/human_31peaks_noloss_400to2000_pt2mz.tsv'
-##outFile = 'Data/Output/csodiaq_lib-human-31to20peaks-noloss-pt2mz-400to2000_exp-n1b.csv'
+## full - 20 to 5 test - no loss, pt2mz, 400to2000
+#libFile = 'Data/Input/human_20peaks_noloss_400to2000_pt2mz.tsv'
+#outFile = 'Data/Output/csodiaq_lib-human-20to5peaks-noloss-pt2mz-400to2000_exp-n1b.csv'
 
 '''
-#menu.write_csodiaq_output(libFile, expFile, outFile)
+menu.write_csodiaq_output(libFile, expFile, outFile)
 menu.filter_optimal_match_csodiaq_output(outFile)
 menu.write_ppm_spread(outFile)
 menu.write_ppm_offset_tolerance(outFile, hist=True)
@@ -90,7 +90,8 @@ menu.filter_optimal_match_csodiaq_output(outFile, corrected=True)
 menu.write_ppm_spread(outFile, corrected=True)
 menu.write_ppm_offset_tolerance(outFile, corrected=True, hist=True)
 '''
-#menu.write_csodiaq_fdr_outputs(outFile)
+
+menu.write_csodiaq_fdr_outputs(outFile)
 menu.write_csodiaq_fdr_outputs(outFile, corrected=True)
 
 #figure.create_venn_diagrams()
