@@ -54,7 +54,7 @@ def filter_optimal_match_csodiaq_output(inFile, corrected=0):
 
     if corrected: inFile = re.sub('(.*).csv', r'\1_corrected.csv', inFile)
     df = pd.read_csv(inFile).sort_values('cosine', ascending=False).reset_index(drop=True)
-    bestMatchNum, bestFDR = cbf.find_best_matchNum_fdr(df, 0.01)
+    bestMatchNum, bestFDR = cbf.find_best_matchNum_fdr(df)
 
     outFile = re.sub('(.*).csv', r'\1_filteredBestMatch'+str(bestMatchNum)+'.csv', inFile)
     df = df[df['shared'] >= bestMatchNum].reset_index(drop=True)
@@ -114,7 +114,9 @@ Parameters:
 Returns:
 '''
 def write_csodiaq_fdr_outputs(inFile, corrected=False):
-    if corrected: inFile = re.sub('(.*).csv', r'\1_corrected_2SD.csv', inFile)
+    print('#enter csodiaq FDR Calculation:')
+    print('#'+str(timedelta(seconds=timer())))
+    if corrected: inFile = re.sub('(.*).csv', r'\1_corrected.csv', inFile)
     spectralFile = re.sub('(.*).csv', r'\1_spectralFDR.csv', inFile)
     peptideFile = re.sub('(.*).csv', r'\1_peptideFDR.csv', inFile)
     proteinFile = re.sub('(.*).csv', r'\1_proteinFDR.csv', inFile)

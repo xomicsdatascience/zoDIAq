@@ -537,7 +537,7 @@ Returns:
     'bestFDR' - int representing the number of rows that are kept after filtering for both peak matches equal to
         and above bestMatchNum and values above the FDR cutoff.
 '''
-def find_best_matchNum_fdr(df, FDRCutoff):
+def find_best_matchNum_fdr(df):
     # list is created representing every unique number of matches represented in the dataframe
     matches = sorted(list(set(df['shared'])))
     bestMatchNum = 0
@@ -550,7 +550,7 @@ def find_best_matchNum_fdr(df, FDRCutoff):
         tempDf = df[df['shared'] >= m].reset_index(drop=True)
 
         # The number of rows kept after filtering for the FDR cutoff is calculated.
-        fdrLength, decoys = fdr_calculation(tempDf, FDRCutoff=FDRCutoff)
+        fdrLength, decoys = fdr_calculation(tempDf)
 
         # The number of matches with the highest number of kept rows is considered the optimal number of matches allowed.
         if fdrLength > bestFDR:
@@ -719,7 +719,7 @@ def write_csodiaq_fdr_outputs(inFile, specFile, pepFile, protFile):
     tempProtDf = add_leading_protein_column(peptideDf, verifiedProteinDict)
 
     # Protein FDR is calculated using the highest-scoring peptide for each protein group.
-    proteinDf = add_fdr_to_csodiaq_output(tempProtDf, filterType='leadingProtein', DEBUG=True)
+    proteinDf = add_fdr_to_csodiaq_output(tempProtDf, filterType='leadingProtein')
 
     # Because the optimal minimum number of allowed peak matches can differ between overall peptide and protein FDR calculations,
     #   the peptide FDR must be recalculated using the optimal protein minimum number for inclusion with the protein FDR output
