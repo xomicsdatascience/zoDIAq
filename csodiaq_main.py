@@ -9,20 +9,20 @@ import numpy as np
 import re
 
 expDict = {
-#'exp-n1b':'Data/Input/20190411_DI2A_1to16_n1b.mzXML',
+'exp-n1b':'Data/Input/20190411_DI2A_1to16_n1b.mzXML',
 'exp-MCF7':'Data/Input/20190405_MCF7_FAIMS_18_2.mzXML'
 }
 
 libDict = {
-#'lib-human-noloss-400to2000-pt2mz-':'Data/Input/human_31peaks_noloss_400to2000_pt2mz.tsv',
+'lib-human-noloss-400to2000-pt2mz-':'Data/Input/human_31peaks_noloss_400to2000_pt2mz.tsv',
 'lib-faims-mgf-':'Data/Input/human.faims.fixed.decoy.mgf'
 }
 
 libPeaks = [
-#    5,
-#    6,
-#    10,
-#    20,
+    5,
+    6,
+    10,
+    20,
     31
 ]
 
