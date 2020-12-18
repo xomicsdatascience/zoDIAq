@@ -439,7 +439,7 @@ def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, ppmTol, ppmYO
                 count += 1
                 if count % 100 == 0:
                     time = timer()
-                    print(str(count)+','+str(time-prevtime)+','+str(len(spec['m/z array']))+','+str(spec['precursorMz'][0]['precursorMz'])+','+str(len(libKeys)))
+                    print(str(count)+','+str(time-prevtime)+','+str(len(spec['m/z array']))+','+str(spec['precursorMz'][0]['precursorMz'])+','+str(len(libKeys)+','+outFile))
                     prevtime = time
 
                 # Only library spectra with a precursor mass that falls within the target window of the experimental spectrum are included. See lib_mz_match_query_window() function description for more details.
@@ -456,7 +456,7 @@ def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, ppmTol, ppmYO
                     cosine = cosine_similarity(cosDict[key])
                     ionCount = sum([ spec['intensity array'][j]+ppm_offset(spec['intensity array'][j],ppmYOffset) for j in ionDict[key] ])
                     # Library spectra that had too few matching peaks are excluded. numPeakMatch variable determines the threshold.
-                    if countDict[key] > 3:
+                    if countDict[key] > 2:
                         temp = [
                             expSpectraFile, #fileName
                             spec['num'], #scan

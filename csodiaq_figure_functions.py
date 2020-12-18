@@ -15,6 +15,7 @@ Parameters:
 Returns:
 '''
 def write_meta_analysis_files(inFile):
+    if corrected: inFile = re.sub('(.*).csv', r'\1_corrected.csv', inFile)
     overallDf = pd.read_csv(inFile).sort_values('cosine', ascending=False)
     overallDf = overallDf.reset_index(drop=True)
 
@@ -56,22 +57,19 @@ def match_fdrSat_graph(df, fdrMax, outFile, DEBUG=False):
     subsetDecoys = []
     totalDecoys = []
     for m in matches:
-        tempDf = df[df['shared'] >= m].reset_index(drop=True)
 
-        if 'peptide' in outFile: tempDf = tempDf.drop_duplicates(subset='peptide', keep='first'); tempDf = tempDf.reset_index(drop=True)
-        elif 'protein' in outFile: tempDf = tempDf.drop_duplicates(subset='protein', keep='first'); tempDf = tempDf.reset_index(drop=True)
+        if 'peptide' in outFile: tempDf = cbf.add_fdr_to_csodiaq_output(df, filterType='peptide', bestMatchNum=m)
+        elif 'protein' in outFile: tempDf = cbf.generate_protein_csodiaq_fdr_output(df, bestMatchNum=m); tempDf = tempDf.drop_duplicates(subset='leadingProtein', keep='first'); tempDf = tempDf.reset_index(drop=True)
+        else: tempDf = cbf.add_fdr_to_csodiaq_output(df, bestMatchNum=m)
 
-        fdrRows, dec = cbf.fdr_calculation(tempDf, 0.01)
-
-        numPeaks.append(len(tempDf))
-        fdrSat.append(fdrRows)
-        subsetDecoys.append(dec)
-        totalDecoys.append(len( [ x for x in list(tempDf['protein']) if 'DECOY' in x ] ))
-        if fdrRows != 0: cos = tempDf['cosine'].loc[fdrRows-1]
+        dec = [x for x in tempDf['protein'] if 'DECOY' in x]
+        fdrSat.append(len(tempDf))
+        subsetDecoys.append(len(dec))
+        if len(tempDf) != 0: cos = tempDf['cosine'].loc[len(tempDf)-1]
         else: cos = 0
         cosine.append(cos)
 
-    graphDf = pd.DataFrame({'matches':matches, 'FDRCutoff': fdrSat, 'total': numPeaks, 'cosine': cosine, 'FDRDecoys': subsetDecoys, 'totalDecoys': totalDecoys})
+    graphDf = pd.DataFrame({'matches':matches, 'FDRCutoff': fdrSat, 'cosine': cosine, 'FDRDecoys': subsetDecoys})
     if DEBUG:
         print('----------------------------')
         print(graphDf)
@@ -143,8 +141,8 @@ def draw_histogram_decoy(inFile):
     #plt.savefig(outFile)
 
 def create_venn_diagrams():
-    caleb_peptide_df = pd.read_csv('Data/Output/csodiaq_lib-human-5peaks-noloss-pt2mz-400to2000_exp-n1b_corrected_2SD_peptideFDR_delete.csv')
-    caleb_protein_df = pd.read_csv('Data/Output/csodiaq_lib-human-5peaks-noloss-pt2mz-400to2000_exp-n1b_corrected_2SD_proteinFDR_delete.csv')
+    caleb_peptide_df = pd.read_csv('Data/Output/csodiaq_lib-human-5peaks-noloss-pt2mz-400to2000_exp-n1b_corrected_peptideFDR.csv')
+    caleb_protein_df = pd.read_csv('Data/Output/csodiaq_lib-human-5peaks-noloss-pt2mz-400to2000_exp-n1b_corrected_proteinFDR.csv')
     jesse_peptide_df = pd.read_csv('Data/Input/peptide_matches_Jesse.csv')
     jesse_protein_df = pd.read_csv('Data/Input/protein_matches_Jesse.csv')
 
