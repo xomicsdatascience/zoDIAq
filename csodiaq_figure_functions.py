@@ -6,6 +6,8 @@ from statistics import pstdev, median
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
+from matplotlib_venn import venn2
+
 '''
 Function:
 Purpose:
@@ -139,3 +141,62 @@ def draw_histogram_decoy(inFile):
     outFile = re.sub('Data/Output/(.*).csv', r'Data/Figures/\1_histogram_decoys.png', inFile)
     plt.show()
     #plt.savefig(outFile)
+
+def create_venn_diagrams():
+    caleb_peptide_df = pd.read_csv('Data/Output/csodiaq_lib-human-5peaks-noloss-pt2mz-400to2000_exp-n1b_corrected_2SD_peptideFDR_delete.csv')
+    caleb_protein_df = pd.read_csv('Data/Output/csodiaq_lib-human-5peaks-noloss-pt2mz-400to2000_exp-n1b_corrected_2SD_proteinFDR_delete.csv')
+    jesse_peptide_df = pd.read_csv('Data/Input/peptide_matches_Jesse.csv')
+    jesse_protein_df = pd.read_csv('Data/Input/protein_matches_Jesse.csv')
+
+    caleb_peptides = sorted(list(caleb_peptide_df['peptide']))
+    caleb_proteins = sorted(list(set(caleb_protein_df['leadingProtein'])),reverse=True)
+    jesse_peptides = sorted(list(jesse_peptide_df['Peptide']))
+    jesse_proteins = sorted(list(jesse_protein_df['Protein']))
+
+    #print(caleb_peptides[:10])
+    #print(jesse_peptides[:10])
+    #print(caleb_proteins[:10])
+    #print(jesse_proteins[:10])
+
+    #UniMod:1 = +42.01057
+    #UniMod:4 = +57.0215
+    #UniMod:5 = +43.0058
+    #UniMod:35 = +15.9949
+
+
+    unimodDict = {
+        '(UniMod:4)':'+57.0215',
+        '(UniMod:5)':'+42.01057',
+        '(UniMod:35)':'+15.9949'
+    }
+
+    for i in range(len(caleb_peptides)):
+        caleb_peptides[i] = re.sub('\(UniMod:\d+\)','',caleb_peptides[i])
+
+    caleb_peptides = list(set(caleb_peptides))
+    for i in range(len(jesse_peptides)):
+        jesse_peptides[i] = re.sub('\+\d+\.\d+','',jesse_peptides[i])
+    jesse_peptides = list(set(jesse_peptides))
+
+
+    #print(len(caleb_proteins))
+    #print(len(set(caleb_proteins)))
+    caleb_proteins1 = [re.sub('(\d+/)(DECOY_0_)?(sp\|\w{6}\|)', r'\2\3', x) for x in caleb_proteins if (x[0]+x[1])=='1/']
+    caleb_proteins = caleb_proteins1 + [x for x in caleb_proteins if (x[0]+x[1])!='1/']
+    jesse_proteins = [re.sub('(.*)(DECOY_0_)?(sp\|\w{6}\|)(.*)', r'\2\3', x) for x in jesse_proteins]
+    #for x in sorted(caleb_proteins): print(x)
+
+    #print(len(caleb_proteins))
+    #print(len(set(caleb_proteins)))
+    #for x in sorted(caleb_peptides): print(x)
+    #for i in range(10): print('-----------------')
+    #for x in sorted(jesse_peptides): print(x)
+    venn2([set(caleb_peptides),set(jesse_peptides)], set_labels = ["csoDIAq", "MSPLIT-DIA"])
+    plt.title('Comparing Peptide Identification Outputs (stripped sequences)\n')
+    plt.savefig('peptide_comparison_venn.png')
+
+    plt.clf()
+
+    venn2([set(caleb_proteins),set(jesse_proteins)], set_labels = ["csoDIAq", "MSPLIT-DIA"])
+    plt.title('Comparing Protein Identification Outputs\n')
+    plt.savefig('protein_comparison_venn.png')

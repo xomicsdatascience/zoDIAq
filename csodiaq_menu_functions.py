@@ -107,23 +107,16 @@ def write_ppm_offset_tolerance(inFile, corrected=0, hist=False):
         writer.writerow(['offset','tolerance'])
         writer.writerow([offset, tolerance])
 
-def write_ppm_spread_decoy(inFile):
-    print('#enter csodiaq ppm spread file creation:')
-    print('#'+str(timedelta(seconds=timer())))
-
-    tag = re.sub('Data/Output/(.*).csv', r'\1', inFile)
-    r = re.compile(tag+'_filteredBestMatch')
-    ppmFile = re.sub('(.*).csv', r'\1_unfilteredPpmPerRow.csv', inFile)
-    decoyFile = re.sub('(.*).csv', r'\1_ppmSpreadDecoy.csv', inFile)
-
-    cbf.write_ppm_spread_decoy(inFile, ppmFile, decoyFile)
-    print('#Complete')
-    print('#'+str(timedelta(seconds=timer())))
-
+'''
+Function:
+Purpose:
+Parameters:
+Returns:
+'''
 def write_csodiaq_fdr_outputs(inFile, corrected=False):
     if corrected: inFile = re.sub('(.*).csv', r'\1_corrected_2SD.csv', inFile)
-    spectralFile = re.sub('(.*).csv', r'\1_spectralFDR_delete.csv', inFile)
-    peptideFile = re.sub('(.*).csv', r'\1_peptideFDR_delete.csv', inFile)
-    proteinFile = re.sub('(.*).csv', r'\1_proteinFDR_delete.csv', inFile)
+    spectralFile = re.sub('(.*).csv', r'\1_spectralFDR.csv', inFile)
+    peptideFile = re.sub('(.*).csv', r'\1_peptideFDR.csv', inFile)
+    proteinFile = re.sub('(.*).csv', r'\1_proteinFDR.csv', inFile)
 
     cbf.write_csodiaq_fdr_outputs(inFile, spectralFile, peptideFile, proteinFile)

@@ -6,7 +6,6 @@ import os
 from pyteomics import mgf
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib_venn import venn2
 import re
 
 # experimental file
@@ -87,73 +86,12 @@ menu.filter_optimal_match_csodiaq_output(outFile)
 menu.write_ppm_spread(outFile)
 menu.write_ppm_offset_tolerance(outFile, hist=True)
 
-menu.write_csodiaq_output(libFile, expFile, outFile, corrected=True)
-menu.filter_optimal_match_csodiaq_output(outFile, corrected=True)
-menu.write_ppm_spread(outFile, corrected=True)
-menu.write_ppm_offset_tolerance(outFile, corrected=True, hist=True)
+#menu.write_csodiaq_output(libFile, expFile, outFile, corrected=True)
+#menu.filter_optimal_match_csodiaq_output(outFile, corrected=True)
+#menu.write_ppm_spread(outFile, corrected=True)
+#menu.write_ppm_offset_tolerance(outFile, corrected=True, hist=True)
 '''
 
-#menu.write_csodiaq_fdr_outputs(outFile, corrected=True)
+menu.write_csodiaq_fdr_outputs(outFile, corrected=True)
 
-caleb_peptide_df = pd.read_csv('Data/Output/csodiaq_lib-human-5peaks-noloss-pt2mz-400to2000_exp-n1b_corrected_2SD_peptideFDR_delete.csv')
-caleb_protein_df = pd.read_csv('Data/Output/csodiaq_lib-human-5peaks-noloss-pt2mz-400to2000_exp-n1b_corrected_2SD_proteinFDR_delete.csv')
-jesse_peptide_df = pd.read_csv('Data/Input/peptide_matches_Jesse.csv')
-jesse_protein_df = pd.read_csv('Data/Input/protein_matches_Jesse.csv')
-
-caleb_peptides = sorted(list(caleb_peptide_df['peptide']))
-caleb_proteins = sorted(list(set(caleb_protein_df['leadingProtein'])),reverse=True)
-jesse_peptides = sorted(list(jesse_peptide_df['Peptide']))
-jesse_proteins = sorted(list(jesse_protein_df['Protein']))
-
-print(caleb_peptides[:10])
-print(jesse_peptides[:10])
-print(caleb_proteins[:10])
-print(jesse_proteins[:10])
-
-#UniMod:1 = +42.01057
-#UniMod:4 = +57.0215
-#UniMod:5 = +43.0058
-#UniMod:35 = +15.9949
-
-
-unimodDict = {
-    '(UniMod:4)':'+57.0215',
-    '(UniMod:5)':'+42.01057',
-    '(UniMod:35)':'+15.9949'
-}
-
-for i in range(len(caleb_peptides)):
-    caleb_peptides[i] = re.sub('\(UniMod:\d+\)','',caleb_peptides[i])
-
-for i in range(len(jesse_peptides)):
-    jesse_peptides[i] = re.sub('\+\d+\.\d+','',jesse_peptides[i])
-
-
-print(len(caleb_proteins))
-print(len(set(caleb_proteins)))
-caleb_proteins = [re.sub('(DECOY_0_)?(sp\|\w{6}\|)', r'\1\2', x) for x in caleb_proteins]
-jesse_proteins = [re.sub('(.*)(DECOY_0_)?(sp\|\w{6}\|)(.*)', r'\2\3', x) for x in jesse_proteins]
-for x in sorted(caleb_proteins): print(x)
-
-print('--------------------')
-protDict = {}
-for x in caleb_proteins:
-    if x not in protDict:
-        protDict[x] = 1
-    else:
-        protDict[x] += 1
-for x in protDict:
-    if protDict[x] > 1: print(x)
-
-print(len(caleb_proteins))
-print(len(set(caleb_proteins)))
-
-venn2([set(caleb_peptides),set(jesse_peptides)], set_labels = ["Caleb's Output", "Jesse's Output"])
-plt.title('Comparing Peptide Identification Outputs\n')
-plt.savefig('peptide_comparison_venn.png')
-
-plt.clf()
-
-venn2([set(caleb_proteins),set(jesse_proteins)], set_labels = ["Caleb's Output", "Jesse's Output"])
-plt.title('Comparing Protein Identification Outputs\n')
-plt.savefig('protein_comparison_venn.png')
+#figure.create_venn_diagrams()
