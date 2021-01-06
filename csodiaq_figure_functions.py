@@ -14,7 +14,7 @@ Purpose:
 Parameters:
 Returns:
 '''
-def write_meta_analysis_files(inFile):
+def write_meta_analysis_files(inFile, corrected=False):
     if corrected: inFile = re.sub('(.*).csv', r'\1_corrected.csv', inFile)
     overallDf = pd.read_csv(inFile).sort_values('cosine', ascending=False)
     overallDf = overallDf.reset_index(drop=True)
@@ -24,7 +24,7 @@ def write_meta_analysis_files(inFile):
     outFileProtein = re.sub('Data/Output/(.*).csv', r'Data/Figures/FDRGraphs/\1_FDRGraph_protein.csv', inFile)
     match_fdrSat_graph(overallDf, 0.01, outFileSpectrum)
     match_fdrSat_graph(overallDf, 0.01, outFilePeptide)
-    match_fdrSat_graph(overallDf, 0.01, outFileProtein, DEBUG=True)
+    match_fdrSat_graph(overallDf, 0.01, outFileProtein)
 '''
     peptideDf = overallDf.copy()
     peptideDf = peptideDf.drop_duplicates(subset='peptide', keep='first')
@@ -141,8 +141,8 @@ def draw_histogram_decoy(inFile):
     #plt.savefig(outFile)
 
 def create_venn_diagrams():
-    caleb_peptide_df = pd.read_csv('Data/Output/csodiaq_lib-human-5peaks-noloss-pt2mz-400to2000_exp-n1b_corrected_peptideFDR.csv')
-    caleb_protein_df = pd.read_csv('Data/Output/csodiaq_lib-human-5peaks-noloss-pt2mz-400to2000_exp-n1b_corrected_proteinFDR.csv')
+    caleb_peptide_df = pd.read_csv('Data/Output/csodiaq_lib-human-noloss-400to2000-pt2mz-6peaks_exp-n1b_corrected_peptideFDR.csv')
+    caleb_protein_df = pd.read_csv('Data/Output/csodiaq_lib-human-noloss-400to2000-pt2mz-6peaks_exp-n1b_corrected_proteinFDR.csv')
     jesse_peptide_df = pd.read_csv('Data/Input/peptide_matches_Jesse.csv')
     jesse_protein_df = pd.read_csv('Data/Input/protein_matches_Jesse.csv')
 
@@ -190,11 +190,11 @@ def create_venn_diagrams():
     #for i in range(10): print('-----------------')
     #for x in sorted(jesse_peptides): print(x)
     venn2([set(caleb_peptides),set(jesse_peptides)], set_labels = ["csoDIAq", "MSPLIT-DIA"])
-    plt.title('Comparing Peptide Identification Outputs (stripped sequences)\n')
-    plt.savefig('peptide_comparison_venn.png')
+    plt.title('Comparing Peptide Identification Outputs (stripped sequences, 6peaks)\n')
+    plt.savefig('Data/Figures/peptide_comparison_venn.png')
 
     plt.clf()
 
     venn2([set(caleb_proteins),set(jesse_proteins)], set_labels = ["csoDIAq", "MSPLIT-DIA"])
-    plt.title('Comparing Protein Identification Outputs\n')
-    plt.savefig('protein_comparison_venn.png')
+    plt.title('Comparing Protein Identification Outputs (6peaks)\n')
+    plt.savefig('Data/Figures/protein_comparison_venn.png')

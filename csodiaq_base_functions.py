@@ -422,28 +422,28 @@ def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, ppmTol, ppmYO
         # 'lib' dictionary keys are kept as a separate list in this analysis. Note that they are sorted by precursor m/z.
         allLibKeys = sorted(lib)
 
-        # Time taken to analyze every 100 spectra is recorded and printed to the screen in a csv format (can be copied and pasted).
-        #   Printing was chosen over direct writing for easy tracking of program progress.
-        time = timer()
-        prevtime = time
-        print("Index,TimeElapsed,NumPeaks,ExpPrecursorMz,NumLibrarySpectra")
-
         # Beginning to loop over query spectra.
         with mzxml.read(expSpectraFile) as spectra:
-            for spec in spectra:
 
+            # Time taken to analyze every 100 spectra is recorded and printed to the screen in a csv format (can be copied and pasted).
+            #   Printing was chosen over direct writing for easy tracking of program progress.
+            time = timer()
+            prevtime = time
+            print("Index,TimeElapsed,NumPeaks,ExpPrecursorMz,NumLibrarySpectra,outputFile")
+
+            for spec in spectra:
                 # TEMP - Normalize intensities by finding their square root
                 spec['intensity array'] = [x**0.5 for x in spec['intensity array']]
+
+                # Only library spectra with a precursor mass that falls within the target window of the experimental spectrum are included. See lib_mz_match_query_window() function description for more details.
+                libKeys = lib_mz_match_query_window( spec, allLibKeys )
 
                 # Printing time taken to analyze every 100 spectra in csv format.
                 count += 1
                 if count % 100 == 0:
                     time = timer()
-                    print(str(count)+','+str(time-prevtime)+','+str(len(spec['m/z array']))+','+str(spec['precursorMz'][0]['precursorMz'])+','+str(len(libKeys)+','+outFile))
+                    print(str(count)+','+str(time-prevtime)+','+str(len(spec['m/z array']))+','+str(spec['precursorMz'][0]['precursorMz'])+','+str(len(libKeys))+','+outFile)
                     prevtime = time
-
-                # Only library spectra with a precursor mass that falls within the target window of the experimental spectrum are included. See lib_mz_match_query_window() function description for more details.
-                libKeys = lib_mz_match_query_window( spec, allLibKeys )
 
                 # Cosine score is generated for each library spectrum and returned in a list. See peak_comparison_for_cosine() function description for formatting.
                 if len(libKeys) != 0:
@@ -480,6 +480,7 @@ def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, ppmTol, ppmYO
 
         # Prints the final number of experimental spectra analyzed.
         print('#'+str(count))
+
 
 '''
 Function: fdr_calculation()

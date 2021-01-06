@@ -7,6 +7,8 @@ import os
 from statistics import pstdev, median
 import csv
 import matplotlib.pyplot as plt
+import csodiaq_base_functions_noPooling as noPool
+
 
 
 '''
@@ -15,7 +17,7 @@ Purpose:
 Parameters:
 Returns:
 '''
-def write_csodiaq_output(libFile, expFile, outFile, corrected=False, numLibPeaks=31 ):
+def write_csodiaq_output(lib, expFile, outFile, corrected=False, numLibPeaks=31 ):
     print('#Enter lib upload/conversion:')
     print('#'+str(timedelta(seconds=timer())))
     if corrected:
@@ -29,7 +31,7 @@ def write_csodiaq_output(libFile, expFile, outFile, corrected=False, numLibPeaks
         ppmOffset=0
     if numLibPeaks > 31: print("Number of library peaks cannot exceed 30, reducing to 30"); numLibPeaks = 30
     ppmFile = re.sub('(.*).csv', r'\1_unfilteredPpmPerRow.csv', outFile)
-    lib = cbf.library_file_to_dict(libFile, numLibPeaks)
+#    lib = cbf.library_file_to_dict(libFile, numLibPeaks)
     print('#enter spectra comparison:')
     print('#'+str(timedelta(seconds=timer())))
     cbf.query_spectra_analysis( expFile,
@@ -122,3 +124,31 @@ def write_csodiaq_fdr_outputs(inFile, corrected=False):
     proteinFile = re.sub('(.*).csv', r'\1_proteinFDR.csv', inFile)
 
     cbf.write_csodiaq_fdr_outputs(inFile, spectralFile, peptideFile, proteinFile)
+
+
+def write_csodiaq_output_noPool(libFile, expFile, outFile, corrected=False, numLibPeaks=31 ):
+    print('#Enter lib upload/conversion:')
+    print('#'+str(timedelta(seconds=timer())))
+    if corrected:
+        offsetFile = re.sub('(.*).csv', r'\1_offset_tolerance.csv', outFile)
+        df = pd.read_csv(offsetFile)
+        ppmTol = df['tolerance'].loc[0]
+        ppmOffset=(-df['offset'].loc[0])
+        outFile = re.sub('(.*).csv', r'\1_corrected.csv', outFile)
+    else:
+        ppmTol=10,
+        ppmOffset=0
+    if numLibPeaks > 31: print("Number of library peaks cannot exceed 30, reducing to 30"); numLibPeaks = 30
+    ppmFile = re.sub('(.*).csv', r'\1_unfilteredPpmPerRow.csv', outFile)
+    lib = cbf.library_file_to_dict(libFile, numLibPeaks)
+    print('#enter spectra comparison:')
+    print('#'+str(timedelta(seconds=timer())))
+    noPool.query_spectra_analysis( expFile,
+                                outFile,
+                                ppmFile,
+                                lib,
+                                ppmTol,
+                                ppmYOffset=ppmOffset)
+
+    print('#Complete')
+    print('#'+str(timedelta(seconds=timer())))
