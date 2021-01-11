@@ -1,11 +1,18 @@
 import pandas as pd
-from pyteomics import mzxml
+from pyteomics import mzxml, mgf
 from bisect import bisect
 from timeit import default_timer as timer
 from datetime import timedelta
 import csv
 import statistics
 import matplotlib.pyplot as plt
+import numpy as np
+import idpicker as idp
+import re
+from collections import defaultdict
+
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
 
 # Template for function descriptions
 '''
@@ -16,14 +23,15 @@ Returns:
 '''
 
 '''
-Function: traml_library_upload_csv()
-Purpose: Given a traml file in .tsv or .csv format representing the library spectra, this function generates
-            a dictionary to be used for future analysis. key:value pairings are described in the "Returns"
-            section of this comment. Note that the tuple key format was chosen because library spectra will
-            need to be sorted and chosen by precursor mass, so identifiers already included in the library
-            spectra were explicitly not used as keys.
+Function: library_file_to_dict()
+Purpose: This function reads the file type of the input file (accepts .mgf, .csv and .tsv formats) and runs it through the
+            appropriate reading function. Basically, this function is a catch-all used in the corresponding menu function to
+            determine how to best read in a particular library spectra file.
 Parameters:
-    'fileName' - string representing the path to the library spectra file (required traml .tsv or .csv format).
+    'inFile' - string representing the file path to the desired library spectra file.
+    'numLibPeaks' - int representing the maximum number of peaks allowed per library spectrum. The [numLibPeaks] peaks with
+        the highest intensity are included, everything else is excluded. Default maximum number of peaks is 31, as determined
+        in the corresponding menu function.
 Returns:
     dictionary 'lib'
         key - (float, string) tuple.
@@ -40,7 +48,27 @@ Returns:
                 tuple - equal to the corresponding key in the 'lib' dictionary. This is to identify the
                     library this peak belongs to, as they will be mixed with peaks from other libraries.
 '''
-def traml_library_upload_csv(fileName):
+def library_file_to_dict(inFile, numLibPeaks):
+    fileType = inFile.split('.')[-1]
+    if fileType == 'mgf':
+        lib = mgf_library_upload(inFile, numLibPeaks)
+    else:
+        lib = traml_library_upload_csv(inFile, numLibPeaks)
+    return lib
+
+
+'''
+Function: traml_library_upload_csv()
+Purpose: Given a traml file in .tsv or .csv format representing the library spectra, this function generates a dictionary to
+            be used for future analysis. key:value pairings are described in the "Returns" section of this comment. Note that
+            the tuple key format was chosen because library spectra will need to be sorted and chosen by precursor mass, so
+            identifiers already included in the library spectra were explicitly not used as keys.
+Parameters:
+    'fileName' - string representing the path to the library spectra file (required traml .tsv or .csv format).
+Returns:
+    dictionary 'lib' - See dictionary 'lib' key explanation in function library_file_to_dict().
+'''
+def traml_library_upload_csv(fileName, numLibPeaks):
     # Library spectra file is read as a pandas dataframe - conditional statement allows for both .tsv and .csv files to be uploaded.
     if fileName.endswith('.tsv'):
         lib_df = pd.read_csv(fileName, sep='\t')
@@ -74,7 +102,68 @@ def traml_library_upload_csv(fileName):
     for key in lib:
         mz, intensity = (list(t) for t in zip(*sorted(zip(mz_dict[key], intensity_dict[key]))))
         keyList = [key for i in range(len(mz))]
-        lib[key]['Peaks'] = list(tuple(zip(mz,intensity,keyList)))
+        peaks = list(tuple(zip(mz,intensity,keyList)))
+        peaks.sort(key=lambda x:x[1],reverse=True)
+        peaks = peaks[:numLibPeaks]
+        peaks.sort(key=lambda x:x[0])
+        lib[key]['Peaks'] = peaks
+    return lib
+
+
+'''
+Function: mgf_library_upload()
+Purpose: Same purpose as traml_library_upload_csv() function, but for mgf files.
+Parameters: see traml_library_upload_csv() parameters.
+Returns: see traml_library_upload_csv() return values.
+'''
+def mgf_library_upload(fileName, numLibPeaks):
+
+    # mgf file is read in using the pyteomics mgf module
+    libMGF = mgf.read(fileName)
+
+    # Print statement for timing the program
+    print('#Enter library dictionary upload: ')
+    print('#'+str(timedelta(seconds=timer())))
+
+    # return value is initialized
+    lib = {}
+
+    # each spectrum in the mgf file
+    for spec in libMGF:
+
+        # key for the final dictionary is initialized
+        key = (spec['params']['pepmass'][0], spec['params']['seq'])
+
+        # final dictionary value values are created
+        charge = spec['params']['charge'][0]
+        name = spec['params']['title']
+
+        # note that the protein value is optional in MGF files - if it's nonexistent, protein value initialized as an empty string
+        if 'protein' in spec['params']: protein = spec['params']['protein']
+        else: protein = ''
+
+        # peaks of the library file are intialized.
+        mz = spec['m/z array']
+        intensity = spec['intensity array']
+        intensity = [x**0.5 for x in intensity]
+        keyList = [key for x in mz]
+        peaks = list(tuple(zip(mz,intensity,keyList)))
+
+        # low-intensity peaks are filtered out, based on value of 'numLibPeaks'
+        peaks.sort(key=lambda x:x[1],reverse=True)
+        peaks = peaks[:numLibPeaks]
+        peaks.sort(key=lambda x:x[0])
+
+        # final dictionary value is created
+        tempDict = {
+            'PrecursorCharge':charge,
+            'transition_group_id':name,
+            'ProteinName':protein,
+            'Peaks':peaks
+        }
+
+        # entry placed in final dictionary
+        lib[key] = tempDict
     return lib
 
 
@@ -87,7 +176,7 @@ Parameters:
     'spec' - dictionary corresponding to pyteomics.mzxml.read() values. This variable contains all data corresponding
         to the query spectrum in question.
     'sortedLibKeys' - a list of (float, string) tuples. List represents all keys of the dictionary 'lib' from
-        traml_library_upload_csv(). See dictionary 'lib' key explanation in function traml_library_upload_csv().
+        library_file_to_dict(). See dictionary 'lib' key explanation in function library_file_to_dict().
 Returns:
     A list of (float, string) tuples. Represents the section of values from the 'sortedLibKeys' parameter that
         are relevant to the query spectrum represented by the 'spec' parameter.
@@ -121,12 +210,12 @@ Purpose: Given a list of library spectra (represented by a list of library keys)
             is generated and returned, representing the pooled peaks of several library spectra. This variable
             signifincantly reduces the time complexity of the algorithm.
 Parameters:
-    'lib' - dictionary as returned by the traml_library_upload_csv() function.
+    'lib' - dictionary as returned by the library_file_to_dict() function.
     'libKeys' - list of keys corresponding to the 'lib' parameter as returned by the lib_mz_match_query_window()
         function.
 Returns:
     A list of (float, float, tuple) tuples. Represents spectrum peaks - see 'Peaks' key explanation in function
-        traml_library_upload_csv().
+        library_file_to_dict().
 '''
 def pool_lib_spectra(lib, libKeys):
     finalList = []
@@ -175,8 +264,8 @@ Purpose: This function determines peaks that are within a sufficiently close tol
             similarity score. The specifics of the various functions can be found in the return values below.
 Parameters:
     'libSpectrum' - list of (float, float, tuple) tuples. Represents spectrum peaks - see 'Peaks' key explanation in function
-        traml_library_upload_csv().
-    'libKeys' - (float, string) tuple. See dictionary 'lib' key explanation in function traml_library_upload_csv().
+        library_file_to_dict().
+    'libKeys' - (float, string) tuple. See dictionary 'lib' key explanation in function library_file_to_dict().
     'expMz' - list of floats. Corresponds to m/z values from the experimental spectrum being analyzed. Matched by index
         with the 'expIntensity' parameter.
     'expIntensity' -list of floats. Corresponds to intensity values from the experimental spectrum being analyzed. Matched
@@ -187,7 +276,7 @@ Parameters:
         csodiaq calculation output.
 Returns:
     dictionary 'cosDict'
-        key - (float, string) tuple. See dictionary 'lib' key explanation in function traml_library_upload_csv().
+        key - (float, string) tuple. See dictionary 'lib' key explanation in function library_file_to_dict().
         value - list of floats
             float - sum of products of intensities between matched library and query peaks. In context of the cosine
                 similarity score algorithm, this is the "A*B" sum.
@@ -196,16 +285,16 @@ Returns:
             float - sum of squared library peak intensities when matched to a query peaks. In context of the cosine
                 similarity score algorithm, this is the "A^2" sum.
     dictionary 'countDict'
-        key - (float, string) tuple. See dictionary 'lib' key explanation in function traml_library_upload_csv().
+        key - (float, string) tuple. See dictionary 'lib' key explanation in function library_file_to_dict().
         value - int
             Representing the number of matched peaks. This value will be the 'shared' column value in the output file.
     dictionary 'ionDict'
-        key - (float, string) tuple. See dictionary 'lib' key explanation in function traml_library_upload_csv().
+        key - (float, string) tuple. See dictionary 'lib' key explanation in function library_file_to_dict().
         value - set representing the indices of the query peaks that matched the library spectrum represented in this
                 dictionary value. The sum of these query peak intensities will be returned as the 'ionCount' column
                 value in the output file.
     dictionary 'ppmDict'
-        key - (float, string) tuple. See dictionary 'lib' key explanation in function traml_library_upload_csv().
+        key - (float, string) tuple. See dictionary 'lib' key explanation in function library_file_to_dict().
         value - list of floats represents the ppm difference of all peak matches that were within the given ppm tolerance. This is
                 most directly used for determining the ppm offset and standard deviation of an uncorrected
                 csodiaq output to be used in generating a corrected csodiaq output. For a corrected csodiaq output,
@@ -289,7 +378,7 @@ Parameters:
         to compile a comprehensive list of ppm differences used in calculating the ppm offset and ppm
         standard deviation of an uncorrected csodiaq output. Such calculations are done after the optimal
         minimum peak matching number is determined and applied as a filter to the data.
-    'lib' - dictionary as returned by the traml_library_upload_csv() function.
+    'lib' - dictionary as returned by the library_file_to_dict() function.
     'numPeakMatch' - int representing the minimum number of allowed peak matches. This number is generally 3
         to catch a wide number of matches that can later be filtered for the optimal number of minimum
         allowed peak matches.
@@ -299,7 +388,7 @@ Returns:
     No Return Value. Results are written directly to the output file and ppm file (outFile and ppmFile,
         respectively). The description of specific columns of output file are provided in the function comments.
 '''
-def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, numPeakMatch, ppmTol, ppmYOffset):
+def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, ppmTol, ppmYOffset):
     # Column headers for the output file are initialized.
     columns = [
         'fileName', # Name of the query spectra file.
@@ -317,7 +406,8 @@ def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, numPeakMatch,
         'shared', # The number of peaks that matched between query spectrum/library spectrum.
         'ionCount', # Sum of query spectrum intensities, excluding possible duplicates - currently uncalculated, set to 0.
         'CompensationVoltage', # The compensation voltage of the query spectrum.
-        'totalWindowWidth' # width of m/z that was captured in the query spectrum. Corresponds to MzEXP.
+        'totalWindowWidth', # width of m/z that was captured in the query spectrum. Corresponds to MzEXP.
+        'csoDIAq_Score'
     ]
 
     # Output file is opened and column headers are written as the first row.
@@ -335,28 +425,27 @@ def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, numPeakMatch,
         # 'lib' dictionary keys are kept as a separate list in this analysis. Note that they are sorted by precursor m/z.
         allLibKeys = sorted(lib)
 
-        # Time taken to analyze every 100 spectra is recorded and printed to the screen in a csv format (can be copied and pasted).
-        #   Printing was chosen over direct writing for easy tracking of program progress.
-        time = timer()
-        prevtime = time
-        print("Index,TimeElapsed,NumPeaks,ExpPrecursorMz,NumLibrarySpectra")
-
         # Beginning to loop over query spectra.
         with mzxml.read(expSpectraFile) as spectra:
-            for spec in spectra:
 
+            # Time taken to analyze every 100 spectra is recorded and printed to the screen in a csv format (can be copied and pasted).
+            #   Printing was chosen over direct writing for easy tracking of program progress.
+            time = timer()
+            prevtime = time
+
+            for spec in spectra:
                 # TEMP - Normalize intensities by finding their square root
                 spec['intensity array'] = [x**0.5 for x in spec['intensity array']]
+
+                # Only library spectra with a precursor mass that falls within the target window of the experimental spectrum are included. See lib_mz_match_query_window() function description for more details.
+                libKeys = lib_mz_match_query_window( spec, allLibKeys )
 
                 # Printing time taken to analyze every 100 spectra in csv format.
                 count += 1
                 if count % 100 == 0:
                     time = timer()
-                    print(str(count)+','+str(time-prevtime)+','+str(len(spec['m/z array']))+','+str(spec['precursorMz'][0]['precursorMz'])+','+str(len(libKeys)))
+                    print(str(count)+','+str(time-prevtime)+','+str(len(spec['m/z array']))+','+str(spec['precursorMz'][0]['precursorMz'])+','+str(len(libKeys))+','+outFile)
                     prevtime = time
-
-                # Only library spectra with a precursor mass that falls within the target window of the experimental spectrum are included. See lib_mz_match_query_window() function description for more details.
-                libKeys = lib_mz_match_query_window( spec, allLibKeys )
 
                 # Cosine score is generated for each library spectrum and returned in a list. See peak_comparison_for_cosine() function description for formatting.
                 if len(libKeys) != 0:
@@ -366,10 +455,10 @@ def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, numPeakMatch,
                 # Cosine scores and supplementary data are written to the output file.
                 # Note that this loop essentially goes over every library spectrum identified by the lib_mz_match_query_window() function.
                 for key in libKeys:
-                    cosine = cosine_similarity(cosDict[key])
-                    ionCount = sum([ spec['intensity array'][j]+ppm_offset(spec['intensity array'][j],ppmYOffset) for j in ionDict[key] ])
                     # Library spectra that had too few matching peaks are excluded. numPeakMatch variable determines the threshold.
-                    if countDict[key] > numPeakMatch:
+                    if countDict[key] > 2:
+                        cosine = cosine_similarity(cosDict[key])
+                        ionCount = sum([ spec['intensity array'][j]+ppm_offset(spec['intensity array'][j],ppmYOffset) for j in ionDict[key] ])
                         temp = [
                             expSpectraFile, #fileName
                             spec['num'], #scan
@@ -386,13 +475,15 @@ def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, numPeakMatch,
                             countDict[key], #shared
                             ionCount, #ionCount
                             spec['compensationVoltage'], #compensationVoltage
-                            spec['precursorMz'][0]['windowWideness'] #totalWindowWidth
+                            spec['precursorMz'][0]['windowWideness'], #totalWindowWidth
+                            (countDict[key]**(1/5))*cosine
                         ]
                         writer.writerow(temp)
-                        ppmWriter.writerow([spec['num'], key[1], lib[key]['ProteinName']] + ppmDict[key])
+                        ppmWriter.writerow([spec['num'], key[1], lib[key]['ProteinName']] + sorted(ppmDict[key]))
 
         # Prints the final number of experimental spectra analyzed.
         print('#'+str(count))
+
 
 '''
 Function: fdr_calculation()
@@ -409,11 +500,11 @@ Returns:
     'numDecoys' - int representing the number of rows represented by decoys specifically. NOTE: This return
         value is not currently used by the program, but is being kept here for possible future use.
 '''
-def fdr_calculation(df, FDRCutoff):
+def fdr_calculation(df, fdrList=False):
     # initializing the two return values at 0
-    fdrRows = 0
+    fdrValues = []
     numDecoys = 0
-
+    df.fillna("nan",inplace=True)
     # for every row in the dataframe
     for i in range(len(df)):
 
@@ -425,15 +516,17 @@ def fdr_calculation(df, FDRCutoff):
         curFDR = numDecoys/(i+1)
 
         # conditional statement comparing the current FDR to the FDR Cutoff. If larger, function values are returned.
-        if curFDR > FDRCutoff:
+        if curFDR > 0.01:
 
             # if the number of rows has not yet reached the minimum number that allows for the FDR cutoff, 0 is returned instead.
-            if fdrRows < 1/FDRCutoff:
-                return 0, 0
-            return fdrRows, numDecoys-1
-        fdrRows += 1
-    return fdrRows, numDecoys-1
-
+            if len(fdrValues) < 1/0.01:
+                if fdrList: return [], 0
+                else: return 0, 0
+            if fdrList: return fdrValues, numDecoys-1
+            else: return len(fdrValues), numDecoys-1
+        fdrValues.append(curFDR)
+    if fdrList: return fdrValues, numDecoys-1
+    else: return len(fdrValues), numDecoys-1
 
 '''
 Function: find_best_matchNum_fdr()
@@ -443,13 +536,12 @@ Purpose: Given the output of the query_spectra_analysis() function as contained 
             allowing for easy filtering of the pandas dataframe later.
 Parameters:
     'df' - Pandas Data Frame representing the contents of a csodiaq output file.
-    'FDRCutoff' - float representing the minumum allowed FDR of the csodiaq output.
 Returns:
     'bestMatchNum' - int representing the optimal minimum allowed peak number.
     'bestFDR' - int representing the number of rows that are kept after filtering for both peak matches equal to
         and above bestMatchNum and values above the FDR cutoff.
 '''
-def find_best_matchNum_fdr(df, FDRCutoff):
+def find_best_matchNum_fdr(df):
     # list is created representing every unique number of matches represented in the dataframe
     matches = sorted(list(set(df['shared'])))
     bestMatchNum = 0
@@ -462,7 +554,7 @@ def find_best_matchNum_fdr(df, FDRCutoff):
         tempDf = df[df['shared'] >= m].reset_index(drop=True)
 
         # The number of rows kept after filtering for the FDR cutoff is calculated.
-        fdrLength, decoys = fdr_calculation(tempDf, FDRCutoff=FDRCutoff)
+        fdrLength, decoys = fdr_calculation(tempDf)
 
         # The number of matches with the highest number of kept rows is considered the optimal number of matches allowed.
         if fdrLength > bestFDR:
@@ -505,9 +597,10 @@ Parameters:
 Returns:
     No Return Value. Results are written directly to the output file ('outFile').
 '''
-def write_ppm_spread(cosFile, ppmFile, outFile):
+def return_ppm_spread(df, ppmFile):
     # Data is read in.
-    df = pd.read_csv(cosFile)
+    df.fillna('',inplace=True)
+
     ppmDict = read_ppm_file_to_dict(ppmFile)
 
     # list of keys corresponding to ppmDict are generated from the csodiaq data frame.
@@ -515,9 +608,246 @@ def write_ppm_spread(cosFile, ppmFile, outFile):
 
     # all values from the ppmFile corresponding to those keys are saved into a single list.
     ppmList = []
-    for key in listOfKeys: ppmList += ppmDict[key]
+    for key in listOfKeys: ppmList += [float(x) for x in ppmDict[key]]
 
-    # CSV file is written with the ppm spread. It's essentially one long row of ppm difference values.
-    with open(outFile, 'w', newline='') as csvFile:
-        writer = csv.writer(csvFile)
-        writer.writerow(ppmList)
+    return ppmList
+
+
+'''
+Function: find_offset_tol()
+Purpose: Given a list of ppm differences from peaks that matched in a cosine similarity score analysis, this function
+            determines the offset and tolerance that can be used in correcting a second analysis. Generally when seeing the
+            list of ppm differences from an uncorrected analysis as a histogram you will see the main peak off-center from
+            "0", suggesting all query spectra results were almost identically biased due to machine error. Uncorrected
+            analyses have no offset (offset=0) and a wide tolerance to determine the "peak" in this histogram for corrective
+            analysis.
+        Also, if provided a string corresponding to the file path and file name of a desired histogram, the function will
+            also write a histogram for visual confirmation.
+        NOTE: We used the mean and second standard deviation as the offset and tolerance, respectively. However, other
+            means can be used to determine all values that lie in the "peak" shown in the histogram.
+Parameters:
+    'data' - a list of floats. Each float corresponds to a library-query peak match in the previous analysis, depicting the
+        ppm difference between the two (which was within the ppm tolerance of the analysis).
+    'histFile' - string corresponding to the file path and file name of a desired histogram. If histFile == 0, no histogram
+        will be written.
+Returns:
+    'offset' - float corresponding to the calculated ppm offset to be used in future corrected analyses.
+    'tolerance' - float corresponding to the calculated ppm tolerance to be used in future corrected analyses.
+'''
+def find_offset_tol(data, histFile):
+
+    # offset is calculated as the mean value of the provided data
+    offset = sum(data)/len(data)
+
+    # tolerance is calculated as the second standard deviation of the provided data
+    tolerance = statistics.pstdev(data)*2
+
+    # if a histogram file is provided, it is created, with offset (black) and tolerance (red) lines drawn for reference
+    if histFile:
+        hist, bins = np.histogram(data, bins=200)
+        width = 0.7 * (bins[1] - bins[0])
+        center = (bins[:-1] + bins[1:]) / 2
+        plt.clf()
+        plt.bar(center, hist, align='center', width=width)
+        plt.title("Gaussian Histogram of Matched Peak PPM Difference Spread")
+        plt.xlabel("Difference between Matched Peaks (PPM)")
+        plt.ylabel("Frequency")
+        plt.axvline(x=offset, color='black', linestyle = 'dashed')
+        plt.axvline(x=offset-tolerance, color='red', linestyle = 'dashed')
+        plt.axvline(x=offset+tolerance, color='red', linestyle = 'dashed')
+        plt.savefig(histFile)
+    return offset, tolerance
+
+
+'''
+Function: write_csodiaq_fdr_outputs()
+Purpose: This function takes the output of the query_spectra_analysis() function, calculates the spectral, peptide, and
+            protein FDR (removing values below an FDR threshold of 0.01), then writes the output of each to it's own file.
+            File names are provided as parameters to the function. Each output has the same format as the
+            query_spectra_analysis() function output, but with columns for FDR values added and rows below the FDR cutoff
+            removed.
+Parameters:
+    'inFile' - string representing file path and name to the query_spectra_analysis() function output. Data from said file is
+        read in and analyzed in this function.
+    'specFile' - string representing file path and name to expected output of the spectral FDR. Spectral FDR column is
+        included.
+    'pepFile' - string representing file path and name to expected output of the peptide FDR. Peptide FDR column is included.
+    'protFile' - string representing file path and name to expected output of the protein FDR. Protein FDR, Protein cosine
+        score and peptide FDR columns are included. The peptide FDR column in this file is not expected to match what is
+        written to 'pepFile', as the minimum number of allowed peaks is based on the protein FDR calculation rather than the
+        optimal peptide FDR calculation used for the 'pepFile' output.
+Returns:
+    No return value. Data is written directly to files provided as string parameters.
+'''
+def write_csodiaq_fdr_outputs(inFile, specFile, pepFile, protFile):
+
+    # cosine score data is read in
+    overallDf = pd.read_csv(inFile).sort_values('csoDIAq_Score', ascending=False).reset_index(drop=True)
+
+    # spectral FDR is calculated and written to dataframe 'spectralDf'
+    spectralDf = add_fdr_to_csodiaq_output(overallDf)
+
+    # peptide FDR is calculated and written to dataframe 'peptideDf'
+    peptideDf = add_fdr_to_csodiaq_output(overallDf, filterType='peptide')
+
+    # Connections from peptides-proteins are listed in a file as (string, string) tuples.
+    peptideProteinConnections = []
+
+    for i in range(len(peptideDf)):
+        peptide = peptideDf['peptide'].loc[i]
+
+        # Notably, the protein group from the query_spectra_analysis() function is essentially a list of proteins the peptide is connected to.
+        #   Thus, a connection is added for every protein in these protein groups.
+        proteinGroup = peptideDf['protein'].loc[i]
+
+        # a regular expression is used to separate proteins in the protein group
+        proteins = re.findall('(DECOY_0_)?(sp\|\w{6}\|)', proteinGroup)
+        for pro in proteins:
+
+            # For decoys, 'pro[0]' will be added as the decoy tag. For non-decoys, 'pro[0]' is blank and therefore adds nothing to the protein name.
+            protein = pro[0] + pro[1]
+            peptideProteinConnections.append((peptide,protein))
+
+    # valid proteins are identified using the IDPicker algorithm
+    verifiedProteinDict = idp.find_valid_proteins(peptideProteinConnections)
+
+    # for each protein in the verified list, add all connected peptides found above the peptideFDR cutoff as a new dataframe.
+    #   Note that this means the peptide can appear multiple times if found in more than one protein group provided by the IDPicker algorithm.
+    proteinDf = add_leading_protein_column(peptideDf, verifiedProteinDict)
+
+    # Protein FDR is calculated using the highest-scoring peptide for each protein group.
+    tempProtDf = add_fdr_to_csodiaq_output(proteinDf, filterType='leadingProtein')
+
+    tempProtDf.to_csv('Data/oldOutput/protein.csv')
+
+    proteinDict = tempProtDf.set_index('leadingProtein').T.to_dict()
+
+    # Peptides that don't map to a protein above the FDR cutoff are excluded (indices of rows to be removed are added to this list)
+    removables = []
+
+    # protein cosine scores are included as a new column in the output.
+    proteinCosine = []
+
+    # protein FDR scores are included as a new column in the output.
+    proteinFDR = []
+
+     # Loops for every peptide in the recalculated peptide FDR dataframe.
+    for i in range(len(proteinDf)):
+
+        # if the leading protein group is one of the protein groups above the FDR cutoff point, protein cosine and FDR are added.
+        protein = proteinDf['leadingProtein'].loc[i]
+        if protein in proteinDict:
+            proteinCosine.append(proteinDict[protein]['cosine'])
+            proteinFDR.append(proteinDict[protein]['leadingProteinFDR'])
+
+        # if leading protein group is NOT one of the protein groups above the FDR cutoff point, it is marked to be removed.
+        else:
+            removables.append(i)
+
+    # invalid peptides are removed
+    proteinDf = proteinDf.drop(proteinDf.index[removables]).reset_index(drop=True)
+
+    # protein cosine/FDR scores are added as new columns
+    proteinDf['proteinCosine'] = proteinCosine
+    proteinDf['leadingProteinFDR'] = proteinFDR
+
+    # for readability, the output is sorted by peptide cosine score, then leading protein, then protein cosine score
+    #   In this way, you see a dataframe that is primarily sorted by proteins, and peptides inside the protein are ordered by cosine score
+    proteinDf = proteinDf.sort_values(['proteinCosine','leadingProtein', 'cosine'], ascending=[False,False,False]).reset_index(drop=True)
+
+    uniquePepsDict = defaultdict(set)
+
+    for i in range(len(proteinDf)):
+        uniquePepsDict[proteinDf.loc[i]['peptide']].add(proteinDf.loc[i]['leadingProtein'])
+
+    uniquePeps = []
+    for i in range(len(proteinDf)):
+        if len(uniquePepsDict[proteinDf.loc[i]['peptide']]) == 1: uniquePeps.append(1)
+        else: uniquePeps.append(0)
+
+    proteinDf['uniquePeptide'] = uniquePeps
+
+    # Data from all of the above dataframes are written to their respective files.
+    spectralDf.to_csv(specFile, index=False)
+    peptideDf.to_csv(pepFile, index=False)
+    proteinDf.to_csv(protFile, index=False)
+
+'''
+Function: add_fdr_to_csodiaq_output()
+Purpose: This function calculates the FDR value for each row in a dataframe, filters out rows below an FDR rate of 0.01, and
+            adds the final FDR values as a new column.
+Parameters:
+    'df' - Pandas dataframe with the same basic format as the query_spectra_analysis() function output
+    'filterType' - string that determines if the dataframe should only use the first unique value (highest cosine score) from
+     a given column. Also determines the name of the FDR column (filterType + 'FDR'). Default is set to 'spectral', where no
+     filtering would be applied and the new column name will be 'spectralFDR'.
+    'bestMatchNum' - int that determines the minimum number of matches allowed in calculating the FDR. Generally no value is
+        provided, in which case the optimal minimum number of matches allowed is calculated in-function. This parameter
+        exists primarily to allow for setting the number when calculating the protein-specific peptide FDR.
+Returns:
+    'finalDf' - Pandas dataframe with rows below an FDR rate of 0.01 removed and with a new FDR column added.
+'''
+def add_fdr_to_csodiaq_output(df, filterType='spectral', bestMatchNum=0):
+
+    finalDf = df.copy()
+
+    # final dataframe is initialized as a filtered version of the paraemter input 'df' - filters are minimum number of
+    #   allowed matches and highest-scoring unique value of a column type if given
+    if filterType != 'spectral': finalDf = finalDf.drop_duplicates(subset=filterType, keep='first').reset_index(drop=True)
+
+    # FDR is calculated
+    fdrList, decoyNum = fdr_calculation(finalDf, fdrList=True)
+
+    # All rows below the FDR cutoff are removed
+    finalDf = finalDf.truncate(after=len(fdrList)-1)
+
+    # FDR column is added to the dataframe
+    finalDf[filterType + 'FDR'] = fdrList
+    finalDf = finalDf.reset_index(drop=True)
+    return finalDf
+
+
+'''
+Function: add_leading_protein_column()
+Purpose: Given a list of proteins verified by the IDPicker algorithm, this function adds the a new column 'leadingProtein'
+            that indicates the protein group connected to the peptide represented by the row. Note that, for peptides that
+            are found in multiple valid peptide groups, a new row will be added for each protein group connection.
+Parameters:
+    'df' - Pandas dataframe with the same basic format as the query_spectra_analysis() function output, though columns such
+        as FDR may have been added.
+    'verifiedProteinDict' - see idpicker.py find_valid_proteins() function return value 'finalDict' description.
+Returns:
+    'finalDf' - Dataframe with the new 'leadingProtein' column added.
+'''
+def add_leading_protein_column(df, verifiedProteinDict):
+    # final dataframe is initialized - empty, but with columns matching the 'df' parameter input
+    finalDf = pd.DataFrame(columns = df.columns)
+
+    # This list will become the 'leadingProtein' column of the output
+    leadingProteins = []
+
+    # for each peptide in the 'df' parameter input
+    for i in range(len(df)):
+
+        # proteins connected to this peptide are separated into a list
+        proteinGroup = df['protein'].loc[i]
+        proteins = re.findall('(DECOY_0_)?(sp\|\w{6}\|)', proteinGroup)
+
+        # for each protein connected to this peptide
+        for pro in proteins:
+
+            # this ensures that decoys are tagged while non-decoys are not
+            protein = pro[0] + pro[1]
+
+            # if the protein is one of the proteins verified by the IDPicker algorithm, a new row is added to the input
+            #   with the (IDPicker-determined) protein group added in the new column 'leadingProtein'.
+            if protein in verifiedProteinDict:
+                finalDf = finalDf.append(df.loc[i])
+                leadingProteins.append(verifiedProteinDict[protein])
+
+    # new leading protein column set
+    finalDf['leadingProtein'] = leadingProteins
+
+    # For proteins that were part of an IDPicker-determined protein group the same row was added for every protein in the group. This is dropping those duplicate rows.
+    finalDf = finalDf.drop_duplicates(keep='first').reset_index(drop=True)
+    return finalDf
