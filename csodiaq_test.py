@@ -7,9 +7,20 @@ import statistics
 import csv
 from matplotlib_venn import venn3
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import figure
 import numpy as np
+from matplotlib.ticker import PercentFormatter
 
-def histogram(df, fileHeader, col):
+
+def set_plot_settings(title, xlabel, ylabel):
+    plt.figure(figsize=(10,10))
+    plt.title(title, fontsize = 32)
+    plt.xlabel(xlabel, fontsize = 24)
+    plt.ylabel(ylabel, fontsize = 24)
+    plt.tick_params(axis="x", labelsize=18)
+    plt.tick_params(axis="y", labelsize=18)
+
+def histogram(df, fileHeader, col, title, l=False):
     target_scores = []
     decoy_scores = []
 
@@ -24,10 +35,12 @@ def histogram(df, fileHeader, col):
     line = temp.loc[f][col]
 
     plt.clf()
-    plt.figure()
+    set_plot_settings(title, col, 'Frequency')
+
     plt.hist([target_scores, decoy_scores], 50, stacked=True, density=True)
-    plt.axvline(x=line, color='black', linestyle = 'dashed')
-    plt.title(col + ', ' + str(f))
+    plt.gca().yaxis.set_major_formatter(PercentFormatter(1))
+    if l: plt.axvline(x=line, color='black', linestyle = 'dashed')
+
     plt.savefig(fileHeader+col+'.png')
 
 '''
@@ -167,16 +180,15 @@ all_top = set(data[2])
 good_top = set(data[3])
 msplitPeptides = data[4]
 '''
-'''
-peptideFDR = pd.read_csv('Data/Output/csodiaq_lib-human-noloss-400to2000-pt2mz-31peaks_exp-100reps-rep16_extraScores.csv')
 
-h = 'Data/Figures/testScoreHistogram_'
-histogram(peptideFDR, h, 'cosine')
-histogram(peptideFDR, h, 'matchesXcosine')
-histogram(peptideFDR, h, 'matches2rootXcosine')
-histogram(peptideFDR, h, 'matches3rootXcosine')
-histogram(peptideFDR, h, 'matches4rootXcosine')
-'''
+peptideFDR = pd.read_csv('Data/Output/csodiaq_lib-human-noloss-400to2000-pt2mz-31peaks_exp-100reps-rep16_corrected_2SD.csv')
+
+h = 'Data/Figures/testScoreHistogram_newScore_'
+histogram(peptideFDR, h, 'cosine', 'Distribution of Cosine Scores')
+histogram(peptideFDR, h, 'shared', 'Distribution of Matched Fragments')
+histogram(peptideFDR, h, 'csoDIAq_Score', 'Distribution of csoDIAq Scores', l=True)
+
+
 
 '''
 lib_df = pd.read_csv('Data/Input/human_31peaks_noloss_400to2000_pt2mz.tsv', sep='\t')
@@ -203,19 +215,18 @@ plt.title('Comparing Peptide Identification Outputs (stripped sequences, 6peaks)
 plt.savefig('Data/Figures/peptide_comparison_clusters_msplit75.png')
 '''
 '''
-files = ['Data/Output/'+x for x in list(os.listdir('Data/Output/')) if 'extraScores' not in x]
-#for x in files: os.remove(x)
-'''
-'''
-files = list(os.listdir('Data/Output/'))
+protFiles = set(['Data/Output/'+x for x in list(os.listdir('Data/Output/')) if 'proteinFDR' in x])
+files = ['Data/Output/'+x for x in list(os.listdir('Data/Output/'))]
 delete = set()
 for x in files:
-    temp = re.search('csodiaq_lib-human-noloss-400to2000-pt2mz-\d{1,2}peaks_exp-100reps-rep\d{2,3}(_corrected)?\.csv',x)#r'csodiaq_lib-human-noloss-400to2000-pt2mz-\1peaks_exp-100reps-rep\2\3.csv',x)
-    if not temp: delete.add('Data/Output/'+x)
-#for x in sorted(delete): print(x)
+    temp = re.search('Data/Output/csodiaq_lib-human-noloss-400to2000-pt2mz-\d{1,2}peaks_exp-100reps-rep\d{2,3}(?:_corrected_2SD)?\.csv',x)#r'csodiaq_lib-human-noloss-400to2000-pt2mz-\1peaks_exp-100reps-rep\2\3.csv',x)
+
+    if not temp and x not in protFiles: delete.add(x)
+#keep = sorted([x for x in files if x not in delete])
+#for x in keep: print(x)
 for x in delete: os.remove(x)
 '''
-
+'''
 files = ['Data/Output/'+x for x in list(os.listdir('Data/Output/'))]
 for file in sorted(files):
     print(file)
@@ -236,7 +247,7 @@ for file in sorted(files):
     newFile = re.sub('Data/Output/csodiaq_lib-human-noloss-400to2000-pt2mz-(\d{1,2})peaks_exp-100reps-rep(\d{2,3})(_corrected)?\.csv',r'Data/Output/csodiaq_lib-human-noloss-400to2000-pt2mz-\1peaks_exp-100reps-rep\2\3_extraScores.csv',file)
     print(newFile+'\n')
     df.to_csv(newFile)
-
+'''
 '''
 df = pd.read_csv('Data/Output/csodiaq_lib-human-noloss-400to2000-pt2mz-31peaks_exp-100reps-rep16_corrected.csv')
 scores = [

@@ -12,22 +12,27 @@ from os.path import isfile, join
 from pyteomics import mzxml, mgf
 import statistics
 
+print("Index,TimeElapsed,NumPeaks,ExpPrecursorMz,NumLibrarySpectra,outputFile")
+
 mypath = 'Data/Input/100mzxml/'
 onlyfiles = [mypath+f for f in listdir(mypath) if isfile(join(mypath, f))]
 expDict = {}
 for x in onlyfiles:
     key = re.sub('Data/Input/100mzxml/20200719_MAGIC_MCF7_1128repro_(\d+)\.mzXML', r'exp-100reps-rep\1', x)
     expDict[key] = x
+
 '''
 expDict = {
-#'exp-n1b':'Data/Input/20190411_DI2A_1to16_n1b.mzXML',
-'exp-MCF7':'Data/Input/20190405_MCF7_FAIMS_18_2.mzXML'
+'exp-n1b':'Data/Input/20190411_DI2A_1to16_n1b.mzXML',
+#'exp-MCF7':'Data/Input/20190405_MCF7_FAIMS_18_2.mzXML'
 }
 '''
 
 libDict = {
 'lib-human-noloss-400to2000-pt2mz-':'Data/Input/human_31peaks_noloss_400to2000_pt2mz.tsv'
 #'lib-faims-mgf-':'Data/Input/human.faims.fixed.decoy.mgf'
+#'lib-human-noloss-400to2000-pt2mz-allTop':'Data/Input/human_31peaks_noloss_400to2000_pt2mz_allTop.csv'
+#'lib-human-noloss-400to2000-pt2mz-goodTop':'Data/Input/human_31peaks_noloss_400to2000_pt2mz_goodTop.csv'
 }
 
 libPeaks = [
@@ -41,7 +46,7 @@ for lib in libDict:
     libFile = libDict[lib]
 #        print(libFile)
     for n in libPeaks:
-        lib1 = cbf.library_file_to_dict(libFile, n)
+        libDict = cbf.library_file_to_dict(libFile, n)
 
         for exp in sorted(expDict):
             expFile = expDict[exp]
@@ -51,19 +56,15 @@ for lib in libDict:
 
             outFile = 'Data/Output/csodiaq_'+lib+str(n)+'peaks_'+exp+'.csv'
 #            print(outFile)
-            menu.write_csodiaq_output(lib1, expFile, outFile, numLibPeaks=n)
-            menu.filter_optimal_match_csodiaq_output(outFile)
-            menu.write_ppm_spread(outFile)
+            menu.write_csodiaq_output(libDict, expFile, outFile, numLibPeaks=n)
             menu.write_ppm_offset_tolerance(outFile, hist=True)
             menu.write_csodiaq_fdr_outputs(outFile)
-            figure.write_meta_analysis_files(outFile)
 
-            menu.write_csodiaq_output(lib1, expFile, outFile, corrected=True, numLibPeaks=n)
-            menu.filter_optimal_match_csodiaq_output(outFile, corrected=True)
-            menu.write_ppm_spread(outFile, corrected=True)
+            menu.write_csodiaq_output(libDict, expFile, outFile, corrected=True, numLibPeaks=n)
             menu.write_ppm_offset_tolerance(outFile, corrected=True, hist=True)
             menu.write_csodiaq_fdr_outputs(outFile, corrected=True)
-            figure.write_meta_analysis_files(outFile, corrected=True)
+
+
 
 
 

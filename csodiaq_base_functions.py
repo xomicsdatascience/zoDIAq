@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import idpicker as idp
 import re
+from collections import defaultdict
+
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 
@@ -404,7 +406,8 @@ def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, ppmTol, ppmYO
         'shared', # The number of peaks that matched between query spectrum/library spectrum.
         'ionCount', # Sum of query spectrum intensities, excluding possible duplicates - currently uncalculated, set to 0.
         'CompensationVoltage', # The compensation voltage of the query spectrum.
-        'totalWindowWidth' # width of m/z that was captured in the query spectrum. Corresponds to MzEXP.
+        'totalWindowWidth', # width of m/z that was captured in the query spectrum. Corresponds to MzEXP.
+        'csoDIAq_Score'
     ]
 
     # Output file is opened and column headers are written as the first row.
@@ -429,7 +432,6 @@ def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, ppmTol, ppmYO
             #   Printing was chosen over direct writing for easy tracking of program progress.
             time = timer()
             prevtime = time
-            print("Index,TimeElapsed,NumPeaks,ExpPrecursorMz,NumLibrarySpectra,outputFile")
 
             for spec in spectra:
                 # TEMP - Normalize intensities by finding their square root
@@ -453,10 +455,10 @@ def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, ppmTol, ppmYO
                 # Cosine scores and supplementary data are written to the output file.
                 # Note that this loop essentially goes over every library spectrum identified by the lib_mz_match_query_window() function.
                 for key in libKeys:
-                    cosine = cosine_similarity(cosDict[key])
-                    ionCount = sum([ spec['intensity array'][j]+ppm_offset(spec['intensity array'][j],ppmYOffset) for j in ionDict[key] ])
                     # Library spectra that had too few matching peaks are excluded. numPeakMatch variable determines the threshold.
                     if countDict[key] > 2:
+                        cosine = cosine_similarity(cosDict[key])
+                        ionCount = sum([ spec['intensity array'][j]+ppm_offset(spec['intensity array'][j],ppmYOffset) for j in ionDict[key] ])
                         temp = [
                             expSpectraFile, #fileName
                             spec['num'], #scan
@@ -473,7 +475,8 @@ def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, ppmTol, ppmYO
                             countDict[key], #shared
                             ionCount, #ionCount
                             spec['compensationVoltage'], #compensationVoltage
-                            spec['precursorMz'][0]['windowWideness'] #totalWindowWidth
+                            spec['precursorMz'][0]['windowWideness'], #totalWindowWidth
+                            (countDict[key]**(1/5))*cosine
                         ]
                         writer.writerow(temp)
                         ppmWriter.writerow([spec['num'], key[1], lib[key]['ProteinName']] + sorted(ppmDict[key]))
@@ -594,9 +597,8 @@ Parameters:
 Returns:
     No Return Value. Results are written directly to the output file ('outFile').
 '''
-def write_ppm_spread(cosFile, ppmFile, outFile):
+def return_ppm_spread(df, ppmFile):
     # Data is read in.
-    df = pd.read_csv(cosFile)
     df.fillna('',inplace=True)
 
     ppmDict = read_ppm_file_to_dict(ppmFile)
@@ -606,12 +608,9 @@ def write_ppm_spread(cosFile, ppmFile, outFile):
 
     # all values from the ppmFile corresponding to those keys are saved into a single list.
     ppmList = []
-    for key in listOfKeys: ppmList += ppmDict[key]
+    for key in listOfKeys: ppmList += [float(x) for x in ppmDict[key]]
 
-    # CSV file is written with the ppm spread. It's essentially one long row of ppm difference values.
-    with open(outFile, 'w', newline='') as csvFile:
-        writer = csv.writer(csvFile)
-        writer.writerow(ppmList)
+    return ppmList
 
 
 '''
@@ -683,7 +682,7 @@ Returns:
 def write_csodiaq_fdr_outputs(inFile, specFile, pepFile, protFile):
 
     # cosine score data is read in
-    overallDf = pd.read_csv(inFile).sort_values('cosine', ascending=False).reset_index(drop=True)
+    overallDf = pd.read_csv(inFile).sort_values('csoDIAq_Score', ascending=False).reset_index(drop=True)
 
     # spectral FDR is calculated and written to dataframe 'spectralDf'
     spectralDf = add_fdr_to_csodiaq_output(overallDf)
@@ -691,13 +690,122 @@ def write_csodiaq_fdr_outputs(inFile, specFile, pepFile, protFile):
     # peptide FDR is calculated and written to dataframe 'peptideDf'
     peptideDf = add_fdr_to_csodiaq_output(overallDf, filterType='peptide')
 
-    # protein FDR is calculated, protein cosine is determined, and relevant peptide FDRs are calculated and written to dataframe 'proteinDf'
-    proteinDf = generate_protein_csodiaq_fdr_output(overallDf)
+    # Connections from peptides-proteins are listed in a file as (string, string) tuples.
+    peptideProteinConnections = []
+
+    for i in range(len(peptideDf)):
+        peptide = peptideDf['peptide'].loc[i]
+
+        # Notably, the protein group from the query_spectra_analysis() function is essentially a list of proteins the peptide is connected to.
+        #   Thus, a connection is added for every protein in these protein groups.
+        proteinGroup = peptideDf['protein'].loc[i]
+
+        # a regular expression is used to separate proteins in the protein group
+        proteins = re.findall('(DECOY_0_)?(sp\|\w{6}\|)', proteinGroup)
+        for pro in proteins:
+
+            # For decoys, 'pro[0]' will be added as the decoy tag. For non-decoys, 'pro[0]' is blank and therefore adds nothing to the protein name.
+            protein = pro[0] + pro[1]
+            peptideProteinConnections.append((peptide,protein))
+
+    # valid proteins are identified using the IDPicker algorithm
+    verifiedProteinDict = idp.find_valid_proteins(peptideProteinConnections)
+
+    # for each protein in the verified list, add all connected peptides found above the peptideFDR cutoff as a new dataframe.
+    #   Note that this means the peptide can appear multiple times if found in more than one protein group provided by the IDPicker algorithm.
+    proteinDf = add_leading_protein_column(peptideDf, verifiedProteinDict)
+
+    # Protein FDR is calculated using the highest-scoring peptide for each protein group.
+    tempProtDf = add_fdr_to_csodiaq_output(proteinDf, filterType='leadingProtein')
+
+    tempProtDf.to_csv('Data/oldOutput/protein.csv')
+
+    proteinDict = tempProtDf.set_index('leadingProtein').T.to_dict()
+
+    # Peptides that don't map to a protein above the FDR cutoff are excluded (indices of rows to be removed are added to this list)
+    removables = []
+
+    # protein cosine scores are included as a new column in the output.
+    proteinCosine = []
+
+    # protein FDR scores are included as a new column in the output.
+    proteinFDR = []
+
+     # Loops for every peptide in the recalculated peptide FDR dataframe.
+    for i in range(len(proteinDf)):
+
+        # if the leading protein group is one of the protein groups above the FDR cutoff point, protein cosine and FDR are added.
+        protein = proteinDf['leadingProtein'].loc[i]
+        if protein in proteinDict:
+            proteinCosine.append(proteinDict[protein]['cosine'])
+            proteinFDR.append(proteinDict[protein]['leadingProteinFDR'])
+
+        # if leading protein group is NOT one of the protein groups above the FDR cutoff point, it is marked to be removed.
+        else:
+            removables.append(i)
+
+    # invalid peptides are removed
+    proteinDf = proteinDf.drop(proteinDf.index[removables]).reset_index(drop=True)
+
+    # protein cosine/FDR scores are added as new columns
+    proteinDf['proteinCosine'] = proteinCosine
+    proteinDf['leadingProteinFDR'] = proteinFDR
+
+    # for readability, the output is sorted by peptide cosine score, then leading protein, then protein cosine score
+    #   In this way, you see a dataframe that is primarily sorted by proteins, and peptides inside the protein are ordered by cosine score
+    proteinDf = proteinDf.sort_values(['proteinCosine','leadingProtein', 'cosine'], ascending=[False,False,False]).reset_index(drop=True)
+
+    uniquePepsDict = defaultdict(set)
+
+    for i in range(len(proteinDf)):
+        uniquePepsDict[proteinDf.loc[i]['peptide']].add(proteinDf.loc[i]['leadingProtein'])
+
+    uniquePeps = []
+    for i in range(len(proteinDf)):
+        if len(uniquePepsDict[proteinDf.loc[i]['peptide']]) == 1: uniquePeps.append(1)
+        else: uniquePeps.append(0)
+
+    proteinDf['uniquePeptide'] = uniquePeps
 
     # Data from all of the above dataframes are written to their respective files.
     spectralDf.to_csv(specFile, index=False)
     peptideDf.to_csv(pepFile, index=False)
     proteinDf.to_csv(protFile, index=False)
+
+'''
+Function: add_fdr_to_csodiaq_output()
+Purpose: This function calculates the FDR value for each row in a dataframe, filters out rows below an FDR rate of 0.01, and
+            adds the final FDR values as a new column.
+Parameters:
+    'df' - Pandas dataframe with the same basic format as the query_spectra_analysis() function output
+    'filterType' - string that determines if the dataframe should only use the first unique value (highest cosine score) from
+     a given column. Also determines the name of the FDR column (filterType + 'FDR'). Default is set to 'spectral', where no
+     filtering would be applied and the new column name will be 'spectralFDR'.
+    'bestMatchNum' - int that determines the minimum number of matches allowed in calculating the FDR. Generally no value is
+        provided, in which case the optimal minimum number of matches allowed is calculated in-function. This parameter
+        exists primarily to allow for setting the number when calculating the protein-specific peptide FDR.
+Returns:
+    'finalDf' - Pandas dataframe with rows below an FDR rate of 0.01 removed and with a new FDR column added.
+'''
+def add_fdr_to_csodiaq_output(df, filterType='spectral', bestMatchNum=0):
+
+    finalDf = df.copy()
+
+    # final dataframe is initialized as a filtered version of the paraemter input 'df' - filters are minimum number of
+    #   allowed matches and highest-scoring unique value of a column type if given
+    if filterType != 'spectral': finalDf = finalDf.drop_duplicates(subset=filterType, keep='first').reset_index(drop=True)
+
+    # FDR is calculated
+    fdrList, decoyNum = fdr_calculation(finalDf, fdrList=True)
+
+    # All rows below the FDR cutoff are removed
+    finalDf = finalDf.truncate(after=len(fdrList)-1)
+
+    # FDR column is added to the dataframe
+    finalDf[filterType + 'FDR'] = fdrList
+    finalDf = finalDf.reset_index(drop=True)
+    return finalDf
+
 
 '''
 Function: add_leading_protein_column()
@@ -743,138 +851,3 @@ def add_leading_protein_column(df, verifiedProteinDict):
     # For proteins that were part of an IDPicker-determined protein group the same row was added for every protein in the group. This is dropping those duplicate rows.
     finalDf = finalDf.drop_duplicates(keep='first').reset_index(drop=True)
     return finalDf
-
-
-'''
-Function: add_fdr_to_csodiaq_output()
-Purpose: This function calculates the FDR value for each row in a dataframe, filters out rows below an FDR rate of 0.01, and
-            adds the final FDR values as a new column.
-Parameters:
-    'df' - Pandas dataframe with the same basic format as the query_spectra_analysis() function output
-    'filterType' - string that determines if the dataframe should only use the first unique value (highest cosine score) from
-     a given column. Also determines the name of the FDR column (filterType + 'FDR'). Default is set to 'spectral', where no
-     filtering would be applied and the new column name will be 'spectralFDR'.
-    'bestMatchNum' - int that determines the minimum number of matches allowed in calculating the FDR. Generally no value is
-        provided, in which case the optimal minimum number of matches allowed is calculated in-function. This parameter
-        exists primarily to allow for setting the number when calculating the protein-specific peptide FDR.
-Returns:
-    'finalDf' - Pandas dataframe with rows below an FDR rate of 0.01 removed and with a new FDR column added.
-'''
-def add_fdr_to_csodiaq_output(df, filterType='spectral', bestMatchNum=0):
-
-    # if no bestMatchNum value provided, the optimal minimum number of matches allowed is calculated and used.
-    #   NOTE: this next part is essentially the find_best_matchNum_fdr() function, but also allows for filtering. I may want
-    #   to add a new parameter to that function to reduce code duplication.
-    if not bestMatchNum:
-        matches = sorted(list(set(df['shared'])))
-        matchNumHits = []
-        for m in matches:
-            finalDf = df[df['shared'] >= m].reset_index(drop=True)
-
-            # if a filterType was provided, the dataframe is filtered by the corresponding filterType
-            if filterType != 'spectral': finalDf = finalDf.drop_duplicates(subset=filterType, keep='first').reset_index(drop=True)
-            fdrRows, dec = fdr_calculation(finalDf)
-            matchNumHits.append(fdrRows)
-        bestMatchNum = matches[matchNumHits.index(max(matchNumHits))]
-
-    # final dataframe is initialized as a filtered version of the paraemter input 'df' - filters are minimum number of
-    #   allowed matches and highest-scoring unique value of a column type if given
-    finalDf = df[df['shared'] >= bestMatchNum].reset_index(drop=True)
-    if filterType != 'spectral': finalDf = finalDf.drop_duplicates(subset=filterType, keep='first').reset_index(drop=True)
-
-    # FDR is calculated
-    fdrList, decoyNum = fdr_calculation(finalDf, fdrList=True)
-
-    # All rows below the FDR cutoff are removed
-    finalDf = finalDf.truncate(after=len(fdrList)-1)
-
-    # FDR column is added to the dataframe
-    finalDf[filterType + 'FDR'] = fdrList
-    finalDf = finalDf.reset_index(drop=True)
-    return finalDf
-
-def generate_protein_csodiaq_fdr_output(df, bestMatchNum=0):
-
-    # peptide FDR is calculated and written to dataframe 'peptideDf'
-    peptideDf = add_fdr_to_csodiaq_output(df, filterType='peptide')
-
-    # proteins/protein groups considered present are determined using the IDPicker algorithm.
-    #   To eliminate invalid peptides from consideration, only proteins found in the peptide FDR dataframe 'peptideDf' are considered.
-
-    # Connections from peptides-proteins are listed in a file as (string, string) tuples.
-    peptideProteinConnections = []
-
-    for i in range(len(peptideDf)):
-        peptide = peptideDf['peptide'].loc[i]
-
-        # Notably, the protein group from the query_spectra_analysis() function is essentially a list of proteins the peptide is connected to.
-        #   Thus, a connection is added for every protein in these protein groups.
-        proteinGroup = peptideDf['protein'].loc[i]
-
-        # a regular expression is used to separate proteins in the protein group
-        proteins = re.findall('(DECOY_0_)?(sp\|\w{6}\|)', proteinGroup)
-        for pro in proteins:
-
-            # For decoys, 'pro[0]' will be added as the decoy tag. For non-decoys, 'pro[0]' is blank and therefore adds nothing to the protein name.
-            protein = pro[0] + pro[1]
-            peptideProteinConnections.append((peptide,protein))
-
-    # valid proteins are identified using the IDPicker algorithm
-    verifiedProteinDict = idp.find_valid_proteins(peptideProteinConnections)
-
-    # for each protein in the verified list, add all connected peptides found above the peptideFDR cutoff as a new dataframe.
-    #   Note that this means the peptide can appear multiple times if found in more than one protein group provided by the IDPicker algorithm.
-    tempProtDf = add_leading_protein_column(peptideDf, verifiedProteinDict)
-
-    # Protein FDR is calculated using the highest-scoring peptide for each protein group.
-    proteinDf = add_fdr_to_csodiaq_output(tempProtDf, filterType='leadingProtein')
-
-    # Because the optimal minimum number of allowed peak matches can differ between overall peptide and protein FDR calculations,
-    #   the peptide FDR must be recalculated using the optimal protein minimum number for inclusion with the protein FDR output
-    proteinBestNum = min(set(proteinDf['shared']))
-
-    if bestMatchNum:
-        proteinDf = add_fdr_to_csodiaq_output(tempProtDf, filterType='leadingProtein', bestMatchNum=bestMatchNum)
-        proteinBestNum = bestMatchNum
-
-    tempPeptideDf = add_fdr_to_csodiaq_output(df, filterType='peptide', bestMatchNum=proteinBestNum)
-
-    # The re-calculated peptide FDR is used as the template for the final protein FDR output.
-    proteinDict = proteinDf.set_index('leadingProtein').T.to_dict()
-    proteinDf = tempPeptideDf.copy()
-    proteinDf = add_leading_protein_column(proteinDf, verifiedProteinDict)
-
-    # Peptides that don't map to a protein above the FDR cutoff are excluded (indices of rows to be removed are added to this list)
-    removables = []
-
-    # protein cosine scores are included as a new column in the output.
-    proteinCosine = []
-
-    # protein FDR scores are included as a new column in the output.
-    proteinFDR = []
-
-    # Loops for every peptide in the recalculated peptide FDR dataframe.
-    for i in range(len(proteinDf)):
-
-        # if the leading protein group is one of the protein groups above the FDR cutoff point, protein cosine and FDR are added.
-        protein = proteinDf['leadingProtein'].loc[i]
-        if protein in proteinDict:
-            proteinCosine.append(proteinDict[protein]['cosine'])
-            proteinFDR.append(proteinDict[protein]['leadingProteinFDR'])
-
-        # if leading protein group is NOT one of the protein groups above the FDR cutoff point, it is marked to be removed.
-        else:
-            removables.append(i)
-
-    # invalid peptides are removed
-    proteinDf = proteinDf.drop(proteinDf.index[removables]).reset_index(drop=True)
-
-    # protein cosine/FDR scores are added as new columns
-    proteinDf['proteinCosine'] = proteinCosine
-    proteinDf['leadingProteinFDR'] = proteinFDR
-
-    # for readability, the output is sorted by peptide cosine score, then leading protein, then protein cosine score
-    #   In this way, you see a dataframe that is primarily sorted by proteins, and peptides inside the protein are ordered by cosine score
-    proteinDf = proteinDf.sort_values(['proteinCosine','leadingProtein', 'cosine'], ascending=[False,False,False]).reset_index(drop=True)
-
-    return proteinDf
