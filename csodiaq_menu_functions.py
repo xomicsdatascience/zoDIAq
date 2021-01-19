@@ -16,7 +16,7 @@ Purpose:
 Parameters:
 Returns:
 '''
-def write_csodiaq_output(lib, expFile, outFile, corrected=False, numLibPeaks=31 ):
+def write_csodiaq_output(lib, expFile, outFile, corrected=False ):
     print('#Enter lib upload/conversion:')
     print('#'+str(timedelta(seconds=timer())))
     if corrected:
@@ -28,7 +28,6 @@ def write_csodiaq_output(lib, expFile, outFile, corrected=False, numLibPeaks=31 
     else:
         ppmTol=10,
         ppmOffset=0
-    if numLibPeaks > 31: print("Number of library peaks cannot exceed 30, reducing to 30"); numLibPeaks = 30
     ppmFile = re.sub('(.*).csv', r'\1_unfilteredPpmPerRow.csv', outFile)
 #    lib = cbf.library_file_to_dict(libFile, numLibPeaks)
     print('#enter spectra comparison:')

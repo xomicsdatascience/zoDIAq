@@ -20,7 +20,6 @@ expDict = {}
 for x in onlyfiles:
     key = re.sub('Data/Input/100mzxml/20200719_MAGIC_MCF7_1128repro_(\d+)\.mzXML', r'exp-100reps-rep\1', x)
     expDict[key] = x
-
 '''
 expDict = {
 'exp-n1b':'Data/Input/20190411_DI2A_1to16_n1b.mzXML',
@@ -29,41 +28,32 @@ expDict = {
 '''
 
 libDict = {
-'lib-human-noloss-400to2000-pt2mz-':'Data/Input/human_31peaks_noloss_400to2000_pt2mz.tsv'
-#'lib-faims-mgf-':'Data/Input/human.faims.fixed.decoy.mgf'
-#'lib-human-noloss-400to2000-pt2mz-allTop':'Data/Input/human_31peaks_noloss_400to2000_pt2mz_allTop.csv'
-#'lib-human-noloss-400to2000-pt2mz-goodTop':'Data/Input/human_31peaks_noloss_400to2000_pt2mz_goodTop.csv'
+'lib-human-noloss-400to2000-pt2mz-31peaks_':'Data/Input/human_31peaks_noloss_400to2000_pt2mz.tsv'
+#'lib-faims-mgf_':'Data/Input/human.faims.fixed.decoy.mgf'
+#'lib-human-noloss-400to2000-pt2mz-allTop_':'Data/Input/human_31peaks_noloss_400to2000_pt2mz_allTop.csv'
+#'lib-human-noloss-400to2000-pt2mz-goodTop_':'Data/Input/human_31peaks_noloss_400to2000_pt2mz_goodTop.csv'
 }
 
-libPeaks = [
-#    5,
-#    6,
-#    10,
-#    20,
-    31
-]
 for lib in libDict:
     libFile = libDict[lib]
 #        print(libFile)
-    for n in libPeaks:
-        libDict = cbf.library_file_to_dict(libFile, n)
+#    libDict = cbf.library_file_to_dict(libFile)
 
-        for exp in sorted(expDict):
-            expFile = expDict[exp]
+    for exp in sorted(expDict):
+        expFile = expDict[exp]
 #            print(expFile)
 
 
 
-            outFile = 'Data/Output/csodiaq_'+lib+str(n)+'peaks_'+exp+'.csv'
+        outFile = 'Data/Output/csodiaq_'+lib+exp+'.csv'
 #            print(outFile)
-            menu.write_csodiaq_output(libDict, expFile, outFile, numLibPeaks=n)
-            menu.write_ppm_offset_tolerance(outFile, hist=True)
-            menu.write_csodiaq_fdr_outputs(outFile)
+#        menu.write_csodiaq_output(libDict, expFile, outFile)
+#        menu.write_ppm_offset_tolerance(outFile, hist=True)
+        menu.write_csodiaq_fdr_outputs(outFile)
 
-            menu.write_csodiaq_output(libDict, expFile, outFile, corrected=True, numLibPeaks=n)
-            menu.write_ppm_offset_tolerance(outFile, corrected=True, hist=True)
-            menu.write_csodiaq_fdr_outputs(outFile, corrected=True)
-
+#        menu.write_csodiaq_output(libDict, expFile, outFile, corrected=True)
+#        menu.write_ppm_offset_tolerance(outFile, corrected=True, hist=True)
+        menu.write_csodiaq_fdr_outputs(outFile, corrected=True)
 
 
 
@@ -157,7 +147,7 @@ outFile = 'Data/Output/csodiaq_lib-human-6peaks-noloss-pt2mz-400to2000_exp-n1b.c
 #menu.write_csodiaq_fdr_outputs(outFile)
 #menu.write_csodiaq_fdr_outputs(outFile, corrected=True)
 
-#figure.create_venn_diagrams()
+figure.create_venn_diagrams()
 
 #outFile = 'Data/Output/csodiaq_lib-human-10peaks-noloss-pt2mz-400to2000_exp-n1b_corrected.csv'
 #figure.write_meta_analysis_files(outFile)

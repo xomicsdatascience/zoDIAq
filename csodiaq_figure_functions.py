@@ -141,8 +141,8 @@ def draw_histogram_decoy(inFile):
     #plt.savefig(outFile)
 
 def create_venn_diagrams():
-    caleb_peptide_df = pd.read_csv('Data/Output/csodiaq_lib-human-noloss-400to2000-pt2mz-6peaks_exp-n1b_corrected_peptideFDR.csv')
-    caleb_protein_df = pd.read_csv('Data/Output/csodiaq_lib-human-noloss-400to2000-pt2mz-6peaks_exp-n1b_corrected_proteinFDR.csv')
+    caleb_peptide_df = pd.read_csv('Data/Output/csodiaq_lib-human-noloss-400to2000-pt2mz_31peaks_exp-n1b_peptideFDR.csv')
+    caleb_protein_df = pd.read_csv('Data/Output/csodiaq_lib-human-noloss-400to2000-pt2mz_31peaks_exp-n1b_proteinFDR.csv')
     jesse_peptide_df = pd.read_csv('Data/Input/peptide_matches_Jesse.csv')
     jesse_protein_df = pd.read_csv('Data/Input/protein_matches_Jesse.csv')
 
@@ -190,11 +190,11 @@ def create_venn_diagrams():
     #for i in range(10): print('-----------------')
     #for x in sorted(jesse_peptides): print(x)
     venn2([set(caleb_peptides),set(jesse_peptides)], set_labels = ["csoDIAq", "MSPLIT-DIA"])
-    plt.title('Comparing Peptide Identification Outputs (stripped sequences, 6peaks)\n')
+#    plt.title('Comparing Peptide Identification Outputs (stripped sequences)\n')
     plt.savefig('Data/Figures/peptide_comparison_venn.png')
 
     plt.clf()
 
     venn2([set(caleb_proteins),set(jesse_proteins)], set_labels = ["csoDIAq", "MSPLIT-DIA"])
-    plt.title('Comparing Protein Identification Outputs (6peaks)\n')
+#    plt.title('Comparing Protein Identification Outputs\n')
     plt.savefig('Data/Figures/protein_comparison_venn.png')

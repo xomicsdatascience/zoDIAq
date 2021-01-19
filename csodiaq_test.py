@@ -180,16 +180,14 @@ all_top = set(data[2])
 good_top = set(data[3])
 msplitPeptides = data[4]
 '''
-
+'''
 peptideFDR = pd.read_csv('Data/Output/csodiaq_lib-human-noloss-400to2000-pt2mz-31peaks_exp-100reps-rep16_corrected_2SD.csv')
 
 h = 'Data/Figures/testScoreHistogram_newScore_'
 histogram(peptideFDR, h, 'cosine', 'Distribution of Cosine Scores')
 histogram(peptideFDR, h, 'shared', 'Distribution of Matched Fragments')
 histogram(peptideFDR, h, 'csoDIAq_Score', 'Distribution of csoDIAq Scores', l=True)
-
-
-
+'''
 '''
 lib_df = pd.read_csv('Data/Input/human_31peaks_noloss_400to2000_pt2mz.tsv', sep='\t')
 all_top_df = lib_df[lib_df['PeptideSequence'].isin(all_top)]
@@ -270,3 +268,5 @@ df['matches3rootXcosine'] = scores[2]
 df['matches4rootXcosine'] = scores[3]
 df.to_csv('Data/Output/csodiaq_lib-human-noloss-400to2000-pt2mz-31peaks_exp-100reps-rep16_corrected_extraScores.csv')
 '''
+df = pd.read_csv('Data/Input/peptide_target_table_unfiltered.txt', sep='\t')
+print(df.columns)
