@@ -5,7 +5,7 @@ from timeit import default_timer as timer
 from datetime import timedelta
 import csv
 import statistics
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as pyplot
 import numpy as np
 import idpicker as idp
 import re
@@ -29,9 +29,6 @@ Purpose: This function reads the file type of the input file (accepts .mgf, .csv
             determine how to best read in a particular library spectra file.
 Parameters:
     'inFile' - string representing the file path to the desired library spectra file.
-    'numLibPeaks' - int representing the maximum number of peaks allowed per library spectrum. The [numLibPeaks] peaks with
-        the highest intensity are included, everything else is excluded. Default maximum number of peaks is 31, as determined
-        in the corresponding menu function.
 Returns:
     dictionary 'lib'
         key - (float, string) tuple.
@@ -48,12 +45,12 @@ Returns:
                 tuple - equal to the corresponding key in the 'lib' dictionary. This is to identify the
                     library this peak belongs to, as they will be mixed with peaks from other libraries.
 '''
-def library_file_to_dict(inFile, numLibPeaks):
+def library_file_to_dict(inFile):
     fileType = inFile.split('.')[-1]
     if fileType == 'mgf':
-        lib = mgf_library_upload(inFile, numLibPeaks)
+        lib = mgf_library_upload(inFile)
     else:
-        lib = traml_library_upload_csv(inFile, numLibPeaks)
+        lib = traml_library_upload_csv(inFile)
     return lib
 
 
@@ -68,7 +65,7 @@ Parameters:
 Returns:
     dictionary 'lib' - See dictionary 'lib' key explanation in function library_file_to_dict().
 '''
-def traml_library_upload_csv(fileName, numLibPeaks):
+def traml_library_upload_csv(fileName):
     # Library spectra file is read as a pandas dataframe - conditional statement allows for both .tsv and .csv files to be uploaded.
     if fileName.endswith('.tsv'):
         lib_df = pd.read_csv(fileName, sep='\t')
@@ -103,8 +100,6 @@ def traml_library_upload_csv(fileName, numLibPeaks):
         mz, intensity = (list(t) for t in zip(*sorted(zip(mz_dict[key], intensity_dict[key]))))
         keyList = [key for i in range(len(mz))]
         peaks = list(tuple(zip(mz,intensity,keyList)))
-        peaks.sort(key=lambda x:x[1],reverse=True)
-        peaks = peaks[:numLibPeaks]
         peaks.sort(key=lambda x:x[0])
         lib[key]['Peaks'] = peaks
     return lib
@@ -116,7 +111,7 @@ Purpose: Same purpose as traml_library_upload_csv() function, but for mgf files.
 Parameters: see traml_library_upload_csv() parameters.
 Returns: see traml_library_upload_csv() return values.
 '''
-def mgf_library_upload(fileName, numLibPeaks):
+def mgf_library_upload(fileName):
 
     # mgf file is read in using the pyteomics mgf module
     libMGF = mgf.read(fileName)
@@ -148,10 +143,6 @@ def mgf_library_upload(fileName, numLibPeaks):
         intensity = [x**0.5 for x in intensity]
         keyList = [key for x in mz]
         peaks = list(tuple(zip(mz,intensity,keyList)))
-
-        # low-intensity peaks are filtered out, based on value of 'numLibPeaks'
-        peaks.sort(key=lambda x:x[1],reverse=True)
-        peaks = peaks[:numLibPeaks]
         peaks.sort(key=lambda x:x[0])
 
         # final dictionary value is created
@@ -440,7 +431,7 @@ def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, ppmTol, ppmYO
                 # Only library spectra with a precursor mass that falls within the target window of the experimental spectrum are included. See lib_mz_match_query_window() function description for more details.
                 libKeys = lib_mz_match_query_window( spec, allLibKeys )
 
-                # Printing time taken to analyze every 100 spectra in csv format.
+                # Printing time taken to analyze every 100 spectra.
                 count += 1
                 if count % 100 == 0:
                     time = timer()
@@ -529,40 +520,6 @@ def fdr_calculation(df, fdrList=False):
     else: return len(fdrValues), numDecoys-1
 
 '''
-Function: find_best_matchNum_fdr()
-Purpose: Given the output of the query_spectra_analysis() function as contained in a csodiaq output file and an
-            FDR cutoff point, this function determines the optimal minimum allowed peak number of the output.
-            It also provides the number of rows available after filtering for peak number and FDR cutoff,
-            allowing for easy filtering of the pandas dataframe later.
-Parameters:
-    'df' - Pandas Data Frame representing the contents of a csodiaq output file.
-Returns:
-    'bestMatchNum' - int representing the optimal minimum allowed peak number.
-    'bestFDR' - int representing the number of rows that are kept after filtering for both peak matches equal to
-        and above bestMatchNum and values above the FDR cutoff.
-'''
-def find_best_matchNum_fdr(df):
-    # list is created representing every unique number of matches represented in the dataframe
-    matches = sorted(list(set(df['shared'])))
-    bestMatchNum = 0
-    bestFDR = 0
-
-    # loops over every unique number of matches represented in the dataframe.
-    for m in matches:
-
-        # Temporary dataframe created, representing the overall data set filtered for the number of matches in question
-        tempDf = df[df['shared'] >= m].reset_index(drop=True)
-
-        # The number of rows kept after filtering for the FDR cutoff is calculated.
-        fdrLength, decoys = fdr_calculation(tempDf)
-
-        # The number of matches with the highest number of kept rows is considered the optimal number of matches allowed.
-        if fdrLength > bestFDR:
-            bestMatchNum = m
-            bestFDR = fdrLength
-    return bestMatchNum, bestFDR
-
-'''
 Function:read_ppm_file_to_dict()
 Purpose: After filtering the csodiaq output for the optimal minimum allowed peak match number, the returned
             dictionary is then used to create a comprehensive list of ppm differences of the output, which is
@@ -647,15 +604,14 @@ def find_offset_tol(data, histFile):
         hist, bins = np.histogram(data, bins=200)
         width = 0.7 * (bins[1] - bins[0])
         center = (bins[:-1] + bins[1:]) / 2
-        plt.clf()
-        plt.bar(center, hist, align='center', width=width)
-        plt.title("Gaussian Histogram of Matched Peak PPM Difference Spread")
-        plt.xlabel("Difference between Matched Peaks (PPM)")
-        plt.ylabel("Frequency")
-        plt.axvline(x=offset, color='black', linestyle = 'dashed')
-        plt.axvline(x=offset-tolerance, color='red', linestyle = 'dashed')
-        plt.axvline(x=offset+tolerance, color='red', linestyle = 'dashed')
-        plt.savefig(histFile)
+        pyplot.clf()
+        set_plot_settings('Difference between Matched Peaks (PPM)','Frequency')
+
+        pyplot.bar(center, hist, align='center', width=width)
+        pyplot.axvline(x=offset, color='black', linestyle = 'dashed', linewidth=4)
+        pyplot.axvline(x=offset-tolerance, color='red', linestyle = 'dashed', linewidth=4)
+        pyplot.axvline(x=offset+tolerance, color='red', linestyle = 'dashed', linewidth=4)
+        pyplot.savefig(histFile)
     return offset, tolerance
 
 
@@ -848,6 +804,22 @@ def add_leading_protein_column(df, verifiedProteinDict):
     # new leading protein column set
     finalDf['leadingProtein'] = leadingProteins
 
+    finalDf = finalDf.reset_index(drop=True)
+
     # For proteins that were part of an IDPicker-determined protein group the same row was added for every protein in the group. This is dropping those duplicate rows.
     finalDf = finalDf.drop_duplicates(keep='first').reset_index(drop=True)
+
     return finalDf
+
+
+def set_plot_settings(xlabel, ylabel, wide=True):
+    if wide: pyplot.figure(figsize=(18,12)).add_axes([0.11, 0.1, 0.85, 0.85])
+    else: pyplot.figure(figsize=(12,12))
+ #   pyplot.title(title, fontsize = 40)
+    pyplot.axhline(linewidth=4, color='black')
+    pyplot.axvline(linewidth=4, x=-10, color='black')
+    pyplot.xlim(-10,10)
+    pyplot.xlabel(xlabel, fontsize = 36, weight='bold')
+    pyplot.ylabel(ylabel, fontsize = 36, weight='bold')
+    pyplot.tick_params(axis="x", labelsize=36)
+    pyplot.tick_params(axis="y", labelsize=36)
