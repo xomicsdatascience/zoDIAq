@@ -32,7 +32,8 @@ def write_csodiaq_output(lib, expFile, outFile, corrected=False ):
 #    lib = cbf.library_file_to_dict(libFile, numLibPeaks)
     print('#enter spectra comparison:')
     print('#'+str(timedelta(seconds=timer())))
-    cbf.query_spectra_analysis( expFile,
+    cbf.pooled_all_query_spectra_analysis( expFile,
+#    cbf.query_spectra_analysis( expFile,
                                 outFile,
                                 ppmFile,
                                 lib,
