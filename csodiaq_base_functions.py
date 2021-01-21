@@ -172,16 +172,14 @@ Returns:
     A list of (float, string) tuples. Represents the section of values from the 'sortedLibKeys' parameter that
         are relevant to the query spectrum represented by the 'spec' parameter.
 '''
-def lib_mz_match_query_window( spec, sortedLibKeys ):
+def lib_mz_match_query_window( top_mz, bottom_mz, sortedLibKeys ):
     # Values will be added to sortedLibKeys parameter, so a copy of that list is created here.
     temp = sortedLibKeys[:]
 
     # A fake 'key' value is created representing the upper limit of keys that correspond to the query spectrum.
-    top_mz = spec['precursorMz'][0]['precursorMz'] + spec['precursorMz'][0]['windowWideness'] / 2
     top_key = (top_mz, "z")
 
     # A fake 'key' value is created representing the lower limit of keys that correspond to the query spectrum.
-    bottom_mz = spec['precursorMz'][0]['precursorMz'] - spec['precursorMz'][0]['windowWideness'] / 2
     bottom_key = (bottom_mz, "")
 
     # The fake keys created above are inserted in an O(log(n)) fashion to the sorted library keys.
@@ -249,25 +247,23 @@ def ppm_offset(mz, ppm):
 
 
 '''
-Function: peak_comparison()
+Function: pooled_all_peak_comparison()
 Purpose: This function determines peaks that are within a sufficiently close tolerance to one another. Various functions
             requiring peak comparison then take place inside this function, including compiling data for a cosine
             similarity score. The specifics of the various functions can be found in the return values below.
 Parameters:
     'libSpectrum' - list of (float, float, tuple) tuples. Represents spectrum peaks - see 'Peaks' key explanation in function
         library_file_to_dict().
-    'libKeys' - (float, string) tuple. See dictionary 'lib' key explanation in function library_file_to_dict().
-    'expMz' - list of floats. Corresponds to m/z values from the experimental spectrum being analyzed. Matched by index
-        with the 'expIntensity' parameter.
-    'expIntensity' -list of floats. Corresponds to intensity values from the experimental spectrum being analyzed. Matched
-        by index with the 'expMz' parameter.
+    'expSpectrum' - list of (float, float, int) tuples. Represents spectrum peaks - see 'Peaks' key explanation in function
+        library_file_to_dict(). The only variation is that the int represents the scan number.
     'ppmTol' - see 'ppmTol' parameter description for function approx().
     'ppmYOffset' - The value in ppm that should be subtracted from the query peak m/z. This is the average ppm difference
         of an uncorrected csodiaq output, being applied to the experimental spectra to generate a corrected
         csodiaq calculation output.
 Returns:
     dictionary 'cosDict'
-        key - (float, string) tuple. See dictionary 'lib' key explanation in function library_file_to_dict().
+        key - ((float, string),int) tuple. See dictionary 'lib' key explanation in function library_file_to_dict() for
+            the first part of the tuple. The second part is the scan number of a query spectrum.
         value - list of floats
             float - sum of products of intensities between matched library and query peaks. In context of the cosine
                 similarity score algorithm, this is the "A*B" sum.
@@ -276,40 +272,40 @@ Returns:
             float - sum of squared library peak intensities when matched to a query peaks. In context of the cosine
                 similarity score algorithm, this is the "A^2" sum.
     dictionary 'countDict'
-        key - (float, string) tuple. See dictionary 'lib' key explanation in function library_file_to_dict().
+        key - ((float, string),int) tuple. See dictionary 'cosDict' key explanation in this function.
         value - int
             Representing the number of matched peaks. This value will be the 'shared' column value in the output file.
     dictionary 'ionDict'
-        key - (float, string) tuple. See dictionary 'lib' key explanation in function library_file_to_dict().
+        key - ((float, string),int) tuple. See dictionary 'cosDict' key explanation in this function.
         value - set representing the indices of the query peaks that matched the library spectrum represented in this
                 dictionary value. The sum of these query peak intensities will be returned as the 'ionCount' column
                 value in the output file.
     dictionary 'ppmDict'
-        key - (float, string) tuple. See dictionary 'lib' key explanation in function library_file_to_dict().
+        key - ((float, string),int) tuple. See dictionary 'cosDict' key explanation in this function.
         value - list of floats represents the ppm difference of all peak matches that were within the given ppm tolerance. This is
                 most directly used for determining the ppm offset and standard deviation of an uncorrected
                 csodiaq output to be used in generating a corrected csodiaq output. For a corrected csodiaq output,
                 it is primarily used for figure generation to compare with uncorrected csodiaq output.
 '''
-def peak_comparison(libSpectrum, libKeys, expMz, expIntensity, ppmTol, ppmYOffset):
+def pooled_all_peak_comparison(libSpectrum, expSpectrum, ppmTol, ppmYOffset):
     # final dictionary returned is initialized. See function description for details on contents.
-    cosDict = {k: [0.0, 0.0, 0.0] for k in libKeys}
-    countDict = {k: 0 for k in libKeys}
-    ionDict = {k: set() for k in libKeys}
-    ppmDict = {k: [] for k in libKeys}
+    def cosDictValues(): return [0.0, 0.0, 0.0]
+    cosDict = defaultdict(cosDictValues)
+    countDict = defaultdict(int)
+    ionDict = defaultdict(set)
+    ppmDict = defaultdict(list)
 
     # By tracking the indices of the current library/query peaks we reduce the time complexity of the algorithm
-    #   from O(n*m) to O(n+m) where n = (# of library peaks) and m = (# of query peaks).
     i, j = 0, 0
-    expPeakMz = expMz[j] - ppm_offset(expMz[j], ppmYOffset)
-    while i < len(libSpectrum) and j < len(expMz):
+    expPeakMz = expSpectrum[j][0] - ppm_offset(expSpectrum[j][0], ppmYOffset)
+    while i < len(libSpectrum) and j < len(expSpectrum):
 
         # If the m/z of the peaks are not within the given ppm tolerance, the indices of the smaller of the two is incremented
         #   and we are returned to the top of the while loop.
         if not approx(libSpectrum[i][0],expPeakMz, ppmTol):
             if libSpectrum[i][0] > expPeakMz:
                 j += 1
-                if j < len(expMz): expPeakMz = expMz[j] - ppm_offset(expMz[j], ppmYOffset)
+                if j < len(expSpectrum): expPeakMz = expSpectrum[j][0] - ppm_offset(expSpectrum[j][0], ppmYOffset)
                 continue
             if libSpectrum[i][0] < expPeakMz: i += 1; continue
 
@@ -319,28 +315,29 @@ def peak_comparison(libSpectrum, libKeys, expMz, expIntensity, ppmTol, ppmYOffse
         while (p < len(libSpectrum)):
             ppm = approx(libSpectrum[p][0], expPeakMz, ppmTol)
             if p==len(libSpectrum) or not ppm: break
+            key = (libSpectrum[p][2],expSpectrum[j][2])
+
 
             # Data required to calculate the cosine score
-            cosDict[libSpectrum[p][2]][0] += libSpectrum[p][1]*expIntensity[j]
-            cosDict[libSpectrum[p][2]][1] += expIntensity[j]**2
-            cosDict[libSpectrum[p][2]][2] += libSpectrum[p][1]**2
+            cosDict[key][0] += libSpectrum[p][1]*expSpectrum[j][1]
+            cosDict[key][1] += expSpectrum[j][1]**2
+            cosDict[key][2] += libSpectrum[p][1]**2
 
             # Number of matching peaks
-            countDict[libSpectrum[p][2]] += 1
+            countDict[key] += 1
 
             # Ion Count
-            ionDict[libSpectrum[p][2]].add(j)
+            ionDict[key].add(j)
 
             # ppm differences in matched peaks
-            ppmDict[libSpectrum[p][2]].append(ppm)
+            ppmDict[key].append(ppm)
             p += 1
 
         # Note that the possibility of one library peak matching to multiple query peaks is automatically accounted for
         #   by the fact that the query peak is the next default increment after all match calculations have been made.
         j += 1
-        if j < len(expMz): expPeakMz = expMz[j] - ppm_offset(expMz[j], ppmYOffset)
+        if j < len(expSpectrum): expPeakMz = expSpectrum[j][0] - ppm_offset(expSpectrum[j][0], ppmYOffset)
     return cosDict, countDict, ionDict, ppmDict
-
 
 '''
 Function: cosine_similarity()
@@ -356,7 +353,7 @@ def cosine_similarity(row):
     return (row[0] / magnitude if magnitude else 0)
 
 '''
-Function: query_spectra_analysis()
+Function: pooled_library_query_spectra_analysis()
 Purpose: This function loops through all query spectra and calculates the cosine similarity score and other
             values between it and every library spectra with a precursor m/z value within its designated window.
             For an explanation of each column in the output (references as the csodiaq output file in other
@@ -379,7 +376,7 @@ Returns:
     No Return Value. Results are written directly to the output file and ppm file (outFile and ppmFile,
         respectively). The description of specific columns of output file are provided in the function comments.
 '''
-def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, ppmTol, ppmYOffset):
+def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppmTol, ppmYOffset):
     # Column headers for the output file are initialized.
     columns = [
         'fileName', # Name of the query spectra file.
@@ -398,7 +395,7 @@ def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, ppmTol, ppmYO
         'ionCount', # Sum of query spectrum intensities, excluding possible duplicates - currently uncalculated, set to 0.
         'CompensationVoltage', # The compensation voltage of the query spectrum.
         'totalWindowWidth', # width of m/z that was captured in the query spectrum. Corresponds to MzEXP.
-        'csoDIAq_Score'
+        'MaCC_Score'# score unique to CsoDIAq, the fifith root of the number of matches ('shared') multiplied by the cosine score ('cosine')
     ]
 
     # Output file is opened and column headers are written as the first row.
@@ -409,71 +406,87 @@ def query_spectra_analysis( expSpectraFile, outFile, ppmFile, lib, ppmTol, ppmYO
 
         ppmWriter = csv.writer(ppmFile)
 
-
         # Count variable keeps track of the number of query spectra that have been analyzed for time tracking purposes.
         count = 0
 
         # 'lib' dictionary keys are kept as a separate list in this analysis. Note that they are sorted by precursor m/z.
         allLibKeys = sorted(lib)
 
-        # Beginning to loop over query spectra.
+        quePeakDict = defaultdict(list)
+
+        queValDict = {}
+
+        print("#Pooling query spectra start: ")
+        print('#'+str(timedelta(seconds=timer())))
+
         with mzxml.read(expSpectraFile) as spectra:
-
-            # Time taken to analyze every 100 spectra is recorded and printed to the screen in a csv format (can be copied and pasted).
-            #   Printing was chosen over direct writing for easy tracking of program progress.
-            time = timer()
-            prevtime = time
-
             for spec in spectra:
-                # TEMP - Normalize intensities by finding their square root
+#                if int(spec['num']) < 3601:
+                num = spec['num']
+                precursorMz = spec['precursorMz'][0]['precursorMz']
+                precursorCharge = spec['precursorMz'][0]['precursorCharge']
+                peakCount = len(spec['intensity array'])
+                CV = spec['compensationVoltage']
+                window = spec['precursorMz'][0]['windowWideness']
+
                 spec['intensity array'] = [x**0.5 for x in spec['intensity array']]
+                peakIDs = [num for x in range(len(spec['m/z array']))]
+                top_mz = precursorMz + window / 2
+                bottom_mz = precursorMz - window / 2
+                quePeakDict[(top_mz, bottom_mz)] += zip(spec['m/z array'],spec['intensity array'],peakIDs)
 
-                # Only library spectra with a precursor mass that falls within the target window of the experimental spectrum are included. See lib_mz_match_query_window() function description for more details.
-                libKeys = lib_mz_match_query_window( spec, allLibKeys )
+                queValDict[num] = [ precursorMz, precursorCharge, peakCount, CV, window ]
 
-                # Printing time taken to analyze every 100 spectra.
-                count += 1
-                if count % 100 == 0:
-                    time = timer()
-                    print(str(count)+','+str(time-prevtime)+','+str(len(spec['m/z array']))+','+str(spec['precursorMz'][0]['precursorMz'])+','+str(len(libKeys))+','+outFile)
-                    prevtime = time
+        print("#Spectra Comparison start: ")
+        print('#'+str(timedelta(seconds=timer())))
 
-                # Cosine score is generated for each library spectrum and returned in a list. See peak_comparison_for_cosine() function description for formatting.
-                if len(libKeys) != 0:
-                    cosDict, countDict, ionDict, ppmDict = peak_comparison(pool_lib_spectra(lib, libKeys), libKeys, spec['m/z array'], spec['intensity array'], ppmTol, ppmYOffset)
-                else: continue
+        time = timer()
+        prevtime = time
+        for w in quePeakDict:
+            # Printing time taken to analyze every 100 spectra.
+            count += 1
+            if count % 100 == 0:
+                time = timer()
+                print(str(count)+','+str(time-prevtime)+','+str(len(spec['m/z array']))+','+str(spec['precursorMz'][0]['precursorMz'])+','+str(len(libKeys))+','+outFile)
+                prevtime = time
 
-                # Cosine scores and supplementary data are written to the output file.
-                # Note that this loop essentially goes over every library spectrum identified by the lib_mz_match_query_window() function.
-                for key in libKeys:
-                    # Library spectra that had too few matching peaks are excluded. numPeakMatch variable determines the threshold.
-                    if countDict[key] > 2:
-                        cosine = cosine_similarity(cosDict[key])
-                        ionCount = sum([ spec['intensity array'][j]+ppm_offset(spec['intensity array'][j],ppmYOffset) for j in ionDict[key] ])
-                        temp = [
-                            expSpectraFile, #fileName
-                            spec['num'], #scan
-                            spec['precursorMz'][0]['precursorMz'], #MzEXP
-                            spec['precursorMz'][0]['precursorCharge'], #zEXP
-                            key[1], #peptide
-                            lib[key]['ProteinName'], #protein
-                            key[0], #MzLIB
-                            lib[key]['PrecursorCharge'], #zLIB
-                            cosine, #cosine
-                            lib[key]['transition_group_id'], #name
-                            len(spec['m/z array']), #Peaks(Query)
-                            len(lib[key]['Peaks']), #Peaks(Library)
-                            countDict[key], #shared
-                            ionCount, #ionCount
-                            spec['compensationVoltage'], #compensationVoltage
-                            spec['precursorMz'][0]['windowWideness'], #totalWindowWidth
-                            (countDict[key]**(1/5))*cosine
-                        ]
-                        writer.writerow(temp)
-                        ppmWriter.writerow([spec['num'], key[1], lib[key]['ProteinName']] + sorted(ppmDict[key]))
+            quePeakDict[w] = sorted(quePeakDict[w])
+            libKeys = lib_mz_match_query_window( w[0], w[1], allLibKeys )
 
-        # Prints the final number of experimental spectra analyzed.
-        print('#'+str(count))
+            if len(libKeys) != 0:
+                cosDict, countDict, ionDict, ppmDict = pooled_all_peak_comparison(pool_lib_spectra(lib, libKeys), quePeakDict[w], ppmTol, ppmYOffset)
+            else: continue
+            for key in cosDict:
+                # Library spectra that had too few matching peaks are excluded. numPeakMatch variable determines the threshold.
+
+                if countDict[key] > 2:
+                    cosine = cosine_similarity(cosDict[key])
+                    ionCount = sum([ quePeakDict[w][j][1]+ppm_offset(quePeakDict[w][j][1],ppmYOffset) for j in ionDict[key] ])
+                    temp = [
+                        expSpectraFile, #fileName
+                        key[1], #scan
+                        queValDict[key[1]][0], #MzEXP
+                        queValDict[key[1]][1], #zEXP
+                        key[0][1], #peptide
+                        lib[key[0]]['ProteinName'], #protein
+                        key[0][0], #MzLIB
+                        lib[key[0]]['PrecursorCharge'], #zLIB
+                        cosine, #cosine
+                        lib[key[0]]['transition_group_id'], #name
+                        queValDict[key[1]][2], #Peaks(Query)
+                        len(lib[key[0]]['Peaks']), #Peaks(Library)
+                        countDict[key], #shared
+                        ionCount, #ionCount
+                        queValDict[key[1]][3], #compensationVoltage
+                        queValDict[key[1]][4], #totalWindowWidth
+                        (countDict[key]**(1/5))*cosine
+                    ]
+                    writer.writerow(temp)
+                    ppmWriter.writerow([key[1], key[0][1], lib[key[0]]['ProteinName']] + sorted(ppmDict[key]))
+
+    # Prints the final number of experimental spectra analyzed.
+    print('#'+str(count))
+
 
 
 '''
@@ -811,11 +824,19 @@ def add_leading_protein_column(df, verifiedProteinDict):
 
     return finalDf
 
-
+'''
+Function: set_plot_settings()
+Purpose: Sets parameters for histogram graphics.
+Parameters:
+    'xlabel' - string indicating the x-axis label.
+    'ylabel' - string indicating the y-axis label.
+    'wide' - boolean for two different dimension possibilities
+Returns:
+    No return value. Just sets parameters using pyplot.
+'''
 def set_plot_settings(xlabel, ylabel, wide=True):
     if wide: pyplot.figure(figsize=(18,12)).add_axes([0.11, 0.1, 0.85, 0.85])
     else: pyplot.figure(figsize=(12,12))
- #   pyplot.title(title, fontsize = 40)
     pyplot.axhline(linewidth=4, color='black')
     pyplot.axvline(linewidth=4, x=-10, color='black')
     pyplot.xlim(-10,10)
@@ -823,3 +844,60 @@ def set_plot_settings(xlabel, ylabel, wide=True):
     pyplot.ylabel(ylabel, fontsize = 36, weight='bold')
     pyplot.tick_params(axis="x", labelsize=36)
     pyplot.tick_params(axis="y", labelsize=36)
+
+
+'''
+Function: calc_heavy_mz()
+Purpose: In order to quantify peptides or proteins, we need to re-run DISPA in a targetted fashion on peptides of interest
+            identified in previous experiments. Furthermore, we need to target the "heavy" version of the peptide, namely the
+            version of the peptide that have heavy lysine and arginine instead of their typical, lighter counterparts. This
+            function calculates the expected precursor m/z value for the heavy peptide.
+Parameters:
+    'seq' - string representing the amino acid composition of the peptide.
+    'mz' - float representing the precursor mz for the peptide.
+    'z' - int representing the charge of the peptide.
+Returns:
+    'heavyMz' - float representing the heavy calculation of the precursor mz for the peptide.
+'''
+def calc_heavy_mz(seq, mz, z):
+    hK=8.014199 ## mass of heavy lysine
+    hR=10.00827 ## mass of heavy arg
+
+    nR = len(seq) - len(re.sub('R','', seq))
+    nK = len(seq) - len(re.sub('K','', seq))
+
+    heavyMz = mz + (nK*hK)/z + (nR*hR)/z
+    return heavyMz
+
+
+'''
+Function: prepare_DIA_rerun_data()
+Purpose: This function takes a protein FDR dataframe and converts it into a format that an MS machine can read for targetted
+            DISPA re-analysis.
+Parameters:
+    'df' - Pandas dataframe, representing the protein FDR output from write_csodiaq_fdr_outputs().
+    'trypsin' - boolean variable that indicates if identified peptides should be filtered for those that resulted from trypsin
+        treatment.
+Returns:
+    'finalDf' - Pandas dataframe. 'finalDf' can be written to a file for direct input to an MS machine.
+'''
+def prepare_DIA_rerun_data(df, trypsin=True):
+
+    # Necessary?
+    if trypsin: df = df[df['peptide'].str.endswith('R') | df['peptide'].str.endswith('K')].reset_index(drop=True)
+    df = df[df['uniquePeptide']==1].sort_values('ionCount', ascending=False).drop_duplicates(subset='leadingProtein', keep='first').reset_index(drop=True)
+
+    data = []
+    for i in range(len(df)):
+        compound = df.loc[i]['peptide']
+        formula = ''
+        adduct = '(no adduct)'
+        lightMz = float(df.loc[i]['MzLIB'])
+        charge = df.loc[i]['zLIB']
+        heavyMz = calc_heavy_mz(compound, lightMz, charge)
+        MSXID = i+1
+        data.append([compound, formula, adduct, round(lightMz, ndigits = 2), charge, MSXID])
+        data.append([compound, formula, adduct, round(heavyMz, ndigits = 2), charge, MSXID])
+
+    finalDf = pd.DataFrame(data, columns=['Compound','Formula','Adduct','m.z','z','MSXID'])
+    return finalDf
