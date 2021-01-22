@@ -268,5 +268,5 @@ df['matches3rootXcosine'] = scores[2]
 df['matches4rootXcosine'] = scores[3]
 df.to_csv('Data/Output/csodiaq_lib-human-noloss-400to2000-pt2mz-31peaks_exp-100reps-rep16_corrected_extraScores.csv')
 '''
-df = pd.read_csv('Data/Input/peptide_target_table_unfiltered.txt', sep='\t')
-print(df.columns)
+df = pd.read_csv('Data/Output/csodiaq_lib-human-noloss-400to2000-pt2mz-31peaks_exp-n1b_corrected_proteinFDR.csv')
+cbf.prepare_DIA_rerun_data('Data/oldOutput/delete_mostIntense_', df, proteins=2, trypsin=True)

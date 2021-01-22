@@ -17,8 +17,6 @@ Parameters:
 Returns:
 '''
 def write_csodiaq_output(lib, expFile, outFile, corrected=False ):
-    print('#Enter lib upload/conversion:')
-    print('#'+str(timedelta(seconds=timer())))
     if corrected:
         offsetFile = re.sub('(.*).csv', r'\1_offset_tolerance.csv', outFile)
         df = pd.read_csv(offsetFile)
@@ -55,7 +53,7 @@ def write_ppm_offset_tolerance(inFile, corrected=0, hist=False):
     print('#'+str(timedelta(seconds=timer())))
 
     if corrected: inFile = re.sub('(.*).csv', r'\1_corrected.csv', inFile)
-    df = pd.read_csv(inFile).sort_values('csoDIAq_Score', ascending=False).reset_index(drop=True)
+    df = pd.read_csv(inFile).sort_values('MaCC_Score', ascending=False).reset_index(drop=True)
     hits, decoys = cbf.fdr_calculation(df)
     df = df.loc[:hits]
 
@@ -74,49 +72,7 @@ def write_ppm_offset_tolerance(inFile, corrected=0, hist=False):
     print('#Complete')
     print('#'+str(timedelta(seconds=timer())))
 
-'''
-Function:
-Purpose:
-Parameters:
-Returns:
 
-def write_ppm_spread(inFile, corrected=0):
-    print('#enter csodiaq ppm spread file creation:')
-    print('#'+str(timedelta(seconds=timer())))
-    if corrected: inFile = re.sub('(.*).csv', r'\1_corrected.csv', inFile)
-
-
-    ppmFile = re.sub('(.*).csv', r'\1_unfilteredPpmPerRow.csv', inFile)
-    outFile = re.sub('(.*).csv', r'\1_ppmSpread.csv', inFile)
-    tag = re.sub('Data/Output/(.*).csv', r'\1_filteredBestMatch', inFile)
-    files = list(os.listdir('Data/Output'))
-    for x in files:
-        if tag in x: inFile = 'Data/Output/'+x
-    cbf.write_ppm_spread(inFile, ppmFile, outFile)
-    print('#Complete')
-    print('#'+str(timedelta(seconds=timer())))
-'''
-'''
-Function:
-Purpose:
-Parameters:
-Returns:
-
-def write_ppm_offset_tolerance(inFile, corrected=0, hist=False):
-    if corrected: inFile = re.sub('(.*).csv', r'\1_corrected.csv', inFile)
-    ppmSpreadFile = re.sub('(.*).csv', r'\1_ppmSpread.csv', inFile)
-    with open(ppmSpreadFile, newline='') as f: ppmList = list(csv.reader(f))[0]
-    ppmList = [float(x) for x in ppmList]
-    outFile = re.sub('(.*).csv', r'\1_offset_tolerance.csv', inFile)
-    if hist: histFile = re.sub('Data/Output/(.*).csv', r'Data/Figures/\1_histogram.png', inFile)
-    else: histFile = 0
-
-    offset, tolerance = cbf.find_offset_tol(ppmList, histFile)
-    with open(outFile, 'w', newline='') as csvFile:
-        writer = csv.writer(csvFile)
-        writer.writerow(['offset','tolerance'])
-        writer.writerow([offset, tolerance])
-'''
 '''
 Function:
 Purpose:
@@ -132,3 +88,18 @@ def write_csodiaq_fdr_outputs(inFile, corrected=False):
     proteinFile = re.sub('(.*).csv', r'\1_proteinFDR.csv', inFile)
 
     cbf.write_csodiaq_fdr_outputs(inFile, spectralFile, peptideFile, proteinFile)
+
+'''
+Function:
+Purpose:
+Parameters:
+Returns:
+'''
+def write_DISPA_targeted_reanalysis_files(inFile, proteins=1, trypsin=True):
+    print('#enter DISPA targeted reanalysis file writing:')
+    print('#'+str(timedelta(seconds=timer())))
+    inFile = re.sub('(.*).csv', r'\1_corrected.csv', inFile)
+    header = re.sub('(.*).csv', r'\1_mostIntenseTargs_', inFile)
+    if proteins: inFile = re.sub('(.*).csv', r'\1_proteinFDR.csv', inFile)
+    else: inFile = re.sub('(.*).csv', r'\1_peptideFDR.csv', inFile)
+    cbf.return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin)

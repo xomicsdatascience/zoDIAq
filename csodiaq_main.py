@@ -48,3 +48,4 @@ for lib in libDict:
         menu.write_csodiaq_output(libDict, expFile, outFile, corrected=True)
         menu.write_ppm_offset_tolerance(outFile, corrected=True, hist=True)
         menu.write_csodiaq_fdr_outputs(outFile, corrected=True)
+        menu.write_DISPA_targeted_reanalysis_files(outFile)

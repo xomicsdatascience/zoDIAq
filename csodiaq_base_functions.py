@@ -14,7 +14,17 @@ from collections import defaultdict
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#
 # Template for function descriptions
+#
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
 '''
 Function:
 Purpose:
@@ -22,6 +32,17 @@ Parameters:
 Returns:
 '''
 
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#
+# PSM Scoring: Identification
+#
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
 '''
 Function: library_file_to_dict()
 Purpose: This function reads the file type of the input file (accepts .mgf, .csv and .tsv formats) and runs it through the
@@ -416,9 +437,6 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
 
         queValDict = {}
 
-        print("#Pooling query spectra start: ")
-        print('#'+str(timedelta(seconds=timer())))
-
         with mzxml.read(expSpectraFile) as spectra:
             for spec in spectra:
 #                if int(spec['num']) < 3601:
@@ -436,9 +454,6 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
                 quePeakDict[(top_mz, bottom_mz)] += zip(spec['m/z array'],spec['intensity array'],peakIDs)
 
                 queValDict[num] = [ precursorMz, precursorCharge, peakCount, CV, window ]
-
-        print("#Spectra Comparison start: ")
-        print('#'+str(timedelta(seconds=timer())))
 
         time = timer()
         prevtime = time
@@ -488,50 +503,17 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
     print('#'+str(count))
 
 
-
-'''
-Function: fdr_calculation()
-Purpose: Given the output of the query_spectra_analysis() function as contained in a csodiaq output file and an
-            FDR cutoff point, this function returns the number of rows in the dataframe above the FDR cutoff
-            point. Note that this function is usually applied to various subsets of the actual csodiaq output
-            file after filtering for minimum allowed peak matches. A higher return value from this function
-            indicates a more optimal minimum allowed peak match number.
-Parameters:
-    'df' - Pandas Data Frame representing the contents of a csodiaq output file.
-    'FDRCutoff' - float representing the minumum allowed FDR of the csodiaq output.
-Returns:
-    'fdr' - int representing number of rows in dataframe 'df' that are above the 'FDRCutoff' FDR cutoff point.
-    'numDecoys' - int representing the number of rows represented by decoys specifically. NOTE: This return
-        value is not currently used by the program, but is being kept here for possible future use.
-'''
-def fdr_calculation(df, fdrList=False):
-    # initializing the two return values at 0
-    fdrValues = []
-    numDecoys = 0
-    df.fillna("nan",inplace=True)
-    # for every row in the dataframe
-    for i in range(len(df)):
-
-        # current criteria for 'decoys' is to have 'decoy' in the protein name. This may change in the future.
-        if 'DECOY' in df.loc[i]['protein']:
-            numDecoys += 1
-
-        # calculates the FDR up to this point in the data frame.
-        curFDR = numDecoys/(i+1)
-
-        # conditional statement comparing the current FDR to the FDR Cutoff. If larger, function values are returned.
-        if curFDR > 0.01:
-
-            # if the number of rows has not yet reached the minimum number that allows for the FDR cutoff, 0 is returned instead.
-            if len(fdrValues) < 1/0.01:
-                if fdrList: return [], 0
-                else: return 0, 0
-            if fdrList: return fdrValues, numDecoys-1
-            else: return len(fdrValues), numDecoys-1
-        fdrValues.append(curFDR)
-    if fdrList: return fdrValues, numDecoys-1
-    else: return len(fdrValues), numDecoys-1
-
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#
+# PSM Scoring: Scoring
+#
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
 '''
 Function:read_ppm_file_to_dict()
 Purpose: After filtering the csodiaq output for the optimal minimum allowed peak match number, the returned
@@ -628,6 +610,61 @@ def find_offset_tol(data, histFile):
     return offset, tolerance
 
 
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#
+# FDR Filtering
+#
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+'''
+Function: fdr_calculation()
+Purpose: Given the output of the query_spectra_analysis() function as contained in a csodiaq output file and an
+            FDR cutoff point, this function returns the number of rows in the dataframe above the FDR cutoff
+            point. Note that this function is usually applied to various subsets of the actual csodiaq output
+            file after filtering for minimum allowed peak matches. A higher return value from this function
+            indicates a more optimal minimum allowed peak match number.
+Parameters:
+    'df' - Pandas Data Frame representing the contents of a csodiaq output file.
+    'FDRCutoff' - float representing the minumum allowed FDR of the csodiaq output.
+Returns:
+    'fdr' - int representing number of rows in dataframe 'df' that are above the 'FDRCutoff' FDR cutoff point.
+    'numDecoys' - int representing the number of rows represented by decoys specifically. NOTE: This return
+        value is not currently used by the program, but is being kept here for possible future use.
+'''
+def fdr_calculation(df, fdrList=False):
+    # initializing the two return values at 0
+    fdrValues = []
+    numDecoys = 0
+    df.fillna("nan",inplace=True)
+    # for every row in the dataframe
+    for i in range(len(df)):
+
+        # current criteria for 'decoys' is to have 'decoy' in the protein name. This may change in the future.
+        if 'DECOY' in df.loc[i]['protein']:
+            numDecoys += 1
+
+        # calculates the FDR up to this point in the data frame.
+        curFDR = numDecoys/(i+1)
+
+        # conditional statement comparing the current FDR to the FDR Cutoff. If larger, function values are returned.
+        if curFDR > 0.01:
+
+            # if the number of rows has not yet reached the minimum number that allows for the FDR cutoff, 0 is returned instead.
+            if len(fdrValues) < 1/0.01:
+                if fdrList: return [], 0
+                else: return 0, 0
+            if fdrList: return fdrValues, numDecoys-1
+            else: return len(fdrValues), numDecoys-1
+        fdrValues.append(curFDR)
+    if fdrList: return fdrValues, numDecoys-1
+    else: return len(fdrValues), numDecoys-1
+
+
 '''
 Function: write_csodiaq_fdr_outputs()
 Purpose: This function takes the output of the query_spectra_analysis() function, calculates the spectral, peptide, and
@@ -651,7 +688,7 @@ Returns:
 def write_csodiaq_fdr_outputs(inFile, specFile, pepFile, protFile):
 
     # cosine score data is read in
-    overallDf = pd.read_csv(inFile).sort_values('csoDIAq_Score', ascending=False).reset_index(drop=True)
+    overallDf = pd.read_csv(inFile).sort_values('MaCC_Score', ascending=False).reset_index(drop=True)
 
     # spectral FDR is calculated and written to dataframe 'spectralDf'
     spectralDf = add_fdr_to_csodiaq_output(overallDf)
@@ -824,28 +861,17 @@ def add_leading_protein_column(df, verifiedProteinDict):
 
     return finalDf
 
-'''
-Function: set_plot_settings()
-Purpose: Sets parameters for histogram graphics.
-Parameters:
-    'xlabel' - string indicating the x-axis label.
-    'ylabel' - string indicating the y-axis label.
-    'wide' - boolean for two different dimension possibilities
-Returns:
-    No return value. Just sets parameters using pyplot.
-'''
-def set_plot_settings(xlabel, ylabel, wide=True):
-    if wide: pyplot.figure(figsize=(18,12)).add_axes([0.11, 0.1, 0.85, 0.85])
-    else: pyplot.figure(figsize=(12,12))
-    pyplot.axhline(linewidth=4, color='black')
-    pyplot.axvline(linewidth=4, x=-10, color='black')
-    pyplot.xlim(-10,10)
-    pyplot.xlabel(xlabel, fontsize = 36, weight='bold')
-    pyplot.ylabel(ylabel, fontsize = 36, weight='bold')
-    pyplot.tick_params(axis="x", labelsize=36)
-    pyplot.tick_params(axis="y", labelsize=36)
-
-
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#
+# DISPA: Targeted Re-Analysis
+#
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
 '''
 Function: calc_heavy_mz()
 Purpose: In order to quantify peptides or proteins, we need to re-run DISPA in a targetted fashion on peptides of interest
@@ -881,23 +907,63 @@ Parameters:
 Returns:
     'finalDf' - Pandas dataframe. 'finalDf' can be written to a file for direct input to an MS machine.
 '''
-def prepare_DIA_rerun_data(df, trypsin=True):
+def return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin):
+    df = pd.read_csv(inFile)
 
     # Necessary?
     if trypsin: df = df[df['peptide'].str.endswith('R') | df['peptide'].str.endswith('K')].reset_index(drop=True)
-    df = df[df['uniquePeptide']==1].sort_values('ionCount', ascending=False).drop_duplicates(subset='leadingProtein', keep='first').reset_index(drop=True)
+    df = df[df['uniquePeptide']==1].sort_values('ionCount', ascending=False).reset_index(drop=True)
 
-    data = []
-    for i in range(len(df)):
-        compound = df.loc[i]['peptide']
-        formula = ''
-        adduct = '(no adduct)'
-        lightMz = float(df.loc[i]['MzLIB'])
-        charge = df.loc[i]['zLIB']
-        heavyMz = calc_heavy_mz(compound, lightMz, charge)
-        MSXID = i+1
-        data.append([compound, formula, adduct, round(lightMz, ndigits = 2), charge, MSXID])
-        data.append([compound, formula, adduct, round(heavyMz, ndigits = 2), charge, MSXID])
+    CVs = set(df['CompensationVoltage'])
+    for CV in CVs:
+        tempDf = df[df['CompensationVoltage']==CV].reset_index(drop=True)
+        if proteins: tempDf.groupby('leadingProtein').head(proteins).reset_index()
 
-    finalDf = pd.DataFrame(data, columns=['Compound','Formula','Adduct','m.z','z','MSXID'])
-    return finalDf
+        data = []
+        for i in range(len(tempDf)):
+            compound = tempDf.loc[i]['peptide']
+            formula = ''
+            adduct = '(no adduct)'
+            lightMz = float(tempDf.loc[i]['MzLIB'])
+            charge = tempDf.loc[i]['zLIB']
+            heavyMz = calc_heavy_mz(compound, lightMz, charge)
+            MSXID = i+1
+            data.append([compound, formula, adduct, round(lightMz, ndigits = 2), charge, MSXID])
+            data.append([compound, formula, adduct, round(heavyMz, ndigits = 2), charge, MSXID])
+
+        finalDf = pd.DataFrame(data, columns=['Compound','Formula','Adduct','m.z','z','MSXID'])
+        finalDf.to_csv(header+str(CV)+'.txt', sep='\t')
+    pass
+
+
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#
+# Miscellaneous Functions
+#
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+'''
+Function: set_plot_settings()
+Purpose: Sets parameters for histogram graphics.
+Parameters:
+    'xlabel' - string indicating the x-axis label.
+    'ylabel' - string indicating the y-axis label.
+    'wide' - boolean for two different dimension possibilities
+Returns:
+    No return value. Just sets parameters using pyplot.
+'''
+def set_plot_settings(xlabel, ylabel, wide=True):
+    if wide: pyplot.figure(figsize=(18,12)).add_axes([0.11, 0.1, 0.85, 0.85])
+    else: pyplot.figure(figsize=(12,12))
+    pyplot.axhline(linewidth=4, color='black')
+    pyplot.axvline(linewidth=4, x=-10, color='black')
+    pyplot.xlim(-10,10)
+    pyplot.xlabel(xlabel, fontsize = 36, weight='bold')
+    pyplot.ylabel(ylabel, fontsize = 36, weight='bold')
+    pyplot.tick_params(axis="x", labelsize=36)
+    pyplot.tick_params(axis="y", labelsize=36)
