@@ -3,7 +3,8 @@ from timeit import default_timer as timer
 from datetime import timedelta
 import re
 import pandas as pd
-import os
+from os import listdir
+from os.path import isfile, join
 from statistics import pstdev, median
 import csv
 import matplotlib.pyplot as plt
@@ -103,3 +104,35 @@ def write_DISPA_targeted_reanalysis_files(inFile, proteins=1, trypsin=True):
     if proteins: inFile = re.sub('(.*).csv', r'\1_proteinFDR.csv', inFile)
     else: inFile = re.sub('(.*).csv', r'\1_peptideFDR.csv', inFile)
     cbf.return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin)
+
+
+'''
+Function:
+Purpose:
+Parameters:
+Returns:
+'''
+def quantify(inFile, libFile, expFolder):
+    inFile = re.sub('(.*).csv', r'\1_corrected_proteinFDR.csv', inFile)
+    files = [expFolder+f for f in listdir(expFolder) if isfile(join(expFolder, f))]
+    dfLC = pd.read_csv('Data/MQpeptides_Quant.csv')
+
+
+    var = [5, 'median', 1]
+    dfDIA = cbf.quantify(inFile, libFile, files, var)
+
+    
+
+    '''
+    minMatch = [3]
+    m = ['mean', 'median']
+    stdev = [0.5, 1, 2]
+    for x in minMatch:
+        for y in m:
+            for z in stdev:
+                var = [x, y, x-1, z]
+                cbf.quantify(inFile, libFile, files, var)
+                if x > 2:
+                    var = [x, y, x//2, z]
+                    cbf.quantify(inFile, libFile, files, var)
+    '''

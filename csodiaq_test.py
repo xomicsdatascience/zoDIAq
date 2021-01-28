@@ -6,10 +6,11 @@ from collections import defaultdict
 import statistics
 import csv
 from matplotlib_venn import venn3
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as pyplot
 from matplotlib.pyplot import figure
 import numpy as np
 from matplotlib.ticker import PercentFormatter
+import math
 
 
 def set_plot_settings(title, xlabel, ylabel):
@@ -42,6 +43,21 @@ def histogram(df, fileHeader, col, title, l=False):
     if l: plt.axvline(x=line, color='black', linestyle = 'dashed')
 
     plt.savefig(fileHeader+col+'.png')
+
+def corr(X, Y):
+    """Computes the Pearson correlation coefficient and a 95% confidence
+    interval based on the data in X and Y."""
+
+    r = np.corrcoef(X, Y)[0,1]
+    f = 0.5*np.log((1+r)/(1-r))
+    se = 1/np.sqrt(len(X)-3)
+    ucl = f + 2*se
+    lcl = f - 2*se
+
+    lcl = (np.exp(2*lcl) - 1) / (np.exp(2*lcl) + 1)
+    ucl = (np.exp(2*ucl) - 1) / (np.exp(2*ucl) + 1)
+
+    return r,lcl,ucl
 
 '''
 delete = ['Data/Output/' + x for x in list(os.listdir('Data/Output/')) if ('FDR' not in x and '31' not in x)]
@@ -268,5 +284,183 @@ df['matches3rootXcosine'] = scores[2]
 df['matches4rootXcosine'] = scores[3]
 df.to_csv('Data/Output/csodiaq_lib-human-noloss-400to2000-pt2mz-31peaks_exp-100reps-rep16_corrected_extraScores.csv')
 '''
-df = pd.read_csv('Data/Output/csodiaq_lib-human-noloss-400to2000-pt2mz-31peaks_exp-n1b_corrected_proteinFDR.csv')
-cbf.prepare_DIA_rerun_data('Data/oldOutput/delete_mostIntense_', df, proteins=2, trypsin=True)
+'''
+df = pd.read_csv('Data/Input/human_31peaks_noloss_400to2000_pt2mz_subset.csv')
+d = dict(tuple(df.groupby(['FullUniModPeptideName','PrecursorCharge'])))
+for key in d:
+    print(key)
+    print(d[key])
+    print('-'*20)
+'''
+'''
+cols = [
+    'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to8_01.mzXML',
+    'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to4_01.mzXML',
+    'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to2_01.mzXML',
+    'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to1_01.mzXML',
+    'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_2to1_01.mzXML',
+    'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_4to1_01.mzXML',
+    'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_8to1_01.mzXML'
+]
+finalResults = []
+
+libs = [3, 10, 20]
+rgx = re.compile(r'Data/oldOutput/lib\d+/test_(\d+)_(mean|median)_(\d+)_(P?\d+)\.csv')
+rgx2 = re.compile(r'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_(\d)to(\d)_01\.mzXML')
+for lib in libs:
+    header = 'Data/oldOutput/lib'+str(lib)+'/'
+    files = [header + x for x in list(os.listdir(header))]
+    for file in files:
+        df = pd.read_csv(file)
+        reg = rgx.match(file)
+        match = reg.group(1)
+        m = reg.group(2)
+        expMin = reg.group(3)
+        stdev = reg.group(4)
+        if stdev=='P5': stdev='0.5'
+        main = [lib, match, m, expMin, stdev]
+        outFile = 'Data/QuantifyCompare/lib'+str(lib)+'_match'+match+'_'+m+'_expressMin'+expMin+'_stdev'+stdev+'.csv'
+        print(outFile)
+        for col in cols:
+            proportions = rgx2.match(col)
+            prop = float(proportions.group(1))/float(proportions.group(2))
+            values = []
+            v1 = len(df[df[col]==-100])
+            v2 = len(df[(df[col]<=-0.1) & (df[col]>-100)])
+            v3 = len(df[(df[col]>=-0.1) & (df[col]<0.1)])
+            v4 = len(df[(df[col]>=0.1) & (df[col]<100)])
+            v5 = len(df[df[col]==100])
+            v6 = len(df[df[col].isna()])
+            values = [v1, v2, v3, v4, v5, v6]
+            finalResults.append([prop] + main + values)
+fDf = pd.DataFrame(finalResults, columns=['light:heavy', 'lib', 'matches', 'calculation', 'minimumExpression', 'stdev', 'onlyHeavy','mostlyHeavy','aboutSame','mostlyLight','onlyLight','neither'])
+fDf.to_csv('Data/QuantifyCompare/full.csv', index=False)
+'''
+
+dfLC = pd.read_csv('Data/MQpeptides_Quant.csv')
+dfDIA = pd.read_csv('Data/test_5_median_2_1_y.csv')
+
+
+
+#col1 = 'Ratio H/L 1to8'
+#col2 = 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to8_01.mzXML'
+
+#col1 = 'Ratio H/L 1to4'
+#col2 = 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to4_01.mzXML'
+
+#col1 = 'Ratio H/L 1to2'
+#col2 = 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to2_01.mzXML'
+
+#col1 = 'Ratio H/L 1to1'
+#col2 = 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to1_01.mzXML'
+
+#col1 = 'Ratio H/L 2to1'
+#col2 = 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_2to1_01.mzXML'
+
+#col1 = 'Ratio H/L 4to1'
+#col2 = 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_4to1_01.mzXML'
+
+#col1 = 'Ratio H/L 8to1'
+#col2 = 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_8to1_01.mzXML'
+
+'''
+def calc_med_stdev(dfLC, dfDIA, ratio, ori=1, expr=False):
+    if ori:
+        colLC = 'Ratio H/L 1to'+str(RATIO)
+        colDIA = 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to'+str(RATIO)+'_01.mzXML'
+        ratio = RATIO
+    else:
+        colLC = 'Ratio H/L '+str(RATIO)+'to1'
+        colDIA = 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_'+str(RATIO)+'to1_01.mzXML'
+        ratio = -RATIO
+    if RATIO==1: ratio=0
+
+    print(ratio)
+    ret = []
+    dfLC[colLC] = np.log2(dfLC[colLC])
+    appLC = dfLC[~dfLC[colLC].isnull()][colLC]
+    appDIA = dfDIA[(~dfDIA[colDIA].isnull())][colDIA]
+    ret.append([np.median(appLC),statistics.pstdev(appLC),ratio, 'LC'])
+
+    e = np.median(dfDIA[~dfDIA[colDIA].isnull()][colDIA])
+    if expr: ret.append([e,statistics.pstdev(appDIA),ratio, 'DIA'])
+    else: ret.append([np.median(appDIA),statistics.pstdev(appDIA),ratio, 'DIA'])
+
+    return ret
+
+RATIOS = [1, 2, 4, 8]
+data = []
+e = False
+for RATIO in RATIOS:
+
+    data += calc_med_stdev(dfLC, dfDIA, RATIO, expr=e)
+    if RATIO != 1: data += calc_med_stdev(dfLC, dfDIA, RATIO, ori=0, expr=e)
+'''
+
+def calc_med_stdev(df, ratio, type, ori=1):
+    if ori:
+        if type=='LC': col = 'Ratio H/L 1to'+str(RATIO)
+        else: col = 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to'+str(RATIO)+'_01.mzXML'
+        ratio = RATIO
+    else:
+        if type=='LC': col = 'Ratio H/L '+str(RATIO)+'to1'
+        else: col = 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_'+str(RATIO)+'to1_01.mzXML'
+        ratio = -RATIO
+    if RATIO==1: ratio=0
+
+
+    if type=='LC': df[col] = np.log2(df[col])
+    app = df[~df[col].isnull()][col]
+    return [[np.median(app),statistics.pstdev(app),ratio, type]]
+
+RATIOS = [1, 2, 4, 8]
+data = []
+for RATIO in RATIOS:
+
+    data += calc_med_stdev(dfLC, RATIO, 'LC')
+    data += calc_med_stdev(dfDIA, RATIO, 'DIA')
+    if RATIO != 1:
+        data += calc_med_stdev(dfLC, RATIO, 'LC', ori=0)
+        data += calc_med_stdev(dfDIA, RATIO, 'DIA', ori=0)
+
+
+
+
+
+
+print(data)
+finalDf = pd.DataFrame(data, columns=['median','stdev','ratio','type'])
+finalDf = finalDf.sort_values('ratio', ascending=False)
+finalDf.to_csv('Data/median.csv')
+
+fig, ax = pyplot.subplots()
+
+for key, group in finalDf.groupby('type'):
+    group.plot('ratio', 'median', yerr='stdev',
+               label=key, ax=ax)
+
+pyplot.show()
+
+
+
+'''
+dictLC = dict(zip(dfLC['Sequence'], dfLC[col1]))
+dictDIA = dict(zip(dfDIA['peptide'], dfDIA[col2]))
+
+intersect = set.intersection(set(dictLC.keys()),set(dictDIA.keys()))
+
+X, Y = [], []
+for key in intersect:
+    LCcheck = ~np.isnan(dictLC[key])
+    DIAcheck = (dictDIA[key]!=5 and dictDIA[key]!=-5 and ~np.isnan(dictDIA[key]))
+    if LCcheck and DIAcheck:
+        X.append(dictLC[key])
+        Y.append(dictDIA[key])
+
+
+
+pyplot.scatter(X,Y)
+pyplot.xlabel('LC')
+pyplot.ylabel('DIA')
+pyplot.show()
+'''
