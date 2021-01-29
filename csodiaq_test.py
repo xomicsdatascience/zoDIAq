@@ -11,6 +11,7 @@ from matplotlib.pyplot import figure
 import numpy as np
 from matplotlib.ticker import PercentFormatter
 import math
+from scipy.stats import linregress
 
 
 def set_plot_settings(title, xlabel, ylabel):
@@ -338,7 +339,7 @@ fDf.to_csv('Data/QuantifyCompare/full.csv', index=False)
 '''
 
 dfLC = pd.read_csv('Data/MQpeptides_Quant.csv')
-dfDIA = pd.read_csv('Data/test_5_median_2_1_y.csv')
+dfDIA = pd.read_csv('Data/lib3-1-median-1.csv')
 
 
 
@@ -387,7 +388,8 @@ def calc_med_stdev(dfLC, dfDIA, ratio, ori=1, expr=False):
     else: ret.append([np.median(appDIA),statistics.pstdev(appDIA),ratio, 'DIA'])
 
     return ret
-
+'''
+'''
 RATIOS = [1, 2, 4, 8]
 data = []
 e = False
@@ -396,41 +398,52 @@ for RATIO in RATIOS:
     data += calc_med_stdev(dfLC, dfDIA, RATIO, expr=e)
     if RATIO != 1: data += calc_med_stdev(dfLC, dfDIA, RATIO, ori=0, expr=e)
 '''
-
-def calc_med_stdev(df, ratio, type, ori=1):
+def calc_key_variables(df, r, type, ori=1):
     if ori:
-        if type=='LC': col = 'Ratio H/L 1to'+str(RATIO)
-        else: col = 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to'+str(RATIO)+'_01.mzXML'
-        ratio = RATIO
+        if type=='LC': col = 'Ratio H/L 1to'+str(r)
+        else: col = 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to'+str(r)+'_01.mzXML'
+        ratio = r
     else:
-        if type=='LC': col = 'Ratio H/L '+str(RATIO)+'to1'
-        else: col = 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_'+str(RATIO)+'to1_01.mzXML'
-        ratio = -RATIO
-    if RATIO==1: ratio=0
+        if type=='LC': col = 'Ratio H/L '+str(r)+'to1'
+        else: col = 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_'+str(r)+'to1_01.mzXML'
+        ratio = -r
+    if r==1: ratio=0
 
 
     if type=='LC': df[col] = np.log2(df[col])
     app = df[~df[col].isnull()][col]
-    return [[np.median(app),statistics.pstdev(app),ratio, type]]
+    med = np.median(app)
+    #if type == 'DIA': med = med*3
+    return [[med,statistics.pstdev(app),ratio, type]]
+
+def calc_all_variables(df, type, ratios):
+    data = []
+    for ratio in ratios:
+        data += calc_key_variables(df, ratio, type)
+        if ratio != 1: data += calc_key_variables(df, ratio, type, ori=0)
+    finalDf = pd.DataFrame(data, columns=['median','stdev','ratio','type'])
+    finalDf = finalDf.sort_values('ratio', ascending=False).reset_index(drop=True)
+    return finalDf
 
 RATIOS = [1, 2, 4, 8]
-data = []
-for RATIO in RATIOS:
-
-    data += calc_med_stdev(dfLC, RATIO, 'LC')
-    data += calc_med_stdev(dfDIA, RATIO, 'DIA')
-    if RATIO != 1:
-        data += calc_med_stdev(dfLC, RATIO, 'LC', ori=0)
-        data += calc_med_stdev(dfDIA, RATIO, 'DIA', ori=0)
 
 
+lc = calc_all_variables(dfLC, 'LC', RATIOS)
+dia = dfDIA.drop(labels=['numPeps'], axis=1)
+print(lc)
+print(dia)
 
+'''
+X = lc['median']
+Y = dia['median']
+lr = ['test']+list(linregress(X, Y))
+print(pd.DataFrame([lr], columns=['name', 'slope', 'intercept', 'rvalue', 'pvalue', 'stderr' ]))
+print(lr)
+print(lr[0])
+'''
 
+finalDf = pd.concat([lc, dia])
 
-
-print(data)
-finalDf = pd.DataFrame(data, columns=['median','stdev','ratio','type'])
-finalDf = finalDf.sort_values('ratio', ascending=False)
 finalDf.to_csv('Data/median.csv')
 
 fig, ax = pyplot.subplots()
@@ -440,8 +453,6 @@ for key, group in finalDf.groupby('type'):
                label=key, ax=ax)
 
 pyplot.show()
-
-
 
 '''
 dictLC = dict(zip(dfLC['Sequence'], dfLC[col1]))
@@ -463,4 +474,13 @@ pyplot.scatter(X,Y)
 pyplot.xlabel('LC')
 pyplot.ylabel('DIA')
 pyplot.show()
+'''
+'''
+head = 'Data/QuantifyCompare/variables/'#lib3_compare.csv'
+files = [head+x for x in list(os.listdir(head))]
+dfList = []
+for file in files:
+    dfList.append(pd.read_csv(file))
+finalDf = pd.concat(dfList)
+finalDf.to_csv(head+'full_compare.csv', index=False)
 '''

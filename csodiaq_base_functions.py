@@ -357,7 +357,7 @@ def initialize_return_values(tag):
     elif tag=='qPPM': return[[],[]]
     elif tag=='ratio':
         light = defaultdict(int)
-        heavy = defaultdict(list)
+        heavy = defaultdict(int)
         return [light, heavy]
 
 
@@ -386,7 +386,7 @@ def update_return_values(returns, peak1, peak2, i1, i2, ppm, tag):
         if peak1[2][0] == 'heavy': returns[1].append(ppm)
     elif tag=='ratio':
         if peak1[2][0] == 'light': returns[0][peak1[2][1]] = peak2[1]
-        if peak1[2][0] == 'heavy': returns[1][peak1[2][1]].append(peak2[1])
+        if peak1[2][0] == 'heavy': returns[1][peak1[2][1]] = peak2[1]
 
 
 '''
@@ -986,7 +986,7 @@ Returns:
 '''
 import pickle
 def quantify(inFile, libFile, mzxmlFiles, var):
-
+    '''
     print(1)
 ################ TEMP ################
     fragDf = pd.read_csv('Data/Input/TempHold/mostintense_quantmzlist.txt', sep='\t')
@@ -1038,13 +1038,12 @@ def quantify(inFile, libFile, mzxmlFiles, var):
     for pep in uniquePeps: count += pep.count('C')
     libDict = mgf_library_upload_quant_delete('Data/Input/human.faims.fixed.decoy.mgf', tempLibDict, digDict, customAAcomp)
 
-    pickle.dump(libDict, open( "Data/Input/TempHold/lib.p", "wb" ))
+    pickle.dump(libDict, open( "Data/Input/TempHold/lib_3.p", "wb" ))
     pickle.dump(fragDict, open( "Data/Input/TempHold/frag.p", "wb" ))
+    '''
+    libDict = pickle.load(open( "Data/Input/TempHold/lib_3.p", "rb" ))
+    fragDict = pickle.load(open( "Data/Input/TempHold/frag.p", "rb" ))
 
-    #libDict = pickle.load(open( "Data/Input/TempHold/lib.p", "rb" ))
-    #fragDict = pickle.load(open( "Data/Input/TempHold/frag.p", "rb" ))
-
-    print(var)
     minMatch = var[0]
     m = var[1]
     stdev = var[2]
@@ -1055,7 +1054,7 @@ def quantify(inFile, libFile, mzxmlFiles, var):
     check = False
     for f in sorted(mzxmlFiles):
         #print(f)
-        if f == 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to1_01.mzXML': check = True;
+        if f == 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to1_01.mzXML': check = True
         ppmDiffs = []
         with mzxml.read(f, use_index =True) as file:
             for scan in sorted(libDict.keys()):
@@ -1066,12 +1065,14 @@ def quantify(inFile, libFile, mzxmlFiles, var):
                 expSpectrum = list(tuple(zip(spec['m/z array'],spec['intensity array'],peakIDs)))
                 expSpectrum.sort(key=lambda x:x[0])
                 l, h = spectra_peak_comparison(libDict[scan], expSpectrum, 50, 0, tag='qPPM')
+
                 if len(l) > minMatch and len(h) > minMatch:
                     ppmDiffs += l; ppmDiffs += h
 
 
-
         offset, tolerance = find_offset_tol(sorted(ppmDiffs), 'Data/oldOutput/hist.png', stdev=stdev, mean=False)
+        data = []
+
         ratioDict = {}
         with mzxml.read(f, use_index =True) as file:
             for scan in sorted(libDict.keys()):
@@ -1084,20 +1085,31 @@ def quantify(inFile, libFile, mzxmlFiles, var):
                 lightSet = set(l.keys())
                 heavySet = set(h.keys())
 
+
                 smallPeakIntensity = np.mean(sorted(spec['intensity array'])[:10])
                 onlyLight = lightSet - heavySet
-                for key in onlyLight: h[key] = [smallPeakIntensity]
+                for key in onlyLight: h[key] = smallPeakIntensity
                 onlyHeavy = heavySet - lightSet
                 for key in onlyHeavy: l[key] = smallPeakIntensity
 
                 keys = l.keys()
                 if len(keys) > minMatch:
+                    minKey = min(keys)
                     light = [l[key] for key in keys]
                     heavy = [h[key] for key in keys]
-                    heavy = [sum(x)/len(x) for x in heavy]
-                    ratios = [x/y for x,y in zip(heavy, light)]
-                    if m == 'mean': ratio = np.log2(np.mean(ratios))
-                    elif m=='median': ratio = np.log2(np.median(ratios))
+                    allInt = sorted(light + heavy)
+                    mini = allInt[0] + allInt[1]
+                    maxi = allInt[-1] + allInt[-2]
+
+
+
+#                    mini = min(light+heavy)
+#                    maxi = max(light+heavy)
+                    ratios = [np.log2(x/y)*weight_ratio(x,y,mini,maxi) for x,y in zip(heavy, light)]
+                    if m == 'mean': ratio = np.mean(ratios)
+                    elif m=='median': ratio = np.median(ratios)
+                    elif m=='intensity': ratio = np.log2((h[minKey]/l[minKey]))
+
                 else:
                     ratio=np.nan
 
@@ -1112,9 +1124,15 @@ def quantify(inFile, libFile, mzxmlFiles, var):
     if var[2]==0.5: var[2]='P5'
     var = [str(x) for x in var]
 
-    return(finalDf)
+    #finalDf.to_csv('Data/oldOutput/test_'+'_'.join(var)+'.csv')
+    return finalDf
 
-
+def weight_ratio(x, y, mini, maxi, scale=10):
+    return 1
+    #top = max([x,y])
+    #top = np.mean([x,y])
+    #top = x + y
+    #return ((top-mini)/maxi)*scale
 
 #        print()
 '''
@@ -1163,7 +1181,7 @@ def mgf_library_upload_quant_delete(fileName, d, digDict, aaDict):
     count=0
     time = timer()
     prevtime = time
-    minPeaks = 10
+    minPeaks = 1
 
     def repl(m):
         return digDict[m]
@@ -1172,10 +1190,11 @@ def mgf_library_upload_quant_delete(fileName, d, digDict, aaDict):
         count += 1
         if count % 5000 == 0:
             time = timer()
-            print(str(count)+', '+str(time-prevtime) + ', ' + str(peaks[0]))
+            if len(peaks) > 0: print(str(count)+', '+str(time-prevtime) + ', ' + str(peaks[0]))
             prevtime = time
         seq = spec['params']['seq']
-        key = (spec['params']['pepmass'][0], seq)
+        precMz = spec['params']['pepmass'][0]
+        key = (precMz, seq)
         if key not in d: continue
         sequence = re.sub(r'\+\d+\.\d+', lambda m: digDict.get(m.group()), seq)
 
@@ -1187,10 +1206,11 @@ def mgf_library_upload_quant_delete(fileName, d, digDict, aaDict):
         fragList = []
         for x in range(1, len(sequence)-1):
             fragseq = sequence[x:]
-            lightfragmz = mass.fast_mass(sequence=sequence[x:], ion_type='y', charge=z-1, aa_mass = aaDict) # Do I need to use different possible charges?
+            lightfragmz = mass.fast_mass(sequence=sequence[x:], ion_type='y', charge=1, aa_mass = aaDict) # Do I need to use different possible charges?
             i = mz.index(round(lightfragmz, 3)) if round(lightfragmz, 3) in mz else -1
             if i==-1: continue
             fragList.append((intensity[i], lightfragmz, fragseq))
+
 
         fragList.sort(reverse=True)
         if len(fragList) >= minPeaks: fragList = fragList[:minPeaks]
@@ -1199,8 +1219,7 @@ def mgf_library_upload_quant_delete(fileName, d, digDict, aaDict):
             fragMz = fragList[i][1]
             fragInt = fragList[i][0]
             peaks.append((fragMz, fragInt, ('light',i)))
-            for charge in range(1,z):
-                peaks.append((calc_heavy_mz(fragList[i][2], fragMz, charge), fragInt, ('heavy', i)))
+            peaks.append((calc_heavy_mz(fragList[i][2], fragMz, 1), fragInt, ('heavy', i)))
 
         '''
 
@@ -1239,30 +1258,6 @@ def mgf_library_upload_quant_delete(fileName, d, digDict, aaDict):
 
     return lib
 
-
-def calc_med_stdev(dfLC, dfDIA, ratio, ori=1, expr=False):
-    if ori:
-        colLC = 'Ratio H/L 1to'+str(RATIO)
-        colDIA = 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to'+str(RATIO)+'_01.mzXML'
-        ratio = RATIO
-    else:
-        colLC = 'Ratio H/L '+str(RATIO)+'to1'
-        colDIA = 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_'+str(RATIO)+'to1_01.mzXML'
-        ratio = -RATIO
-    if RATIO==1: ratio=0
-
-    print(ratio)
-    ret = []
-    dfLC[colLC] = np.log2(dfLC[colLC])
-    appLC = dfLC[~dfLC[colLC].isnull()][colLC]
-    appDIA = dfDIA[(dfDIA[colDIA]!=5)&(dfDIA[colDIA]!=-5)&(~dfDIA[colDIA].isnull())][colDIA]
-    ret.append([np.median(appLC),statistics.pstdev(appLC),ratio, 'LC'])
-
-    e = np.median(dfDIA[~dfDIA[colDIA].isnull()][colDIA])
-    if expr: ret.append([e,statistics.pstdev(appDIA),ratio, 'DIA'])
-    else: ret.append([np.median(appDIA)*2.3,statistics.pstdev(appDIA),ratio, 'DIA'])
-
-    return ret
 #############################################################################################################################
 #############################################################################################################################
 #############################################################################################################################

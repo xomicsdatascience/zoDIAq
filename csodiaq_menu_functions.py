@@ -8,7 +8,9 @@ from os.path import isfile, join
 from statistics import pstdev, median
 import csv
 import matplotlib.pyplot as plt
-
+import numpy as np
+import statistics
+from scipy.stats import linregress
 
 
 '''
@@ -115,24 +117,68 @@ Returns:
 def quantify(inFile, libFile, expFolder):
     inFile = re.sub('(.*).csv', r'\1_corrected_proteinFDR.csv', inFile)
     files = [expFolder+f for f in listdir(expFolder) if isfile(join(expFolder, f))]
-    dfLC = pd.read_csv('Data/MQpeptides_Quant.csv')
+    ratios = [1, 2, 4, 8]
+    lc = calc_all_variables(pd.read_csv('Data/MQpeptides_Quant.csv'), 'LC', ratios)
+    X = lc['median']
 
-
-    var = [5, 'median', 1]
-    dfDIA = cbf.quantify(inFile, libFile, files, var)
-
-    
-
+    print('#LC average standard deviation: '+str(np.mean(lc['stdev'])))
+    print('#LC total peptides quantified: '+str(sum(lc['numPeps'])))
+    data = []
     '''
-    minMatch = [3]
-    m = ['mean', 'median']
-    stdev = [0.5, 1, 2]
+    var = [1, 'median', 1]
+    print(var)
+    dfDIA = cbf.quantify(inFile, libFile, files, var)
+    dia = calc_all_variables(dfDIA, 'DIA', ratios)
+    Y = dia['median']
+    data.append([3]+var+list(linregress(X, Y))+[np.mean(dia['stdev']),sum(dia['numPeps'])])
+    print(data[-1])
+    finalDf = pd.DataFrame(data, columns=['libPeaks', 'minMatch', 'mode', 'corrStDev', 'slope', 'intercept', 'rvalue', 'pvalue', 'stderr', 'avrStDev', 'numPeps'])
+    finalDf.to_csv('Data/QuantifyCompare/variables/compare.csv', index=False)
+    '''
+
+    #minMatch = [1, 2, 3, 4, 5]
+    #m = ['mean', 'median', 'intensity']
+    #stdev = [1, 2]
+    minMatch = [1]
+    m = ['median']
+    stdev = [1]
     for x in minMatch:
         for y in m:
             for z in stdev:
-                var = [x, y, x-1, z]
-                cbf.quantify(inFile, libFile, files, var)
-                if x > 2:
-                    var = [x, y, x//2, z]
-                    cbf.quantify(inFile, libFile, files, var)
-    '''
+                var = [x, y, z]
+                print(var)
+                dfDIA = cbf.quantify(inFile, libFile, files, var)
+                dia = calc_all_variables(dfDIA, 'DIA', ratios)
+                dia.to_csv('Data/lib3-1-median-1.csv', index=False)
+                Y = dia['median']
+                data.append([3]+var+list(linregress(X, Y))+[np.mean(dia['stdev']),sum(dia['numPeps'])])
+                print(data[-1])
+    finalDf = pd.DataFrame(data, columns=['libPeaks', 'minMatch', 'mode', 'corrStDev', 'slope', 'intercept', 'rvalue', 'pvalue', 'stderr', 'avrStDev', 'numPeps'])
+    finalDf.to_csv('Data/QuantifyCompare/variables/compare.csv', index=False)
+
+def calc_key_variables(df, r, type, ori=1):
+    if ori:
+        if type=='LC': col = 'Ratio H/L 1to'+str(r)
+        else: col = 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to'+str(r)+'_01.mzXML'
+        ratio = r
+    else:
+        if type=='LC': col = 'Ratio H/L '+str(r)+'to1'
+        else: col = 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_'+str(r)+'to1_01.mzXML'
+        ratio = -r
+    if r==1: ratio=0
+
+
+    if type=='LC': df[col] = np.log2(df[col])
+    app = df[~df[col].isnull()][col]
+    if len(app) > 0: return [[np.median(app)*2.6,statistics.pstdev(app),ratio, type, len(app)]]
+
+    return [[0,0, ratio, type, 0]]
+
+def calc_all_variables(df, type, ratios):
+    data = []
+    for ratio in ratios:
+        data += calc_key_variables(df, ratio, type)
+        if ratio != 1: data += calc_key_variables(df, ratio, type, ori=0)
+    finalDf = pd.DataFrame(data, columns=['median','stdev','ratio','type', 'numPeps'])
+    finalDf = finalDf.sort_values('ratio', ascending=False).reset_index(drop=True)
+    return finalDf
