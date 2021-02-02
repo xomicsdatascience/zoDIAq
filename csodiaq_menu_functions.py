@@ -116,7 +116,16 @@ Returns:
 '''
 def quantify(inFile, libFile, expFolder):
     inFile = re.sub('(.*).csv', r'\1_corrected_proteinFDR.csv', inFile)
-    files = [expFolder+f for f in listdir(expFolder) if isfile(join(expFolder, f))]
+    #files = [expFolder+f for f in listdir(expFolder) if isfile(join(expFolder, f))]
+    files = [
+        'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to8_01.mzXML',
+        'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to4_01.mzXML',
+        'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to2_01.mzXML',
+        'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to1_01.mzXML',
+        'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_2to1_01.mzXML',
+        'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_4to1_01.mzXML',
+        'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_8to1_01.mzXML'
+    ]
     ratios = [1, 2, 4, 8]
     lc = calc_all_variables(pd.read_csv('Data/MQpeptides_Quant.csv'), 'LC', ratios)
     X = lc['median']
@@ -136,8 +145,10 @@ def quantify(inFile, libFile, expFolder):
     finalDf.to_csv('Data/QuantifyCompare/variables/compare.csv', index=False)
     '''
 
-    #minMatch = [1, 2, 3, 4, 5]
-    #m = ['mean', 'median', 'intensity']
+    #minMatch = [1, 2]
+    #minMatch = [1, 2, 3, 4]
+    #minMatch = [1, 2, 3, 5, 7, 9]
+    #m = ['mean', 'median', 'intensity', 'weighted']
     #stdev = [1, 2]
     minMatch = [1]
     m = ['median']
@@ -146,9 +157,27 @@ def quantify(inFile, libFile, expFolder):
         for y in m:
             for z in stdev:
                 var = [x, y, z]
-                print(var)
+                #print(var)
                 dfDIA = cbf.quantify(inFile, libFile, files, var)
+                temp = dfDIA.drop('peptide', axis=1)
+                temp.to_csv('Data/CalebOutput.csv')
+                plt.clf()
+                temp.boxplot(column=files)
+                plt.axhline(y=-3, color='blue', linestyle='dashed')
+                plt.axhline(y=-2, color='blue', linestyle='dashed')
+                plt.axhline(y=-1, color='blue', linestyle='dashed')
+                plt.axhline(y=0, color='blue', linestyle='dashed')
+                plt.axhline(y=1, color='blue', linestyle='dashed')
+                plt.axhline(y=2, color='blue', linestyle='dashed')
+                plt.axhline(y=3, color='blue', linestyle='dashed')
+                #plt.ylim(-10, 10)
+                plt.show()
+
+
+
+
                 dia = calc_all_variables(dfDIA, 'DIA', ratios)
+                print(dia['numPeps'])
                 dia.to_csv('Data/lib3-1-median-1.csv', index=False)
                 Y = dia['median']
                 data.append([3]+var+list(linregress(X, Y))+[np.mean(dia['stdev']),sum(dia['numPeps'])])
@@ -170,7 +199,7 @@ def calc_key_variables(df, r, type, ori=1):
 
     if type=='LC': df[col] = np.log2(df[col])
     app = df[~df[col].isnull()][col]
-    if len(app) > 0: return [[np.median(app)*2.6,statistics.pstdev(app),ratio, type, len(app)]]
+    if len(app) > 0: return [[np.median(app),statistics.pstdev(app),ratio, type, len(app)]]
 
     return [[0,0, ratio, type, 0]]
 

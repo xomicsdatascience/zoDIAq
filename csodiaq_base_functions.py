@@ -74,12 +74,12 @@ def library_file_to_dict(inFile):
     if fileType == 'mgf':
         lib = mgf_library_upload(inFile)
     else:
-        lib = traml_library_upload_csv(inFile)
+        lib = traml_library_upload(inFile)
     return lib
 
 
 '''
-Function: traml_library_upload_csv()
+Function: traml_library_upload()
 Purpose: Given a traml file in .tsv or .csv format representing the library spectra, this function generates a dictionary to
             be used for future analysis. key:value pairings are described in the "Returns" section of this comment. Note that
             the tuple key format was chosen because library spectra will need to be sorted and chosen by precursor mass, so
@@ -89,7 +89,7 @@ Parameters:
 Returns:
     dictionary 'lib' - See dictionary 'lib' key explanation in function library_file_to_dict().
 '''
-def traml_library_upload_csv(fileName):
+def traml_library_upload(fileName):
     # Library spectra file is read as a pandas dataframe - conditional statement allows for both .tsv and .csv files to be uploaded.
     if fileName.endswith('.tsv'):
         lib_df = pd.read_csv(fileName, sep='\t')
@@ -985,9 +985,9 @@ Parameters:
 Returns:
 '''
 import pickle
-def quantify(inFile, libFile, mzxmlFiles, var):
+
+def quantify(inFile, libFile, mzxmlFiles, var, norm=True):
     '''
-    print(1)
 ################ TEMP ################
     fragDf = pd.read_csv('Data/Input/TempHold/mostintense_quantmzlist.txt', sep='\t')
 #    libDict = mgf_library_upload_quant_delete('Data/Input/human.faims.fixed.decoy.mgf')
@@ -996,7 +996,6 @@ def quantify(inFile, libFile, mzxmlFiles, var):
 #    libDict = pickle.load(open( "Data/Input/TempHold/lib.p", "rb" ))
 
 ################ TEMP ################
-    print(5)
 
 #    fragDf = pd.read_csv(inFile)
 #    libDf = pd.read_csv(inFile)
@@ -1007,8 +1006,6 @@ def quantify(inFile, libFile, mzxmlFiles, var):
                           round(x['precursorMz'][1]['precursorMz'], 2),
                           x['compensationVoltage']] = x['num']
 #    pickle.dump(tmp_prec_dict, open( "Data/Input/TempHold/dict.p", "wb" ))
-
-    print(10)
 
     peakDict = {}
     fragDict = {}
@@ -1023,8 +1020,6 @@ def quantify(inFile, libFile, mzxmlFiles, var):
         tempLibDict[mz, seq] = scan
         fragDict[scan] = {'seq':seq, 'mz':mz, 'z':z, 'CV':CV}
 
-    print(15)
-
     uniquePeps = set(fragDf['Peptide'])
     digPat = r'\+\d+\.\d+'
     uniqueDigs = set()
@@ -1038,10 +1033,10 @@ def quantify(inFile, libFile, mzxmlFiles, var):
     for pep in uniquePeps: count += pep.count('C')
     libDict = mgf_library_upload_quant_delete('Data/Input/human.faims.fixed.decoy.mgf', tempLibDict, digDict, customAAcomp)
 
-    pickle.dump(libDict, open( "Data/Input/TempHold/lib_3.p", "wb" ))
+    pickle.dump(libDict, open( "Data/Input/TempHold/lib_3_.p", "wb" ))
     pickle.dump(fragDict, open( "Data/Input/TempHold/frag.p", "wb" ))
     '''
-    libDict = pickle.load(open( "Data/Input/TempHold/lib_3.p", "rb" ))
+    libDict = pickle.load(open( "Data/Input/TempHold/lib_3_.p", "rb" ))
     fragDict = pickle.load(open( "Data/Input/TempHold/frag.p", "rb" ))
 
     minMatch = var[0]
@@ -1052,7 +1047,7 @@ def quantify(inFile, libFile, mzxmlFiles, var):
     finalDf = pd.DataFrame(index=sorted(libDict.keys()))
     finalDf['peptide'] = [fragDict[key]['seq'] for key in sorted(fragDict.keys())]
     check = False
-    for f in sorted(mzxmlFiles):
+    for f in mzxmlFiles:
         #print(f)
         if f == 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to1_01.mzXML': check = True
         ppmDiffs = []
@@ -1060,24 +1055,27 @@ def quantify(inFile, libFile, mzxmlFiles, var):
             for scan in sorted(libDict.keys()):
 
                 spec = file.get_by_id(scan)
-                spec['intensity array'] = [x**0.5 for x in spec['intensity array']]
+                spec['intensity array'] = [x for x in spec['intensity array']]
                 peakIDs = [scan for x in range(len(spec['m/z array']))]
                 expSpectrum = list(tuple(zip(spec['m/z array'],spec['intensity array'],peakIDs)))
                 expSpectrum.sort(key=lambda x:x[0])
                 l, h = spectra_peak_comparison(libDict[scan], expSpectrum, 50, 0, tag='qPPM')
 
-                if len(l) > minMatch and len(h) > minMatch:
+                if len(l) >= minMatch and len(h) >= minMatch:
                     ppmDiffs += l; ppmDiffs += h
 
 
         offset, tolerance = find_offset_tol(sorted(ppmDiffs), 'Data/oldOutput/hist.png', stdev=stdev, mean=False)
+        #offset, tolerance = 5,10
+        #print(offset)
+        #print(tolerance)
         data = []
 
         ratioDict = {}
         with mzxml.read(f, use_index =True) as file:
             for scan in sorted(libDict.keys()):
                 spec = file.get_by_id(scan)
-                spec['intensity array'] = [x**0.5 for x in spec['intensity array']]
+                spec['intensity array'] = [x for x in spec['intensity array']]
                 peakIDs = [scan for x in range(len(spec['m/z array']))]
                 expSpectrum = list(tuple(zip(spec['m/z array'],spec['intensity array'],peakIDs)))
                 expSpectrum.sort(key=lambda x:x[0])
@@ -1086,53 +1084,64 @@ def quantify(inFile, libFile, mzxmlFiles, var):
                 heavySet = set(h.keys())
 
 
-                smallPeakIntensity = np.mean(sorted(spec['intensity array'])[:10])
+                smallPeakIntensity = np.mean(sorted(spec['intensity array'])[:10])/2
+                #smallPeakIntensity = 1
+
                 onlyLight = lightSet - heavySet
                 for key in onlyLight: h[key] = smallPeakIntensity
                 onlyHeavy = heavySet - lightSet
                 for key in onlyHeavy: l[key] = smallPeakIntensity
 
-                keys = l.keys()
-                if len(keys) > minMatch:
-                    minKey = min(keys)
-                    light = [l[key] for key in keys]
-                    heavy = [h[key] for key in keys]
-                    allInt = sorted(light + heavy)
-                    mini = allInt[0] + allInt[1]
-                    maxi = allInt[-1] + allInt[-2]
+                scanEx = '16'
+                if scan == scanEx:
+                    print('\n')
+                    print(f)
+                    print(list(l.values()))
+                    print(list(h.values()))
 
+                if len(l) >= minMatch:
+                    ratio = return_ratio(l, h, m)
+                    if scan == scanEx:
+                        print(ratio)
 
-
-#                    mini = min(light+heavy)
-#                    maxi = max(light+heavy)
-                    ratios = [np.log2(x/y)*weight_ratio(x,y,mini,maxi) for x,y in zip(heavy, light)]
-                    if m == 'mean': ratio = np.mean(ratios)
-                    elif m=='median': ratio = np.median(ratios)
-                    elif m=='intensity': ratio = np.log2((h[minKey]/l[minKey]))
 
                 else:
                     ratio=np.nan
 
-                '''
-                print(l)
-                print(h)
-                print('-'*20)
-                print(' '*20)
-                '''
+
                 ratioDict[scan] = ratio
         finalDf[f] = [ratioDict[key] for key in sorted(ratioDict.keys())]
-    if var[2]==0.5: var[2]='P5'
+    if var[2]<1: var[2]='P5'
     var = [str(x) for x in var]
 
-    #finalDf.to_csv('Data/oldOutput/test_'+'_'.join(var)+'.csv')
+    finalDf.to_csv('Data/oldOutput/test_'+'_'.join(var)+'.csv')
     return finalDf
 
-def weight_ratio(x, y, mini, maxi, scale=10):
-    return 1
-    #top = max([x,y])
-    #top = np.mean([x,y])
-    #top = x + y
-    #return ((top-mini)/maxi)*scale
+
+def return_ratio(lightDict, heavyDict, type):
+    keys = lightDict.keys()
+    minKey = min(keys)
+    lightInt = [lightDict[key] for key in keys]
+    heavyInt = [heavyDict[key] for key in keys]
+    if type=='intensity': return np.log2((heavyDict[minKey]/lightDict[minKey]))
+    log2Ratios = [np.log2(x/y) for x,y in zip(heavyInt, lightInt)]
+    normRatios = [x/y for x,y in zip(heavyInt, lightInt)]
+    if type=='mean': return np.mean(log2Ratios)
+    elif type=='median': return np.median(log2Ratios)
+    elif type=='weighted':
+        ratio = 0.0
+        sumInt = sum(lightInt + heavyInt)
+        for i in range(len(lightInt)): ratio += ((lightInt[i]+heavyInt[i])/sumInt)*log2Ratios[i]
+        return ratio
+    elif type=='ratio_median':
+        return np.median(normRatios)
+    elif type=='ppm':
+        ratios = [approx(x,y,np.inf) for x,y in zip(heavyInt, lightInt)]
+        #return np.log2(approx(heavyDict[minKey], lightDict[minKey],  np.inf))
+        return np.median(ratios)
+
+def weight_ratio(intensity, mini, maxi):
+    return ((intensity-mini)/maxi)
 
 #        print()
 '''
@@ -1167,6 +1176,11 @@ def weight_ratio(x, y, mini, maxi, scale=10):
                         check = False
 '''
 
+def approxList(x, l, ppmTol=10):
+    for i in range(len(l)):
+        if approx(x, l[i], ppmTol): return i
+    return -1
+
 def mgf_library_upload_quant_delete(fileName, d, digDict, aaDict):
 
     # mgf file is read in using the pyteomics mgf module
@@ -1181,10 +1195,8 @@ def mgf_library_upload_quant_delete(fileName, d, digDict, aaDict):
     count=0
     time = timer()
     prevtime = time
-    minPeaks = 1
-
-    def repl(m):
-        return digDict[m]
+    minPeaks = 3
+    check = False
     # each spectrum in the mgf file
     for spec in libMGF:
         count += 1
@@ -1201,16 +1213,32 @@ def mgf_library_upload_quant_delete(fileName, d, digDict, aaDict):
         # peaks of the library file are intialized.
         mz = list(spec['m/z array'])
         intensity = list(spec['intensity array'])
+
+
+
         z = spec['params']['charge'][0]
 
         fragList = []
+        debug = []
         for x in range(1, len(sequence)-1):
             fragseq = sequence[x:]
             lightfragmz = mass.fast_mass(sequence=sequence[x:], ion_type='y', charge=1, aa_mass = aaDict) # Do I need to use different possible charges?
-            i = mz.index(round(lightfragmz, 3)) if round(lightfragmz, 3) in mz else -1
+
+            i = approxList(lightfragmz, mz)
+            if check: print(lightfragmz)
             if i==-1: continue
+            if check: debug.append(i)
             fragList.append((intensity[i], lightfragmz, fragseq))
 
+        if check:
+            yion = [1 if i in debug else 0 for i in range(len(intensity))]
+            allPeaks = list(tuple(zip(mz, intensity, yion)))
+            allPeaks.sort(key=lambda x:x[1], reverse=True)
+            print(d[key])
+            print(precMz)
+            print(seq)
+            for x in allPeaks[:20]:
+                print(x)
 
         fragList.sort(reverse=True)
         if len(fragList) >= minPeaks: fragList = fragList[:minPeaks]
@@ -1221,6 +1249,8 @@ def mgf_library_upload_quant_delete(fileName, d, digDict, aaDict):
             peaks.append((fragMz, fragInt, ('light',i)))
             peaks.append((calc_heavy_mz(fragList[i][2], fragMz, 1), fragInt, ('heavy', i)))
 
+        if check: print('\n')
+        check = False
         '''
 
         #sorted, then filter, then calculate heavy

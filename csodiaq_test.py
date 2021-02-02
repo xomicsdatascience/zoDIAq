@@ -12,6 +12,7 @@ import numpy as np
 from matplotlib.ticker import PercentFormatter
 import math
 from scipy.stats import linregress
+import pickle
 
 
 def set_plot_settings(title, xlabel, ylabel):
@@ -398,6 +399,8 @@ for RATIO in RATIOS:
     data += calc_med_stdev(dfLC, dfDIA, RATIO, expr=e)
     if RATIO != 1: data += calc_med_stdev(dfLC, dfDIA, RATIO, ori=0, expr=e)
 '''
+
+# For Making Line Graphs
 def calc_key_variables(df, r, type, ori=1):
     if ori:
         if type=='LC': col = 'Ratio H/L 1to'+str(r)
@@ -413,8 +416,18 @@ def calc_key_variables(df, r, type, ori=1):
     if type=='LC': df[col] = np.log2(df[col])
     app = df[~df[col].isnull()][col]
     med = np.median(app)
+
+    ratioDict = {
+        -8:-3,
+        -4:-2,
+        -2:-1,
+        0:0,
+        2:1,
+        4:2,
+        8:3
+    }
     #if type == 'DIA': med = med*3
-    return [[med,statistics.pstdev(app),ratio, type]]
+    return [[med,statistics.pstdev(app),ratioDict[ratio], type]]
 
 def calc_all_variables(df, type, ratios):
     data = []
@@ -427,21 +440,41 @@ def calc_all_variables(df, type, ratios):
 
 RATIOS = [1, 2, 4, 8]
 
-
+ratioDict = {
+        -8:-3,
+        -4:-2,
+        -2:-1,
+        0:0,
+        2:1,
+        4:2,
+        8:3
+    }
 lc = calc_all_variables(dfLC, 'LC', RATIOS)
 dia = dfDIA.drop(labels=['numPeps'], axis=1)
+diaRats = list(dia['ratio'])
+for i in range(len(diaRats)): diaRats[i] = ratioDict[diaRats[i]]
+dia['ratio'] = diaRats
+
+diaMeans = list(dia['median'])
+diaMeans = [1.265**x for x in diaMeans]
+dia['median'] = diaMeans
+
+
 print(lc)
 print(dia)
 
-'''
+
 X = lc['median']
 Y = dia['median']
 lr = ['test']+list(linregress(X, Y))
 print(pd.DataFrame([lr], columns=['name', 'slope', 'intercept', 'rvalue', 'pvalue', 'stderr' ]))
 print(lr)
-print(lr[0])
+pyplot.scatter(X,Y)
+pyplot.ylim(-3.3, 3.3)
+pyplot.show()
 '''
 
+#For Making Line Graphs
 finalDf = pd.concat([lc, dia])
 
 finalDf.to_csv('Data/median.csv')
@@ -453,7 +486,7 @@ for key, group in finalDf.groupby('type'):
                label=key, ax=ax)
 
 pyplot.show()
-
+'''
 '''
 dictLC = dict(zip(dfLC['Sequence'], dfLC[col1]))
 dictDIA = dict(zip(dfDIA['peptide'], dfDIA[col2]))
@@ -483,4 +516,39 @@ for file in files:
     dfList.append(pd.read_csv(file))
 finalDf = pd.concat(dfList)
 finalDf.to_csv(head+'full_compare.csv', index=False)
+'''
+'''
+libDict = pickle.load(open( "Data/Input/TempHold/lib_3_.p", "rb" ))
+fragDict = pickle.load(open( "Data/Input/TempHold/frag.p", "rb" ))
+
+jesse = pd.read_csv("Data/jesseQuant.csv")
+jesseLights = {}
+jesseHeavys = {}
+jesseCount = defaultdict(int)
+for i in range(len(jesse)):
+    index = jesse.loc[i]['quantscan']
+    jesseCount[index] += 1
+    lights = jesse.loc[i]['ylight'].strip("[]").replace("'","").split(', ')
+    heavys = jesse.loc[i]['yheavy'].strip("[]").replace("'","").split(', ')
+    if len(lights[0]) != 0: jesseLights[int(index)] = set([round(float(x),1) for x in lights])
+    else: jesseLights[int(index)] = set()
+    if len(heavys[0]) != 0: jesseHeavys[int(index)] = set([round(float(x),1) for x in heavys])
+    else: jesseHeavys[int(index)] = set()
+
+
+
+calebLights = {}
+calebHeavys = {}
+
+for key in libDict:
+    lights = set()
+    heavys = set()
+    for peak in libDict[key]:
+        if peak[2][0]=='light': lights.add(round(peak[0],1))
+        else: heavys.add(round(peak[0],1))
+    calebLights[int(key)] = lights
+    calebHeavys[int(key)] = heavys
+
+Jkeys = set(list(jesseLights.keys()))
+Ckeys = set(list(calebLights.keys()))
 '''
