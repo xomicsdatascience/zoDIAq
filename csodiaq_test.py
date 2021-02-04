@@ -399,7 +399,7 @@ for RATIO in RATIOS:
     data += calc_med_stdev(dfLC, dfDIA, RATIO, expr=e)
     if RATIO != 1: data += calc_med_stdev(dfLC, dfDIA, RATIO, ori=0, expr=e)
 '''
-
+'''
 # For Making Line Graphs
 def calc_key_variables(df, r, type, ori=1):
     if ori:
@@ -473,7 +473,7 @@ pyplot.scatter(X,Y)
 pyplot.ylim(-3.3, 3.3)
 pyplot.show()
 '''
-
+'''
 #For Making Line Graphs
 finalDf = pd.concat([lc, dia])
 
@@ -508,7 +508,8 @@ pyplot.xlabel('LC')
 pyplot.ylabel('DIA')
 pyplot.show()
 '''
-'''
+
+# Full Compare Compilation
 head = 'Data/QuantifyCompare/variables/'#lib3_compare.csv'
 files = [head+x for x in list(os.listdir(head))]
 dfList = []
@@ -516,7 +517,7 @@ for file in files:
     dfList.append(pd.read_csv(file))
 finalDf = pd.concat(dfList)
 finalDf.to_csv(head+'full_compare.csv', index=False)
-'''
+
 '''
 libDict = pickle.load(open( "Data/Input/TempHold/lib_3_.p", "rb" ))
 fragDict = pickle.load(open( "Data/Input/TempHold/frag.p", "rb" ))

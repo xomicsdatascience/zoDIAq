@@ -48,4 +48,4 @@ for libTag in libDict:
 #        menu.write_csodiaq_fdr_outputs(outFile, corrected=True)
 #        menu.write_DISPA_targeted_reanalysis_files(outFile)
 
-        menu.quantify(outFile, libFile, 'Data/Input/jesse/')
+        menu.heavy_light_quantification(outFile, libFile, 'Data/Input/jesse/')

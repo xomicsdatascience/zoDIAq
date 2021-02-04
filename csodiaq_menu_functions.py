@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import statistics
 from scipy.stats import linregress
+import pickle
 
 
 '''
@@ -24,7 +25,7 @@ def write_csodiaq_output(lib, expFile, outFile, corrected=False ):
         offsetFile = re.sub('(.*).csv', r'\1_offset_tolerance.csv', outFile)
         df = pd.read_csv(offsetFile)
         ppmTol = df['tolerance'].loc[0]
-        ppmOffset=(-df['offset'].loc[0])
+        ppmOffset=(df['offset'].loc[0])
         outFile = re.sub('(.*).csv', r'\1_corrected.csv', outFile)
     else:
         ppmTol=10,
@@ -114,8 +115,8 @@ Purpose:
 Parameters:
 Returns:
 '''
-def quantify(inFile, libFile, expFolder):
-    inFile = re.sub('(.*).csv', r'\1_corrected_proteinFDR.csv', inFile)
+def heavy_light_quantification(inFile, libFile, expFolder):
+    inFile = re.sub('(.*).csv', r'\1_corrected_mostIntenseTargs_allCVs.csv', inFile)
     #files = [expFolder+f for f in listdir(expFolder) if isfile(join(expFolder, f))]
     files = [
         'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to8_01.mzXML',
@@ -148,40 +149,57 @@ def quantify(inFile, libFile, expFolder):
     #minMatch = [1, 2]
     #minMatch = [1, 2, 3, 4]
     #minMatch = [1, 2, 3, 5, 7, 9]
-    #m = ['mean', 'median', 'intensity', 'weighted']
-    #stdev = [1, 2]
-    minMatch = [1]
-    m = ['median']
-    stdev = [1]
-    for x in minMatch:
-        for y in m:
-            for z in stdev:
-                var = [x, y, z]
-                #print(var)
-                dfDIA = cbf.quantify(inFile, libFile, files, var)
-                temp = dfDIA.drop('peptide', axis=1)
-                temp.to_csv('Data/CalebOutput.csv')
-                plt.clf()
-                temp.boxplot(column=files)
-                plt.axhline(y=-3, color='blue', linestyle='dashed')
-                plt.axhline(y=-2, color='blue', linestyle='dashed')
-                plt.axhline(y=-1, color='blue', linestyle='dashed')
-                plt.axhline(y=0, color='blue', linestyle='dashed')
-                plt.axhline(y=1, color='blue', linestyle='dashed')
-                plt.axhline(y=2, color='blue', linestyle='dashed')
-                plt.axhline(y=3, color='blue', linestyle='dashed')
-                #plt.ylim(-10, 10)
-                plt.show()
+    graph = False
+    libPeaks = [3, 5, 10]
+    #libPeaks = [3]
+    minMatches = [[1, 2],[1, 2, 3, 4],[1, 2, 3, 5, 7, 9]]
+    #minMatches = [[1]]
+    m = ['mean', 'median', 'intensity', 'weighted']
+    #m = ['median']
+    stdev = [0, 0.5, 1, 2]
+    #stdev = [0]
+    for w in range(len(libPeaks)):
+        #fragDict, libDict = cbf.make_quant_dicts('Data/Input/TempHold/mostintense_quantmzlist.txt', 'Data/Input/human.faims.fixed.decoy.mgf', files, libPeaks[w])
+        fragDict, libDict = cbf.make_quant_dicts(inFile, libFile, files, libPeaks[w])
+        #pickle.dump(libDict, open( "Data/Input/TempHold/lib_"+str(libPeaks[w])+"_traml.p", "wb" ))
+        #pickle.dump(fragDict, open( "Data/Input/TempHold/frag.p", "wb" ))
+        minMatch = minMatches[w]
+        #libDict = pickle.load(open( "Data/Input/TempHold/lib_"+str(libPeaks[w])+".p", "rb" ))
+        #libDict = pickle.load(open( "Data/Input/TempHold/lib_"+str(libPeaks[w])+"_traml.p", "rb" ))
+        #fragDict = pickle.load(open( "Data/Input/TempHold/frag.p", "rb" ))
+        #print(len(fragDict))
+        for x in minMatch:
+            for y in m:
+                for z in stdev:
+                    var = [x, y, z]
+
+                    #print(var)
+                    dfDIA = cbf.heavy_light_quantification(fragDict, libDict, files, var)
+                    if graph:
+                        temp = dfDIA.drop('peptide', axis=1)
+                        temp.to_csv('Data/CalebOutput.csv')
+                        plt.clf()
+                        temp.boxplot(column=files)
+                        plt.axhline(y=-3, color='blue', linestyle='dashed')
+                        plt.axhline(y=-2, color='blue', linestyle='dashed')
+                        plt.axhline(y=-1, color='blue', linestyle='dashed')
+                        plt.axhline(y=0, color='blue', linestyle='dashed')
+                        plt.axhline(y=1, color='blue', linestyle='dashed')
+                        plt.axhline(y=2, color='blue', linestyle='dashed')
+                        plt.axhline(y=3, color='blue', linestyle='dashed')
+                        #plt.ylim(-10, 10)
+                        plt.show()
 
 
 
 
-                dia = calc_all_variables(dfDIA, 'DIA', ratios)
-                print(dia['numPeps'])
-                dia.to_csv('Data/lib3-1-median-1.csv', index=False)
-                Y = dia['median']
-                data.append([3]+var+list(linregress(X, Y))+[np.mean(dia['stdev']),sum(dia['numPeps'])])
-                print(data[-1])
+                    dia = calc_all_variables(dfDIA, 'DIA', ratios)
+                    #print(dia['numPeps'])
+                    dia.to_csv('Data/lib3-1-median-1.csv', index=False)
+                    Y = dia['median']
+                    data.append([libPeaks[w]]+var+list(linregress(X, Y))+[np.mean(dia['stdev']),sum(dia['numPeps'])])
+                    print(data[-1])
+
     finalDf = pd.DataFrame(data, columns=['libPeaks', 'minMatch', 'mode', 'corrStDev', 'slope', 'intercept', 'rvalue', 'pvalue', 'stderr', 'avrStDev', 'numPeps'])
     finalDf.to_csv('Data/QuantifyCompare/variables/compare.csv', index=False)
 
