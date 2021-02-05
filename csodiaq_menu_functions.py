@@ -151,17 +151,18 @@ def heavy_light_quantification(inFile, libFile, expFolder):
     #minMatch = [1, 2, 3, 5, 7, 9]
     graph = False
     libPeaks = [3, 5, 10]
-    #libPeaks = [3]
-    minMatches = [[1, 2],[1, 2, 3, 4],[1, 2, 3, 5, 7, 9]]
+    #libPeaks = [10]
+    minMatches = [[1, 2],[1, 3, 4],[1, 2, 3, 5, 9]]
     #minMatches = [[1]]
     m = ['mean', 'median', 'intensity', 'weighted']
     #m = ['median']
-    stdev = [0, 0.5, 1, 2]
-    #stdev = [0]
+    stdev = [0, 0.5, 1]
+    stdev = [0]
     for w in range(len(libPeaks)):
-        #fragDict, libDict = cbf.make_quant_dicts('Data/Input/TempHold/mostintense_quantmzlist.txt', 'Data/Input/human.faims.fixed.decoy.mgf', files, libPeaks[w])
-        fragDict, libDict = cbf.make_quant_dicts(inFile, libFile, files, libPeaks[w])
-        #pickle.dump(libDict, open( "Data/Input/TempHold/lib_"+str(libPeaks[w])+"_traml.p", "wb" ))
+        fragDict, libDict = cbf.make_quant_dicts('Data/Input/TempHold/mostintense_quantmzlist.txt', 'Data/Input/human.faims.fixed.decoy.mgf', files, libPeaks[w])
+        #fragDict, libDict = cbf.make_quant_dicts(inFile, libFile, files, libPeaks[w])
+        #pickle.dump(libDict, open( "Data/Input/TempHold/lib_"+str(libPeaks[w])+"_traml2.p", "wb" ))
+        pickle.dump(libDict, open( "Data/Input/TempHold/lib_"+str(libPeaks[w])+"_mgf.p", "wb" ))
         #pickle.dump(fragDict, open( "Data/Input/TempHold/frag.p", "wb" ))
         minMatch = minMatches[w]
         #libDict = pickle.load(open( "Data/Input/TempHold/lib_"+str(libPeaks[w])+".p", "rb" ))

@@ -508,7 +508,7 @@ pyplot.xlabel('LC')
 pyplot.ylabel('DIA')
 pyplot.show()
 '''
-
+'''
 # Full Compare Compilation
 head = 'Data/QuantifyCompare/variables/'#lib3_compare.csv'
 files = [head+x for x in list(os.listdir(head))]
@@ -517,7 +517,7 @@ for file in files:
     dfList.append(pd.read_csv(file))
 finalDf = pd.concat(dfList)
 finalDf.to_csv(head+'full_compare.csv', index=False)
-
+'''
 '''
 libDict = pickle.load(open( "Data/Input/TempHold/lib_3_.p", "rb" ))
 fragDict = pickle.load(open( "Data/Input/TempHold/frag.p", "rb" ))
@@ -553,3 +553,13 @@ for key in libDict:
 Jkeys = set(list(jesseLights.keys()))
 Ckeys = set(list(calebLights.keys()))
 '''
+jesse = pd.read_csv('Data/Input/TempHold/mostintense_quantmzlist.txt', sep='\t')
+caleb = pd.read_csv('Data/Output/csodiaq_lib-human-noloss-400to2000-pt2mz-31peaks_exp-n1b_corrected_mostIntenseTargs_allCVs.csv')
+
+jesse_peptides = set(list(tuple(zip(jesse['Peptide'], jesse['CV']))))
+caleb_peptides = set(list(tuple(zip(caleb['peptide'], caleb['CompensationVoltage']))))
+
+both = set.intersection(jesse_peptides, caleb_peptides)
+print(len(jesse_peptides))
+print(len(caleb_peptides))
+print(len(both))
