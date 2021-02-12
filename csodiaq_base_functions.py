@@ -315,15 +315,23 @@ Returns:
                     csodiaq output to be used in generating a corrected csodiaq output. For a corrected csodiaq output,
                     it is primarily used for figure generation to compare with uncorrected csodiaq output.
     tag 'qPPM':
-        'lightPPM' - list of ppm differences between light library peak and a query peak.
-        'heavyPPM' - list of ppm differences between heavy library peak and a query peak.
+        dictionary 'lightPPM' -
+            'key' - string representing the peptide of interest.
+            'value' - list of ppm differences between light library peak and a query peak.
+        dictionary 'heavyPPM' -
+            'key' - string representing the peptide of interest.
+            'value' - list of ppm differences between heavy library peak and a query peak.
     tag 'ratio':
-        dictionary 'lightDict'
-            key - int representing intensity rank of the light library peak that matched a query peak.
-            value - float representing the intensity of the matched query peak.
-        dictionary 'heavyDict'
-            key - int representing intensity rank of the heavy library peak that matched a query peak.
-            value - float representing the intensity of the matched query peak.
+        dictionary 'lightRatio'
+            'key' - string representing the peptide of interest.
+            'value' - dictionary 'intensityRank'
+                key - int representing intensity rank of the light library peak that matched a query peak.
+                value - float representing the intensity of the matched query peak.
+        dictionary 'heavyRatio'
+            'key' - string representing the peptide of interest.
+            'value' - dictionary 'intensityRank'
+                key - int representing intensity rank of the heavy library peak that matched a query peak.
+                value - float representing the intensity of the matched query peak.
 '''
 def spectra_peak_comparison(libSpectrum, expSpectrum, ppmTol, ppmYOffset, tag='identify'):
     # final dictionary returned is initialized. See function description for details on contents.
@@ -363,7 +371,7 @@ def spectra_peak_comparison(libSpectrum, expSpectrum, ppmTol, ppmYOffset, tag='i
 Function: initialize_return_values()
 Purpose: Initializes the return values for the peak comparison function. Because the same function is used several times for
             different purposes, this and the update_return_values() function allow for customized use of the same function.
-            Explanations for each set of return values are written under the spectra_peak_comparison() function.
+            Explanations for return values are written under the spectra_peak_comparison() function, separated by tag.
 Parameters:
     'tag' - string representing the condition under which the peak comparison is happening. This changes the return values.
 Returns:
@@ -377,10 +385,13 @@ def initialize_return_values(tag):
         ionDict = defaultdict(set)
         ppmDict = defaultdict(list)
         return [cosDict, countDict, ionDict, ppmDict]
-    elif tag=='qPPM': return[[],[]]
+    elif tag=='qPPM':
+        light = defaultdict(list)
+        heavy = defaultdict(list)
+        return [light, heavy]
     elif tag=='ratio':
-        light = defaultdict(int)
-        heavy = defaultdict(int)
+        light = defaultdict(dict)
+        heavy = defaultdict(dict)
         return [light, heavy]
 
 
@@ -421,11 +432,11 @@ def update_return_values(returns, peak1, peak2, i1, i2, ppm, tag):
         returns[3][key].append(ppm)
 
     elif tag=='qPPM':
-        if peak1[2][0] == 'light': returns[0].append(ppm)
-        if peak1[2][0] == 'heavy': returns[1].append(ppm)
+        if peak1[2][0] == 'light': returns[0][peak1[2][2]].append(ppm)
+        if peak1[2][0] == 'heavy': returns[1][peak1[2][2]].append(ppm)
     elif tag=='ratio':
-        if peak1[2][0] == 'light': returns[0][peak1[2][1]] = peak2[1]
-        if peak1[2][0] == 'heavy': returns[1][peak1[2][1]] = peak2[1]
+        if peak1[2][0] == 'light': returns[0][peak1[2][2]][peak1[2][1]] = peak2[1]
+        if peak1[2][0] == 'heavy': returns[1][peak1[2][2]][peak1[2][1]] = peak2[1]
 
 
 '''
@@ -678,7 +689,9 @@ def find_offset_tol(data, histFile, stdev=2, mean=False):
             if hist[i] < noise: max_i = i; break
 
         offset = center[index_max]
-        tolerance = (center[max_i] - center[min_i])/2
+        if index_max - min_i >= max_i - index_max: tolerance = offset - center[min_i]
+        else: tolerance = center[max_i] - offset
+        #tolerance = (center[max_i] - center[min_i])/2
 
     # if a histogram file is provided, it is created, with offset (black) and tolerance (red) lines drawn for reference
     if histFile:
@@ -1020,6 +1033,7 @@ def return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin):
 
 
         finalDf = pd.DataFrame(data, columns=['Compound','Formula','Adduct','m.z','z','MSXID'])
+        finalDf = finalDf.drop_duplicates(subset=['m.z'], keep='first')
         finalDf.to_csv(header+str(CV)+'.txt', sep='\t', index=False)
     compDf = pd.concat(allDfs)
     compDf.to_csv(header+'allCVs.csv', index=False)
@@ -1078,33 +1092,50 @@ def heavy_light_quantification(fragDict, libDict, mzxmlFiles, var):
 
     # final return value initialized, and the first two columns set.
     finalDf = pd.DataFrame()
-    finalDf['scan'] = sorted(libDict.keys())
-    finalDf['peptide'] = [fragDict[key]['seq'] for key in sorted(libDict.keys())]
+
+    tempKeys = []
+    for scan in libDict:
+        for tempDict in fragDict[scan]:
+            tempKeys.append((scan, tempDict['seq']))
+
+    scans = []
+    peptides = []
+    for x in sorted(tempKeys):
+        scans.append(x[0])
+        peptides.append(x[1])
+
+    finalDf['scan'] = scans
+    finalDf['peptide'] = peptides
 
     # Heavy:Light Ratio for each peptide is calculated for every DISPA reanalysis file. Looping over the files begins here.
     for f in mzxmlFiles:
+        if stdev == -1: offset, tolerance = 0,10
+        else:
+            # In order to apply a ppm correction, optimal offset and tolerance for the data.
+            ppmDiffs = []
+            with mzxml.read(f, use_index =True) as file:
+                for scan in sorted(libDict.keys()):
 
-        # In order to apply a ppm correction, optimal offset and tolerance for the data.
-        ppmDiffs = []
-        with mzxml.read(f, use_index =True) as file:
-            for scan in sorted(libDict.keys()):
+                    # experimental spectrum is formatted for peak comparison (see 'libDict' parameter value for peak description)
+                    spec = file.get_by_id(scan)
+                    spec['intensity array'] = [x for x in spec['intensity array']]
+                    peakIDs = [scan for x in range(len(spec['m/z array']))]
+                    expSpectrum = list(tuple(zip(spec['m/z array'],spec['intensity array'],peakIDs)))
+                    expSpectrum.sort(key=lambda x:x[0])
 
-                # experimental spectrum is formatted for peak comparison (see 'libDict' parameter value for peak description)
-                spec = file.get_by_id(scan)
-                spec['intensity array'] = [x for x in spec['intensity array']]
-                peakIDs = [scan for x in range(len(spec['m/z array']))]
-                expSpectrum = list(tuple(zip(spec['m/z array'],spec['intensity array'],peakIDs)))
-                expSpectrum.sort(key=lambda x:x[0])
+                    # all PPM differences from matches of interest are included for consideration
+                    l, h = spectra_peak_comparison(sorted(libDict[scan]), expSpectrum, 50, 0, tag='qPPM')
+                    for pep in l:
+                        if len(l[pep]) >= minMatch: ppmDiffs += l[pep]
+                    for pep in h:
+                        if len(h[pep]) >= minMatch: ppmDiffs += h[pep]
 
-                # all PPM differences from matches of interest are included for consideration
-                l, h = spectra_peak_comparison(libDict[scan], expSpectrum, 50, 0, tag='qPPM')
-                if len(l) >= minMatch or len(h) >= minMatch: ppmDiffs += l; ppmDiffs += h
+            # offset and tolerance determined from the list of PPM differences
+            stringVar = [str(x) for x in var]
+            if var[2]<1: stringVar[2] = 'P'+stringVar[2].split('.')[-1]
+            offset, tolerance = find_offset_tol(sorted(ppmDiffs), 'Data/QuantifyCompare/Histograms/hist'+'_'.join(stringVar)+'.png', stdev=stdev)
 
-        # offset and tolerance determined from the list of PPM differences
-        stringVar = [str(x) for x in var]
-        if var[2]<1: stringVar[2] = 'P'+stringVar[2].split('.')[-1]
-        offset, tolerance = find_offset_tol(sorted(ppmDiffs), 'Data/QuantifyCompare/Histograms/hist'+'_'.join(stringVar)+'.png', stdev=stdev)
-
+        print(str(offset)+','+str(tolerance))
         # @DEBUG: Remove these
         #offset, tolerance = 0,10
         #print(offset)
@@ -1124,47 +1155,52 @@ def heavy_light_quantification(fragDict, libDict, mzxmlFiles, var):
                 peakIDs = [scan for x in range(len(spec['m/z array']))]
                 expSpectrum = list(tuple(zip(spec['m/z array'],spec['intensity array'],peakIDs)))
                 expSpectrum.sort(key=lambda x:x[0])
-                l, h = spectra_peak_comparison(libDict[scan], expSpectrum, tolerance, offset, tag='ratio')
+                lightPeps, heavyPeps = spectra_peak_comparison(sorted(libDict[scan]), expSpectrum, tolerance, offset, tag='ratio')
+                peps = [x['seq'] for x in fragDict[scan]]
+                for pep in peps:
+                    l = lightPeps[pep]
+                    h = heavyPeps[pep]
+                    # for light or heavy peaks that are identified without a match, a psuedo peak is created
+                    #   with an intensity equal to the average of 10 least intense peaks divided by two.
+                    smallPeakIntensity = np.mean(sorted(spec['intensity array'])[:10])/2
 
-                # for light or heavy peaks that are identified without a match, a psuedo peak is created
-                #   with an intensity equal to the average of 10 least intense peaks divided by two.
-                smallPeakIntensity = np.mean(sorted(spec['intensity array'])[:10])/2
-
-                # creating the psuedo peaks
-                lightSet = set(l.keys())
-                heavySet = set(h.keys())
-                onlyLight = lightSet - heavySet
-                for key in onlyLight: h[key] = smallPeakIntensity
-                onlyHeavy = heavySet - lightSet
-                for key in onlyHeavy: l[key] = smallPeakIntensity
-
-                # @DEBUG: For seeing output relating to a specific scan. When blank, nothing happens.
-                scanEx = ''
-                if scan == scanEx:
-                    print('\n')
-                    print(f)
-                    print(list(l.values()))
-                    print(list(h.values()))
-
-                # ratio is calculated if there are enough peaks to warrant a match.
-                if len(l) >= minMatch:
-                    ratio = return_ratio(l, h, m)
+                    # creating the psuedo peaks
+                    lightSet = set(l.keys())
+                    heavySet = set(h.keys())
+                    onlyLight = lightSet - heavySet
+                    for key in onlyLight: h[key] = smallPeakIntensity
+                    onlyHeavy = heavySet - lightSet
+                    for key in onlyHeavy: l[key] = smallPeakIntensity
 
                     # @DEBUG: For seeing output relating to a specific scan. When blank, nothing happens.
+                    scanEx = ''
                     if scan == scanEx:
-                        keys = list(l.keys())
-                        lightInt = [l[key] for key in keys]
-                        heavyInt = [h[key] for key in keys]
-                        for i in range(len(lightInt)):
-                            print(str(heavyInt[i])+'/'+str(lightInt[i])+'='+str(heavyInt[i]/lightInt[i]))
-                        print(ratio)
+                        print('\n')
+                        print(f)
+                        print(list(l.values()))
+                        print(list(h.values()))
 
-                # if there are not enough peaks to warrant a match, the ratio is returned as NaN.
-                else:
-                    ratio=np.nan
+                    # ratio is calculated if there are enough peaks to warrant a match.
+                    if minMatch: check = (len(l) >= minMatch)
+                    else: check = match_score(list(l.keys()))
+                    if check:
+                        ratio = return_ratio(l, h, m)
 
-                # This dictionary maps scans to calculated ratios.
-                ratioDict[scan] = ratio
+                        # @DEBUG: For seeing output relating to a specific scan. When blank, nothing happens.
+                        if scan == scanEx:
+                            keys = list(l.keys())
+                            lightInt = [l[key] for key in keys]
+                            heavyInt = [h[key] for key in keys]
+                            for i in range(len(lightInt)):
+                                print(str(heavyInt[i])+'/'+str(lightInt[i])+'='+str(heavyInt[i]/lightInt[i]))
+                            print(ratio)
+
+                    # if there are not enough peaks to warrant a match, the ratio is returned as NaN.
+                    else:
+                        ratio=np.nan
+
+                    # This dictionary maps scans to calculated ratios.
+                    ratioDict[scan, pep] = ratio
 
         # column of ratios from the just-analyzed file is added to the output
         finalDf[f] = [ratioDict[key] for key in sorted(ratioDict.keys())]
@@ -1175,6 +1211,11 @@ def heavy_light_quantification(fragDict, libDict, mzxmlFiles, var):
     finalDf.to_csv('Data/oldOutput/test_'+'_'.join(var)+'.csv', index=False)
     return finalDf
 
+
+def match_score(keys):
+    if len(keys) == 0: return False
+    if min(keys) < 3: return True
+    return False
 
 '''
 Function: make_quant_dicts()
@@ -1199,20 +1240,20 @@ def make_quant_dicts(inFile, libFile, mzxmlFiles, maxPeaks):
     # Dictionary is created that can match FDR calculation variables to the scan number of the DISPA re-analysis.
     # NOTE: all DISPA re-analysis files should have corresponding scan numbers. The first of the list is arbitrarily chosen there.
     fragScanDict = {}
+
     with mzxml.read(mzxmlFiles[0]) as spectra:
         for x in spectra:
 
-            # heavy and light mz values are rounded to 2 decimal places in case differences exist between FDR file and experiment file
-            key = ( float(x['precursorMz'][0]['precursorMz']),
-                    float(x['precursorMz'][1]['precursorMz']),
-                    int(x['compensationVoltage'])
+            # @MAKE NOTE
+            key = ( round(x['precursorMz'][0]['precursorMz'], 2),
+                    round(x['precursorMz'][1]['precursorMz'], 2),
+                    x['compensationVoltage']
                     )
             fragScanDict[key] = x['num']
 
-    keyList = sorted(list(fragScanDict.keys()))
-    fragVarDict = {}
+    fragVarDict = defaultdict(list)
     libScanDict = {}
-
+    print('total scans: ' + str(len(fragScanDict)))
     # each peptide of interest should have a corresponding scan. This runs over each peptide.
     for i in range(len(fragDf)):
 
@@ -1220,7 +1261,10 @@ def make_quant_dicts(inFile, libFile, mzxmlFiles, maxPeaks):
         #seq, mz, z, CV = fragDf.loc[i]['peptide'], fragDf.loc[i]['MzLIB'], fragDf.loc[i]['zLIB'], fragDf.loc[i]['CompensationVoltage']
         seq, mz, z, CV = fragDf.loc[i]['Peptide'], fragDf.loc[i]['prec_light_mz'], fragDf.loc[i]['z'], fragDf.loc[i]['CV']
 
-        # heavy and light mz values are rounded to 2 decimal places in case differences exist between FDR file and experiment file
+
+        '''
+        # @DEBUG: error 1
+        # heavy and light mz values are ####CHANGE#### rounded to 2 decimal places in case differences exist between FDR file and experiment file
         heavyMz = calc_heavy_mz(seq, mz, z)
 
         # Because the keys might not match up perfectly (for example, if you're using a different library), approximation is taken into account
@@ -1233,23 +1277,40 @@ def make_quant_dicts(inFile, libFile, mzxmlFiles, maxPeaks):
         # @DEBUG: Presumably, you won't need this if statement if the re-analysis data was based off the same file
         if keyMatch:
 
+
+
+            # @DEBUG: error 1
             # corresponding scan identified
             scan = fragScanDict[keyMatch]
+
 
             # FDR calculation variables are put into a new dictionary that can be identified by scan number.
             fragVarDict[scan] = {'seq':seq, 'mz':mz, 'z':z, 'CV':CV}
 
             #seq = re.sub(r'\+\d+\.\d+', '', seq)
+            # @DEBUG: error 1
             # a dictionary that can match library spectrum identifying features to scan number is created.
-            libScanDict[float(mz), str(seq)] = scan
+            #libScanDict[float(mz), str(seq)] = scan
+            libScanDict[round(mz,2), seq] = scan
+        '''
+        lightMz = round(mz, 2)
+        heavyMz = round(calc_heavy_mz(seq, mz, z), 2)
+        key = (lightMz, heavyMz, CV)
+        if key in fragScanDict:
+            scan = fragScanDict[key]
+            libScanDict[lightMz, seq] = scan
+            fragVarDict[scan].append({'seq':seq, 'mz':mz, 'z':z, 'CV':CV})
 
+
+    print('scans identified: '+str(len(libScanDict)))
     # dictionary with a scan:peaks entries is created.
     libPeakDict = make_lib_dict_quant(libFile, libScanDict, fragDf, maxPeaks)
+    print('libraries identified: '+str(len(libPeakDict)))
     return fragVarDict, libPeakDict
 
 
 '''
-Function: tuple_key_match()
+Function: tuple_key_match() *****DEFUNCT*****
 Purpose: Given a list of tuple keys and a key that may be in the list, this function determines if an approximately equal key
             exists. String values must be exact, but float values must be withit 10 ppm to be considered a match.
 Parameters:
@@ -1257,16 +1318,30 @@ Parameters:
     'key' - a tuple of the same composition as the tuples in keyList.
 Returns:
     boolean - if 'key' is found in 'keyList', this function returns true, else false.
+
+Defunct Reasons: We've opted to just round float values to 2 decimal places rather than finding values within a ppm
+                    tolerance. At the time we chose not to use this function, I was debugging instances where 1) a different
+                    CV match was being chosen first and 2) the wrong heavy-mz values were being identified, possibly because
+                    the light-mz value (ordered before heavy) was different.
 '''
 def tuple_key_match(keyList, key):
     i = bisect(keyList, key)
     if i != 0 and approx_tuple(key, keyList[i-1]): return keyList[i-1]
     if i != len(keyList) and approx_tuple(key, keyList[i]): return keyList[i]
+    #print('neither')
+    #print(key)
+    #print(keyList[i-1])
+    #print(keyList[i])
+    if i<3 and i < len(keyList)-4:
+        print('i: '+str(i))
+        for j in range(i-2,i+2):
+            print(str(j) + str(keyList[i-1]))
+        print(key)
     return False
 
 
 '''
-Function: approx_tuple()
+Function: approx_tuple() *****DEFUNCT*****
 Purpose: This function compares each value of two tuples to determine if they are approximately (in the case of float values)
             or exactly (in the case of string or int values) the same.
 Parameters:
@@ -1275,12 +1350,15 @@ Parameters:
     'ppmTol' - the ppm tolerance for float values to be considered a match. Default is 10ppm.
 Returns:
     boolean - if each value of tuples match this function returns true, else false.
+
+Defunct Reasons: We've opted to just round float values to 2 decimal places rather than finding values within a ppm
+                    tolerance.
 '''
 def approx_tuple(t1, t2, ppmTol=10):
 
     # @DEBUG: I kept deleting this (and the 'check' lines below) but needing it later, so I'm keeping it here for now.
     #check = False
-    #if t1 == '':
+    #if t1 == (-40, 814.4, 820.4074896666666):
     #    check = True
     #    print('\n')
     #    print(t1)
@@ -1373,7 +1451,7 @@ def mgf_library_upload_quant(fileName, scanDict, digDict, aaDict, maxPeaks):
     libMGF = mgf.read(fileName)
 
     # return value is initialized
-    lib = {}
+    lib = defaultdict(list)
 
     keyList = sorted(list(scanDict.keys()))
     # each spectrum in the mgf file
@@ -1381,13 +1459,9 @@ def mgf_library_upload_quant(fileName, scanDict, digDict, aaDict, maxPeaks):
 
         seq = spec['params']['seq']
         precMz = spec['params']['pepmass'][0]
-        key = (float(precMz), str(seq))
 
-        # Because the keys might not match up perfectly (for example, if you're using a different library), approximation is taken into account
-        keyMatch = tuple_key_match(keyList, key)
-
-        #if no match is found, this library entry is skipped. Saves buckets of time.
-        if not keyMatch: continue
+        key = (round(precMz,2), seq)
+        if key not in scanDict: continue
 
         # Decimal values are replaced with numeric placeholders to be included in the analysis.
         sequence = re.sub(r'\+\d+\.\d+', lambda m: digDict.get(m.group()), seq)
@@ -1409,21 +1483,23 @@ def mgf_library_upload_quant(fileName, scanDict, digDict, aaDict, maxPeaks):
 
         # y-ion peaks are sorted by intensity, and lower-intensity peaks are filtered out.
         fragList.sort(reverse=True)
-        if len(fragList) >= maxPeaks: fragList = fragList[:maxPeaks]
+        if type(maxPeaks) is not str and len(fragList) >= maxPeaks: fragList = fragList[:maxPeaks]
 
         # heavy counterpart mz is calculated. Light and heavy pairs are additionally tagged by their intensity rank and included in the final output.
         peaks = []
         for i in range(len(fragList)):
             fragMz = fragList[i][1]
             fragInt = fragList[i][0]
-            peaks.append((fragMz, fragInt, ('light',i)))
-            peaks.append((calc_heavy_mz(fragList[i][2], fragMz, 1), fragInt, ('heavy', i)))
+            peaks.append((fragMz, fragInt, ('light', i, seq)))
+            peaks.append((calc_heavy_mz(fragList[i][2], fragMz, 1), fragInt, ('heavy', i, seq)))
 
         # peaks are sorted by mz value (as they appear in a spectrum)
         peaks.sort(key=lambda x:x[0])
 
+        # @DEBUG: error 1
         # entry placed in final dictionary
-        lib[scanDict[keyMatch]] = peaks
+        #lib[scanDict[keyMatch]] = peaks
+        lib[scanDict[key]] += peaks
     return lib
 
 
@@ -1455,16 +1531,11 @@ def traml_library_upload_quant(fileName, scanDict, maxPeaks):
     # Unneeded columns are removed from the dataframe
     lib_df = lib_df.loc[:, lib_df.columns.intersection(['PrecursorMz','PeptideSequence','FullUniModPeptideName','ProductMz','LibraryIntensity','FragmentCharge','FragmentType','FragmentSeriesNumber'])]
 
+    # Rounding to two decimal places to match the re-analysis files
+    lib_df['PrecursorMz'] = [round(x,2) for x in lib_df['PrecursorMz']]
+
     # ID created to become the key of the resulting dictionary
     lib_df['ID'] = list(zip(lib_df['PrecursorMz'].tolist(),lib_df['FullUniModPeptideName'].tolist()))
-
-    # IDs that match (approximately) a key of the scanDict dictionary are replaced by that key
-    keyList = sorted(list(scanDict.keys()))
-    IDs = [(float(x[0]),str(x[1])) for x in lib_df['ID']]
-    for i in range(len(IDs)):
-        keyMatch = tuple_key_match(keyList, IDs[i])
-        if keyMatch: IDs[i] = keyMatch
-    lib_df['ID'] = IDs
 
     # Dataframe filters out rows with an ID that is not found in the scanDict dictionary
     lib_df = lib_df[lib_df['ID'].isin(scanDict)]
@@ -1487,7 +1558,7 @@ def traml_library_upload_quant(fileName, scanDict, maxPeaks):
     scanEx = ''
 
     # Peaks list is created and attached to the dictionary
-    finalDict = {}
+    finalDict = defaultdict(list)
     for key in lib:
 
         # y-ion peaks are sorted by intensity, and lower-intensity peaks are filtered out.
@@ -1495,23 +1566,23 @@ def traml_library_upload_quant(fileName, scanDict, maxPeaks):
         # @DEBUG: see above
         if scanDict[key]==scanEx:
             for x in fragList: print(x)
-        if len(fragList) >= maxPeaks: fragList = fragList[:maxPeaks]
+        if type(maxPeaks) is not str and len(fragList) >= maxPeaks: fragList = fragList[:maxPeaks]
 
         # heavy counterpart mz is calculated. Light and heavy pairs are additionally tagged by their intensity rank and included in the final output.
         peaks = []
         for i in range(len(fragList)):
             fragMz = fragList[i][1]
             fragInt = fragList[i][0]
-            peaks.append((fragMz, fragInt, ('light',i)))
+            peaks.append((fragMz, fragInt, ('light',i,key[1])))
             fragSeq = lib[key]['PeptideSequence'][-lib[key]['FragmentSeriesNumber']:]
             heavyMz = calc_heavy_mz(fragSeq, fragMz, lib[key]['FragmentCharge'])
-            peaks.append((heavyMz, fragInt, ('heavy',i)))
+            peaks.append((heavyMz, fragInt, ('heavy',i,key[1])))
         # @DEBUG: see above
         if scanDict[key]==scanEx:
             for x in peaks: print(x)
 
         # entry placed in final dictionary
-        finalDict[scanDict[key]] = peaks
+        finalDict[scanDict[key]] += peaks
 
     return finalDict
 

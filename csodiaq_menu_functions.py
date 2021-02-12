@@ -128,8 +128,62 @@ def heavy_light_quantification(inFile, libFile, expFolder):
         'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_8to1_01.mzXML'
     ]
     ratios = [1, 2, 4, 8]
-    lc = calc_all_variables(pd.read_csv('Data/MQpeptides_Quant.csv'), 'LC', ratios)
+    dfLC = pd.read_csv('Data/MQpeptides_Quant.csv')
+    lc = calc_all_variables(dfLC, 'LC', ratios)
     X = lc['median']
+
+    lcCols = [
+        'Ratio H/L 1to8',
+        'Ratio H/L 1to4',
+        'Ratio H/L 1to2',
+        'Ratio H/L 1to1',
+        'Ratio H/L 2to1',
+        'Ratio H/L 4to1',
+        'Ratio H/L 8to1',
+    ]
+
+    ratioStr = [
+        '1:8',
+        '1:4',
+        '1:2',
+        '1:1',
+        '2:1',
+        '4:1',
+        '8:1',
+    ]
+
+    boxLC = dfLC.loc[:, dfLC.columns.intersection(lcCols)]
+    boxLC = boxLC[lcCols]
+    boxLC.columns = ratioStr
+    plt.clf()
+    set_plot_settings('','')
+    boxLC.boxplot(column=ratioStr)
+    plt.axhline(y=-3, color='blue', linestyle='dashed')
+    plt.axhline(y=-2, color='blue', linestyle='dashed')
+    plt.axhline(y=-1, color='blue', linestyle='dashed')
+    plt.axhline(y=0, color='blue', linestyle='dashed')
+    plt.axhline(y=1, color='blue', linestyle='dashed')
+    plt.axhline(y=2, color='blue', linestyle='dashed')
+    plt.axhline(y=3, color='blue', linestyle='dashed')
+    plt.ylim(-6.2, 6.2)
+    plt.savefig('Data/QuantifyCompare/BoxPlots/LCOriginal.png')
+
+    plt.clf()
+    set_plot_settings('','')
+    finalDf = pd.read_csv('Data/jesseOutput.csv')
+    finalDf.columns = ['scan'] + ratioStr
+    finalDf.boxplot(column=ratioStr)
+    plt.axhline(y=-3, color='blue', linestyle='dashed')
+    plt.axhline(y=-2, color='blue', linestyle='dashed')
+    plt.axhline(y=-1, color='blue', linestyle='dashed')
+    plt.axhline(y=0, color='blue', linestyle='dashed')
+    plt.axhline(y=1, color='blue', linestyle='dashed')
+    plt.axhline(y=2, color='blue', linestyle='dashed')
+    plt.axhline(y=3, color='blue', linestyle='dashed')
+    plt.ylim(-6.2, 6.2)
+
+    plt.savefig('Data/QuantifyCompare/BoxPlots/jesseOriginal.png')
+
 
     print('#LC average standard deviation: '+str(np.mean(lc['stdev'])))
     print('#LC total peptides quantified: '+str(sum(lc['numPeps'])))
@@ -149,38 +203,47 @@ def heavy_light_quantification(inFile, libFile, expFolder):
     #minMatch = [1, 2]
     #minMatch = [1, 2, 3, 4]
     #minMatch = [1, 2, 3, 5, 7, 9]
-    graph = False
-    libPeaks = [3, 5, 10]
-    #libPeaks = [10]
-    minMatches = [[1, 2],[1, 3, 4],[1, 2, 3, 5, 9]]
-    #minMatches = [[1]]
-    m = ['mean', 'median', 'intensity', 'weighted']
-    #m = ['median']
-    stdev = [0, 0.5, 1]
+    graph = True
+    #libPeaks = [3, 5, 10, 'all']
+    libPeaks = ['all']
+    #minMatches = [[1, 2],[0, 1, 3, 4],[0, 1, 2, 3, 5],[0, 1, 2, 3, 5]]
+    minMatches = [[0]]
+    #m = ['mean', 'median', 'intensity', 'weighted']
+    m = ['median']
+    #stdev = [-1, 0, 0.5, 1]
     stdev = [0]
+
     for w in range(len(libPeaks)):
-        fragDict, libDict = cbf.make_quant_dicts('Data/Input/TempHold/mostintense_quantmzlist.txt', 'Data/Input/human.faims.fixed.decoy.mgf', files, libPeaks[w])
+        #fragDict, libDict = cbf.make_quant_dicts('Data/Input/TempHold/mostintense_quantmzlist.txt', 'Data/Input/human.faims.fixed.decoy.mgf', files, libPeaks[w])
         #fragDict, libDict = cbf.make_quant_dicts(inFile, libFile, files, libPeaks[w])
-        #pickle.dump(libDict, open( "Data/Input/TempHold/lib_"+str(libPeaks[w])+"_traml2.p", "wb" ))
-        pickle.dump(libDict, open( "Data/Input/TempHold/lib_"+str(libPeaks[w])+"_mgf.p", "wb" ))
-        #pickle.dump(fragDict, open( "Data/Input/TempHold/frag.p", "wb" ))
+        #fragDict, libDict = cbf.make_quant_dicts('Data/Input/TempHold/mostintense_quantmzlist.txt', libFile, files, libPeaks[w])
+        #pickle.dump(libDict, open( "Data/Input/TempHold/lib_"+str(libPeaks[w])+"_traml.p", "wb" ))
+        #pickle.dump(libDict, open( "Data/Input/TempHold/lib_"+str(libPeaks[w])+"_mgf.p", "wb" ))
+        #pickle.dump(fragDict, open( "Data/Input/TempHold/frag_mgf.p", "wb" ))
+        #pickle.dump(fragDict, open( "Data/Input/TempHold/frag_traml.p", "wb" ))
         minMatch = minMatches[w]
-        #libDict = pickle.load(open( "Data/Input/TempHold/lib_"+str(libPeaks[w])+".p", "rb" ))
+        libDict = pickle.load(open( "Data/Input/TempHold/lib_"+str(libPeaks[w])+"_mgf.p", "rb" ))
         #libDict = pickle.load(open( "Data/Input/TempHold/lib_"+str(libPeaks[w])+"_traml.p", "rb" ))
-        #fragDict = pickle.load(open( "Data/Input/TempHold/frag.p", "rb" ))
+        fragDict = pickle.load(open( "Data/Input/TempHold/frag_mgf.p", "rb" ))
+        #fragDict = pickle.load(open( "Data/Input/TempHold/frag_traml.p", "rb" ))
         #print(len(fragDict))
         for x in minMatch:
             for y in m:
                 for z in stdev:
                     var = [x, y, z]
+                    strVar = '_'.join([str(libPeaks[w])]+[str(v) for v in var])
 
                     #print(var)
                     dfDIA = cbf.heavy_light_quantification(fragDict, libDict, files, var)
+
                     if graph:
                         temp = dfDIA.drop('peptide', axis=1)
-                        temp.to_csv('Data/CalebOutput.csv')
+                        temp.to_csv('Data/QuantifyCompare/RatioFiles/lib'+strVar+'.csv')
                         plt.clf()
-                        temp.boxplot(column=files)
+                        set_plot_settings('','')
+
+                        temp.columns = ['scan']+ratioStr
+                        temp.boxplot(column=ratioStr)
                         plt.axhline(y=-3, color='blue', linestyle='dashed')
                         plt.axhline(y=-2, color='blue', linestyle='dashed')
                         plt.axhline(y=-1, color='blue', linestyle='dashed')
@@ -188,17 +251,38 @@ def heavy_light_quantification(inFile, libFile, expFolder):
                         plt.axhline(y=1, color='blue', linestyle='dashed')
                         plt.axhline(y=2, color='blue', linestyle='dashed')
                         plt.axhline(y=3, color='blue', linestyle='dashed')
-                        #plt.ylim(-10, 10)
-                        plt.show()
+                        plt.ylim(-6.2, 6.2)
+                        plt.savefig('Data/QuantifyCompare/BoxPlots/lib'+strVar+'.png')
 
 
 
 
                     dia = calc_all_variables(dfDIA, 'DIA', ratios)
-                    #print(dia['numPeps'])
-                    dia.to_csv('Data/lib3-1-median-1.csv', index=False)
+                    print(dia['numPeps'])
+                    dia.to_csv('Data/QuantifyCompare/RatioCompareFiles/lib'+strVar+'.csv', index=False)
                     Y = dia['median']
                     data.append([libPeaks[w]]+var+list(linregress(X, Y))+[np.mean(dia['stdev']),sum(dia['numPeps'])])
+                    lineDf = pd.concat([lc, dia])
+                    ratioDict = {
+                            -8:-3,
+                            -4:-2,
+                            -2:-1,
+                            0:0,
+                            2:1,
+                            4:2,
+                            8:3
+                        }
+                    lineDf['ratio'] = [ratioDict[x] for x in lineDf['ratio']]
+
+
+                    plt.clf()
+                    fig, ax = plt.subplots()
+                    for key, group in lineDf.groupby('type'):
+                        group.plot('ratio', 'median', yerr='stdev',
+                                   label=key, ax=ax)
+                    plt.ylim(-4.5, 4.5)
+                    plt.savefig('Data/QuantifyCompare/LineGraphs/lib'+strVar+'.png')
+                    plt.close("all")
                     print(data[-1])
 
     finalDf = pd.DataFrame(data, columns=['libPeaks', 'minMatch', 'mode', 'corrStDev', 'slope', 'intercept', 'rvalue', 'pvalue', 'stderr', 'avrStDev', 'numPeps'])
@@ -230,3 +314,15 @@ def calc_all_variables(df, type, ratios):
     finalDf = pd.DataFrame(data, columns=['median','stdev','ratio','type', 'numPeps'])
     finalDf = finalDf.sort_values('ratio', ascending=False).reset_index(drop=True)
     return finalDf
+
+def set_plot_settings(xlabel, ylabel, wide=True):
+    #if wide: plt.figure(figsize=(18,12))
+    #else: plt.figure(figsize=(12,12))
+    #plt.axhline(linewidth=4, y=1, color='black')
+    #plt.axhline(linewidth=4, y=10, color='black')
+    #plt.axvline(linewidth=4, x=1.5, color='black')
+    #plt.axvline(linewidth=4, x=10, color='black')
+    #plt.xlabel(xlabel, fontsize = 36, weight='bold')
+    #plt.ylabel(ylabel, fontsize = 36, weight='bold')
+    plt.tick_params(axis="x", labelsize=18)
+    plt.tick_params(axis="y", labelsize=18)

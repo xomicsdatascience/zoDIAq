@@ -1,27 +1,36 @@
 import pandas as pd
-import os
+#import os
 import csodiaq_base_functions as cbf
-import re
+#import re
 from collections import defaultdict
-import statistics
-import csv
-from matplotlib_venn import venn3
+#import statistics
+#import csv
+#from matplotlib_venn import venn3
 import matplotlib.pyplot as pyplot
-from matplotlib.pyplot import figure
+import matplotlib.pyplot as plt
+#from matplotlib.pyplot import figure
 import numpy as np
-from matplotlib.ticker import PercentFormatter
-import math
-from scipy.stats import linregress
+#from matplotlib.ticker import PercentFormatter
+#import math
+#from scipy.stats import linregress
 import pickle
+import umap
+import seaborn as sns
+from sklearn.preprocessing import StandardScaler
 
-
-def set_plot_settings(title, xlabel, ylabel):
-    plt.figure(figsize=(10,10))
-    plt.title(title, fontsize = 32)
-    plt.xlabel(xlabel, fontsize = 24)
-    plt.ylabel(ylabel, fontsize = 24)
-    plt.tick_params(axis="x", labelsize=18)
-    plt.tick_params(axis="y", labelsize=18)
+def set_plot_settings(xlabel, ylabel, wide=True):
+    if wide: pyplot.figure(figsize=(18,12))
+    else: pyplot.figure(figsize=(12,12))
+    pyplot.xlim(1.5,10)
+    pyplot.ylim(1,10)
+    pyplot.axhline(linewidth=4, y=1, color='black')
+    pyplot.axhline(linewidth=4, y=10, color='black')
+    pyplot.axvline(linewidth=4, x=1.5, color='black')
+    pyplot.axvline(linewidth=4, x=10, color='black')
+    pyplot.xlabel(xlabel, fontsize = 36, weight='bold')
+    pyplot.ylabel(ylabel, fontsize = 36, weight='bold')
+    pyplot.tick_params(axis="x", labelsize=45)
+    pyplot.tick_params(axis="y", labelsize=45)
 
 def histogram(df, fileHeader, col, title, l=False):
     target_scores = []
@@ -511,7 +520,13 @@ pyplot.show()
 '''
 # Full Compare Compilation
 head = 'Data/QuantifyCompare/variables/'#lib3_compare.csv'
-files = [head+x for x in list(os.listdir(head))]
+#files = [head+x for x in list(os.listdir(head))]
+
+files = [
+    'Data/QuantifyCompare/variables/full_compare_noSqrRt_HalvingBot10_mgf.csv',
+    'Data/QuantifyCompare/variables/compare.csv'
+]
+
 dfList = []
 for file in files:
     dfList.append(pd.read_csv(file))
@@ -553,6 +568,8 @@ for key in libDict:
 Jkeys = set(list(jesseLights.keys()))
 Ckeys = set(list(calebLights.keys()))
 '''
+'''
+# comparing peptides between outputs
 jesse = pd.read_csv('Data/Input/TempHold/mostintense_quantmzlist.txt', sep='\t')
 caleb = pd.read_csv('Data/Output/csodiaq_lib-human-noloss-400to2000-pt2mz-31peaks_exp-n1b_corrected_mostIntenseTargs_allCVs.csv')
 
@@ -563,3 +580,230 @@ both = set.intersection(jesse_peptides, caleb_peptides)
 print(len(jesse_peptides))
 print(len(caleb_peptides))
 print(len(both))
+'''
+
+# Finding best variables
+allVariables = pd.read_csv('Data/QuantifyCompare/variables/full_compare_noSqrRt_HalvingBot10_mgf.csv')
+#allVariables = pd.read_csv('Data/QuantifyCompare/variables/full_compare_noSqrRt_HalvingBot10_traml.csv')
+print('no filter:')
+print(len(allVariables))
+print('\n')
+
+# filter by average standard deviation
+allVariables = allVariables[allVariables['avrStDev'] < 1]
+print('filter out average standard deviations above 1:')
+print(len(allVariables))
+print('\n')
+
+# filter by number of peptides
+allVariables = allVariables[allVariables['numPeps'] > (3864*.8)]
+#allVariables = allVariables[allVariables['numPeps'] > (2926*.75)]
+print('filter out peptides < 75%:')
+print(len(allVariables))
+print('\n')
+
+# filter slopes not close to 1
+allVariables = allVariables[(allVariables['slope'] > .95) & (allVariables['slope'] < 1.05)]
+print('filter out slopes outside .5 from 1:')
+print(len(allVariables))
+print('\n')
+
+print(allVariables)
+topHits = allVariables.index
+
+
+# UMAP attempt
+allVariables = pd.read_csv('Data/QuantifyCompare/variables/full_compare_noSqrRt_HalvingBot10_mgf.csv')
+#t1 = ['one stdev' if x=='1' else x for x in allVariables['corrStDev']]
+#allVariables['corrStDev'] = t1
+#print(t1)
+#allVariables.to_csv('Data/QuantifyCompare/variables/full_compare_noSqrRt_HalvingBot10_mgf.csv', index=False)
+allVariables = allVariables[(allVariables['mode']=='mean') | (allVariables['mode']=='median')]#.reset_index(drop=True)
+#topHits = [101, 133, 149, 181, 213, 229]
+
+
+
+reducer = umap.UMAP()
+print(1)
+data = allVariables[
+    ['slope',
+#    'intercept',
+#    'rvalue',
+#    'pvalue',
+#    'stderr',
+    'avrStDev',
+    'numPeps']
+].values
+scaled_data = StandardScaler().fit_transform(data)
+embedding = reducer.fit_transform(scaled_data)
+
+
+'''
+#interactive UMAP
+from bokeh.plotting import figure, show, output_notebook
+from bokeh.models import HoverTool, ColumnDataSource, CategoricalColorMapper
+from bokeh.palettes import Spectral10
+
+digits_df = pd.DataFrame(embedding, columns=('x', 'y'))
+print([allVariables.loc[i] for i in range(len(allVariables))])
+digits_df['digit'] = ['_'.join([str(x) for x in list(allVariables.loc[i])]) for i in range(len(allVariables))]
+
+
+datasource = ColumnDataSource(digits_df)
+
+
+plot_figure = figure(
+    title='UMAP projection of the Digits dataset',
+    plot_width=600,
+    plot_height=600,
+    tools=('pan, wheel_zoom, reset')
+)
+
+plot_figure.add_tools(HoverTool(tooltips="""
+<div>
+    <div>
+        <img src='@image' style='float: left; margin: 5px 5px 5px 5px'/>
+    </div>
+    <div>
+        <span style='font-size: 16px; color: #224499'>Digit:</span>
+        <span style='font-size: 18px'>@digit</span>
+    </div>
+</div>
+"""))
+
+plot_figure.circle(
+    'x',
+    'y',
+    source=datasource,
+    color=dict(field='digit'),
+    line_alpha=0.6,
+    fill_alpha=0.6,
+    size=4
+)
+show(plot_figure)
+'''
+
+#continue UMAP
+x_values = embedding[:, 0]
+y_values = embedding[:, 1]
+#pickle.dump(x_values, open( "Data/x.p", "wb" ))
+#pickle.dump(y_values, open( "Data/y.p", "wb" ))
+x_values = pickle.load(open( "Data/x.p", "rb" ))
+y_values = pickle.load(open( "Data/y.p", "rb" ))
+
+ins = ['numPeps','avrStDev','slope']
+outs = ['corrStDev','libPeaks','minMatch']
+edgeColors = ['#DC143C' if x in topHits else 'white' for x in allVariables.index]
+edgeWidth = [6 if x in topHits else 0.5 for x in allVariables.index]
+palDict = {
+    'avrStDev':'viridis',
+    'numPeps':'viridis_r',
+    'slope':'viridis_r'
+    #'numPeps':'Purples',
+    #'slope':'YlOrBr'
+}
+
+
+for i in ins:
+    for o in outs:
+
+        labels = allVariables[i]
+        markers = allVariables[o]
+        print(len(allVariables))
+        #sns.set_palette("viridis")
+        h = None
+        if i=='slope': h = (None, 1)
+
+
+        set_plot_settings('','')
+        #style=markers,
+        ax = sns.scatterplot(x=x_values, y=y_values, hue=labels, style=markers, palette=palDict[i], edgecolor=edgeColors, hue_norm=h, s=750, linewidth=edgeWidth)
+        norm = plt.Normalize(allVariables[i].min(), allVariables[i].max())
+        sm = plt.cm.ScalarMappable(cmap=palDict[i], norm=norm)
+        sm.set_array([])
+
+        ax.get_legend().remove()
+        cbar = ax.figure.colorbar(sm,orientation="horizontal")
+        cbar.ax.tick_params(labelsize=45)
+        #plt.legend(scatterpoints=1, frameon=False, labelspacing=1, title='City Area')
+        plt.savefig('Data/QuantifyCompare/UMAP/'+i+'_'+o+'.png')
+        plt.close("all")
+
+'''
+#violin plots
+# Chosen: all, custom, median, custom
+ins = ['numPeps','avrStDev','slope']
+
+colDict = {
+    'avrStDev':'blueviolet',
+    'numPeps':'skyblue',
+    'slope':'red'
+}
+yDict = {
+    'avrStDev':0.9849648653900464,
+    'numPeps':3489,
+    'slope':0.9636899678653778
+}
+
+
+allVariables = pd.read_csv('Data/QuantifyCompare/variables/full_compare_noSqrRt_HalvingBot10_mgf.csv')
+for i in ins:
+    df = allVariables.loc[:, allVariables.columns.intersection([i])]#'avrStDev','slope','numPeps'
+    df = df.melt(var_name='groups', value_name='vals')
+    sns.violinplot(x="groups", y="vals", data=df, color=colDict[i])
+    plt.axhline(y=yDict[i], color='red', linestyle = 'dashed') #slope
+    plt.savefig('Data/QuantifyCompare/ViolinPlots/'+i+'.png')
+    plt.close("all")
+'''
+'''
+# Trying to match peptides between LC and DIA (fail)
+def calc_heavy_mz(seq, mz, z):
+    hK=8.014199 ## mass of heavy lysine
+    hR=10.00827 ## mass of heavy arg
+
+    nK = seq.count('K')
+    nR = seq.count('R')
+    #nK = len(seq) - len(re.sub('K','',seq))
+    #nR = len(seq) - len(re.sub('R','',seq))
+
+    heavyMz = mz + (nK*hK)/z + (nR*hR)/z
+    return heavyMz
+
+# Matching Peptides
+from pyteomics import mass
+
+dfLC = pd.read_csv('Data/MQpeptides_Quant.csv')
+dfLC = dfLC.loc[:, dfLC.columns.intersection(['Sequence','Charges'])]
+dfDIA = pd.read_csv('Data/Input/TempHold/mostintense_quantmzlist.txt', sep='\t')
+
+
+LCDict = defaultdict(list)
+
+print('LC start')
+for index, row in dfLC.iterrows():
+    seq = row['Sequence']
+    charges = [int(c) for c in row['Charges'].split(';')]
+    for c in charges:
+        light = mass.calculate_mass(sequence=seq, charge=c)
+        heavy = calc_heavy_mz(seq, light, c)
+        key = (round(light,2),round(heavy,2),c)
+        LCDict[key].append(seq)
+
+print('DIA start')
+DIADict = defaultdict(list)
+for index, row in dfDIA.iterrows():
+    key = (round(row['prec_light_mz'],2),round(row['prec_heavy_mz'],2),int(row['z']))
+    DIADict[key].append(row['Peptide'])
+
+print('key start')
+LCKeys = set(LCDict.keys())
+DIAKeys = set(DIADict.keys())
+both = set.intersection(LCKeys, DIAKeys)
+for key in both:
+    print(key)
+    print(LCDict[key])
+    print(DIADict[key])
+    print('\n')
+
+print(len(both))
+'''
