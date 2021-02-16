@@ -3,6 +3,7 @@
 """Dialog-Style application."""
 
 import sys
+import os
 
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QDialog
@@ -21,6 +22,18 @@ from PyQt5.QtWidgets import QTabWidget
 from PyQt5.QtWidgets import QListWidget
 from PyQt5.QtCore import Qt
 
+import csodiaq_base_functions as cbf
+import csodiaq_menu_functions as menu
+
+#!/usr/bin/env python3
+
+import sys
+
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, QProcess, QTextCodec
+from PyQt5.QtGui import QTextCursor
+from PyQt5.QtWidgets import QApplication, QPlainTextEdit
+
+
 __version__ = '0.1'
 __author__ = 'Caleb Webster Cranney'
 
@@ -30,6 +43,9 @@ class IdWindow(QWidget):
     def __init__(self, parent=None):
         """Initializer."""
         super().__init__(parent)
+
+        self.p = None
+
 
         dlgLayout = QVBoxLayout()
 
@@ -61,36 +77,34 @@ class IdWindow(QWidget):
         self.fragMassTol = QLineEdit()
         self.corrStDev = QLineEdit()
         self.histCheckBox = QCheckBox()
-        self.histFile = QLineEdit()
-        self.histCheckBox.stateChanged.connect(lambda:self.check_grey(self.histCheckBox, self.histFile))
         self.protCheckBox = QCheckBox()
         self.protTarg = QLineEdit()
         self.protCheckBox.stateChanged.connect(lambda:self.check_grey(self.protCheckBox, self.protTarg,'1'))
         settingLayout = QFormLayout()
         settingLayout.addRow('Initial Fragment Mass Tolerance (in ppm):', self.fragMassTol)
         settingLayout.addRow('Corrective Standard Deviations:', self.corrStDev)
-        settingLayout.addRow('Create Histogram:', self.histCheckBox)
-        settingLayout.addRow('Histogram Outfile: ', self.histFile)
         settingLayout.addRow('Protein Inference:', self.protCheckBox)
         settingLayout.addRow('Number of Target Peptides per Protein: ', self.protTarg)
+        settingLayout.addRow('Create Histogram:', self.histCheckBox)
         dlgLayout.addLayout(settingLayout)
         self.fragMassTol.setPlaceholderText('20')
         self.corrStDev.setPlaceholderText('customized')
-        self.histFile.setPlaceholderText('no histogram')
-        self.histFile.setEnabled(False)
         self.protTarg.setPlaceholderText('peptides, no protein inference')
         self.protTarg.setEnabled(False)
         self.libFile.setEnabled(False)
         self.outDir.setEnabled(False)
 
-        self.runBtn = QPushButton('Run')
+        self.runBtn = QPushButton('Execute')
+        self.text = QPlainTextEdit()
+        self.text.setReadOnly(True)
         dlgLayout.addWidget(self.runBtn)
+        dlgLayout.addWidget(self.text)
         self.runBtn.setDefault(True)
 #        self.runBtns.button(QDialogButtonBox.Ok).setText('Run')
 
         self.setLayout(dlgLayout)
 
-    def check_grey(self, checkBox, lineEdit, filledText=''):
+    def check_grey(self, checkBox, lineEdit, filledText):
         if checkBox.isChecked():
             lineEdit.setText(filledText)
             lineEdit.setEnabled(True)
@@ -111,13 +125,58 @@ class IdWindow(QWidget):
     def return_values(self):
         diaFiles = []
         for i in range(self.diaFiles.count()): diaFiles.append(self.diaFiles.item(i).text())
+
+
         libFile = self.libFile.text()
         outDir = self.outDir.text()
         fragMassTol = self.fragMassTol.text()
         corrStDev = self.corrStDev.text()
-        histFile = self.histFile.text()
+        hist = self.histCheckBox.isChecked()
         protTarg = self.protTarg.text()
-        return [diaFiles, libFile, outDir, fragMassTol, corrStDev, histFile, protTarg]
+        #return False
+        return {'diaFiles':diaFiles,
+                'libFile':libFile,
+                'outDir': outDir,
+                'fragMassTol':fragMassTol,
+                'corrStDev':corrStDev,
+                'hist':hist,
+                'protTarg':protTarg}
+
+    def message(self, s):
+        self.text.appendPlainText(s)
+
+    def start_process(self):
+        if self.p is None:  # No process running.
+            self.message("Executing process")
+            self.p = QProcess()  # Keep a reference to the QProcess (e.g. on self) while it's running.
+            self.p.readyReadStandardOutput.connect(self.handle_stdout)
+            self.p.readyReadStandardError.connect(self.handle_stderr)
+            self.p.stateChanged.connect(self.handle_state)
+            self.p.finished.connect(self.process_finished)  # Clean up once complete.
+            self.p.start("python3", ['dummy_script.py'])
+
+    def handle_stderr(self):
+        data = self.p.readAllStandardError()
+        stderr = bytes(data).decode("utf8")
+        self.message(stderr)
+
+    def handle_stdout(self):
+        data = self.p.readAllStandardOutput()
+        stdout = bytes(data).decode("utf8")
+        self.message(stdout)
+
+    def handle_state(self, state):
+        states = {
+            QProcess.NotRunning: 'Not running',
+            QProcess.Starting: 'Starting',
+            QProcess.Running: 'Running',
+        }
+        state_name = states[state]
+        self.message(f"State changed: {state_name}")
+
+    def process_finished(self):
+        self.message("Process finished.")
+        self.p = None
 
 class quantWindow(QWidget):
     """Dialog."""
@@ -132,7 +191,7 @@ class quantWindow(QWidget):
         formLayout.addRow('FDR Output:', QLineEdit())
         formLayout.addRow('DISPA Targetted Re-Analysis Directory:', QLineEdit())
         dlgLayout.addLayout(formLayout)
-        self.runBtn = QPushButton('Run')
+        self.runBtn = QPushButton('Execute')
         dlgLayout.addWidget(self.runBtn)
         self.runBtn.setDefault(True)
 
@@ -169,8 +228,26 @@ class Controller:
 
 
     def _runIdentification(self):
-        ret = self._view.table_widget.tab1.return_values()
-        for x in ret: print(x)
+        #guiValues = self._view.table_widget.tab1.return_values()
+        self._view.table_widget.tab1.start_process()
+        '''
+        #if not guiValues: return
+        guiValues = {'diaFiles': ['/Users/calebcranney/Desktop/Meyer Lab Project/csoDIAq/Data/Input/20190405_MCF7_FAIMS_18_2.mzXML', '/Users/calebcranney/Desktop/Meyer Lab Project/csoDIAq/Data/Input/20190411_DI2A_1to16_n1b.mzXML'], 'libFile': '/Users/calebcranney/Desktop/Meyer Lab Project/csoDIAq/Data/Input/human_31peaks_noloss_400to2000_pt2mz.tsv', 'outDir': '/Users/calebcranney/Desktop/Meyer Lab Project/csoDIAq/Data/GUIOutput', 'fragMassTol': '10', 'corrStDev': '1', 'hist': True, 'protTarg': '1'}
+
+
+        lib = cbf.library_file_to_dict(guiValues['libFile'])
+        for i in range(len(guiValues['diaFiles'])):
+            expFile = guiValues['diaFiles'][i]
+            outFileHeader = expFile.split('/')[-1].split('.')[0]
+            outFile = guiValues['outDir']+'/CsoDIAq-file' + str(i) + '_' + outFileHeader + '.csv'
+            print(outFile)
+            menu.write_csodiaq_output(lib, expFile, outFile)
+            menu.write_ppm_offset_tolerance(outFile, hist=guiValues['hist'])
+
+            menu.write_csodiaq_output(lib, expFile, outFile, corrected=True)
+            menu.write_csodiaq_fdr_outputs(outFile, corrected=True)
+            menu.write_DISPA_targeted_reanalysis_files(outFile, proteins = int(guiValues['protTarg']))
+        '''
 
     def _runQuantification(self):
         ret = self._view.table_widget.tab1.return_values()
@@ -190,6 +267,7 @@ class MainWindow(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+    print('works?')
     view = MainWindow()
     view.show()
 

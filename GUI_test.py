@@ -1,58 +1,70 @@
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QPlainTextEdit,
+                                QVBoxLayout, QWidget)
+from PyQt5.QtCore import QProcess
 import sys
-from PyQt5.QtWidgets import QMainWindow, QApplication, QPushButton, QWidget, QAction, QTabWidget,QVBoxLayout
-from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import pyqtSlot
 
-class App(QMainWindow):
+
+class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.title = 'PyQt5 tabs - pythonspot.com'
-        self.left = 0
-        self.top = 0
-        self.width = 300
-        self.height = 200
-        self.setWindowTitle(self.title)
-        self.setGeometry(self.left, self.top, self.width, self.height)
 
-        self.table_widget = MyTableWidget(self)
-        self.setCentralWidget(self.table_widget)
+        self.p = None
 
-        self.show()
+        self.btn = QPushButton("Execute")
+        self.btn.pressed.connect(self.start_process)
+        self.text = QPlainTextEdit()
+        self.text.setReadOnly(True)
 
-class MyTableWidget(QWidget):
+        l = QVBoxLayout()
+        l.addWidget(self.btn)
+        l.addWidget(self.text)
 
-    def __init__(self, parent):
-        super(QWidget, self).__init__(parent)
-        self.layout = QVBoxLayout(self)
+        w = QWidget()
+        w.setLayout(l)
 
-        # Initialize tab screen
-        self.tabs = QTabWidget()
-        self.tab1 = QWidget()
-        self.tab2 = QWidget()
-        self.tabs.resize(300,200)
+        self.setCentralWidget(w)
 
-        # Add tabs
-        self.tabs.addTab(self.tab1,"Tab 1")
-        self.tabs.addTab(self.tab2,"Tab 2")
+    def message(self, s):
+        self.text.appendPlainText(s)
 
-        # Create first tab
-        self.tab1.layout = QVBoxLayout(self)
-        self.pushButton1 = QPushButton("PyQt5 button")
-        self.tab1.layout.addWidget(self.pushButton1)
-        self.tab1.setLayout(self.tab1.layout)
+    def start_process(self):
+        if self.p is None:  # No process running.
+            self.message("Executing process")
+            self.p = QProcess()  # Keep a reference to the QProcess (e.g. on self) while it's running.
+            self.p.readyReadStandardOutput.connect(self.handle_stdout)
+            self.p.readyReadStandardError.connect(self.handle_stderr)
+            self.p.stateChanged.connect(self.handle_state)
+            self.p.finished.connect(self.process_finished)  # Clean up once complete.
+            self.p.start("python3", ['dummy_script.py'])
 
-        # Add tabs to widget
-        self.layout.addWidget(self.tabs)
-        self.setLayout(self.layout)
+    def handle_stderr(self):
+        data = self.p.readAllStandardError()
+        stderr = bytes(data).decode("utf8")
+        self.message(stderr)
 
-    @pyqtSlot()
-    def on_click(self):
-        print("\n")
-        for currentQTableWidgetItem in self.tableWidget.selectedItems():
-            print(currentQTableWidgetItem.row(), currentQTableWidgetItem.column(), currentQTableWidgetItem.text())
+    def handle_stdout(self):
+        data = self.p.readAllStandardOutput()
+        stdout = bytes(data).decode("utf8")
+        self.message(stdout)
 
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    ex = App()
-    sys.exit(app.exec_())
+    def handle_state(self, state):
+        states = {
+            QProcess.NotRunning: 'Not running',
+            QProcess.Starting: 'Starting',
+            QProcess.Running: 'Running',
+        }
+        state_name = states[state]
+        self.message(f"State changed: {state_name}")
+
+    def process_finished(self):
+        self.message("Process finished.")
+        self.p = None
+
+
+app = QApplication(sys.argv)
+
+w = MainWindow()
+w.show()
+
+app.exec_()

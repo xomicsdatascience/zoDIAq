@@ -1,6 +1,7 @@
 import pandas as pd
 #import os
 import csodiaq_base_functions as cbf
+import csodiaq_menu_functions as menu
 #import re
 from collections import defaultdict
 #import statistics
@@ -18,6 +19,7 @@ import umap
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 
+'''
 def set_plot_settings(xlabel, ylabel, wide=True):
     if wide: pyplot.figure(figsize=(18,12))
     else: pyplot.figure(figsize=(12,12))
@@ -31,6 +33,19 @@ def set_plot_settings(xlabel, ylabel, wide=True):
     pyplot.ylabel(ylabel, fontsize = 36, weight='bold')
     pyplot.tick_params(axis="x", labelsize=45)
     pyplot.tick_params(axis="y", labelsize=45)
+'''
+
+def set_plot_settings(xlabel, ylabel, wide=True):
+    #if wide: plt.figure(figsize=(18,12))
+    #else: plt.figure(figsize=(12,12))
+    #plt.axhline(linewidth=4, y=1, color='black')
+    #plt.axhline(linewidth=4, y=10, color='black')
+    #plt.axvline(linewidth=4, x=1.5, color='black')
+    #plt.axvline(linewidth=4, x=10, color='black')
+    #plt.xlabel(xlabel, fontsize = 36, weight='bold')
+    #plt.ylabel(ylabel, fontsize = 36, weight='bold')
+    plt.tick_params(axis="x", labelsize=18)
+    plt.tick_params(axis="y", labelsize=18)
 
 def histogram(df, fileHeader, col, title, l=False):
     target_scores = []
@@ -347,7 +362,7 @@ for lib in libs:
 fDf = pd.DataFrame(finalResults, columns=['light:heavy', 'lib', 'matches', 'calculation', 'minimumExpression', 'stdev', 'onlyHeavy','mostlyHeavy','aboutSame','mostlyLight','onlyLight','neither'])
 fDf.to_csv('Data/QuantifyCompare/full.csv', index=False)
 '''
-
+'''
 dfLC = pd.read_csv('Data/MQpeptides_Quant.csv')
 dfDIA = pd.read_csv('Data/lib3-1-median-1.csv')
 
@@ -373,7 +388,7 @@ dfDIA = pd.read_csv('Data/lib3-1-median-1.csv')
 
 #col1 = 'Ratio H/L 8to1'
 #col2 = 'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_8to1_01.mzXML'
-
+'''
 '''
 def calc_med_stdev(dfLC, dfDIA, ratio, ori=1, expr=False):
     if ori:
@@ -581,7 +596,7 @@ print(len(jesse_peptides))
 print(len(caleb_peptides))
 print(len(both))
 '''
-
+'''
 # Finding best variables
 allVariables = pd.read_csv('Data/QuantifyCompare/variables/full_compare_noSqrRt_HalvingBot10_mgf.csv')
 #allVariables = pd.read_csv('Data/QuantifyCompare/variables/full_compare_noSqrRt_HalvingBot10_traml.csv')
@@ -636,8 +651,7 @@ data = allVariables[
 ].values
 scaled_data = StandardScaler().fit_transform(data)
 embedding = reducer.fit_transform(scaled_data)
-
-
+'''
 '''
 #interactive UMAP
 from bokeh.plotting import figure, show, output_notebook
@@ -682,7 +696,7 @@ plot_figure.circle(
 )
 show(plot_figure)
 '''
-
+'''
 #continue UMAP
 x_values = embedding[:, 0]
 y_values = embedding[:, 1]
@@ -728,7 +742,7 @@ for i in ins:
         #plt.legend(scatterpoints=1, frameon=False, labelspacing=1, title='City Area')
         plt.savefig('Data/QuantifyCompare/UMAP/'+i+'_'+o+'.png')
         plt.close("all")
-
+'''
 '''
 #violin plots
 # Chosen: all, custom, median, custom
@@ -756,7 +770,7 @@ for i in ins:
     plt.close("all")
 '''
 '''
-# Trying to match peptides between LC and DIA (fail)
+# Trying to match peptides between LC and DIA by mass (fail)
 def calc_heavy_mz(seq, mz, z):
     hK=8.014199 ## mass of heavy lysine
     hR=10.00827 ## mass of heavy arg
@@ -807,3 +821,102 @@ for key in both:
 
 print(len(both))
 '''
+
+# Trying to match peptides between LC and DIA by sequence (fail)
+
+dfLC = pd.read_csv('Data/MQpeptides_Quant.csv')
+dfPepsDIA = pd.read_csv('Data/Input/TempHold/mostintense_quantmzlist.txt', sep='\t')
+dfDIACaleb = pd.read_csv('Data/CalebOutput2.csv')
+
+LCSet = set(dfLC['Sequence'])
+
+DIASet = set(dfPepsDIA['Peptide'])
+
+DIASet2 = dfDIACaleb['peptide']
+
+both = set.intersection(LCSet, DIASet)
+both = set.intersection(both, DIASet2)
+
+print(len(both))
+print(both)
+
+dfLC = dfLC.loc[dfLC['Sequence'].isin(both)]
+dfDIACaleb = dfDIACaleb.loc[dfDIACaleb['peptide'].isin(both)]
+dfPepsDIA = dfPepsDIA.loc[dfPepsDIA['Peptide'].isin(both)]
+ScanListDIA = [row['scan'] for index, row in dfPepsDIA.iterrows()]
+print(ScanListDIA)
+
+
+ratios = [1, 2, 4, 8]
+
+lc = menu.calc_all_variables(dfLC, 'LC', ratios)
+X = lc['median']
+
+lcCols = [
+    'Ratio H/L 1to8',
+    'Ratio H/L 1to4',
+    'Ratio H/L 1to2',
+    'Ratio H/L 1to1',
+    'Ratio H/L 2to1',
+    'Ratio H/L 4to1',
+    'Ratio H/L 8to1',
+]
+
+ratioStr = [
+    '1:8',
+    '1:4',
+    '1:2',
+    '1:1',
+    '2:1',
+    '4:1',
+    '8:1',
+]
+
+boxLC = dfLC.loc[:, dfLC.columns.intersection(lcCols)]
+boxLC = boxLC[lcCols]
+boxLC.columns = ratioStr
+
+plt.clf()
+set_plot_settings('','')
+boxLC.boxplot(column=ratioStr)
+plt.axhline(y=-3, color='blue', linestyle='dashed')
+plt.axhline(y=-2, color='blue', linestyle='dashed')
+plt.axhline(y=-1, color='blue', linestyle='dashed')
+plt.axhline(y=0, color='blue', linestyle='dashed')
+plt.axhline(y=1, color='blue', linestyle='dashed')
+plt.axhline(y=2, color='blue', linestyle='dashed')
+plt.axhline(y=3, color='blue', linestyle='dashed')
+plt.ylim(-6.2, 6.2)
+plt.savefig('Data/QuantifyCompare/BoxPlots/LCOriginal_peptideMatches.png')
+
+plt.clf()
+set_plot_settings('','')
+finalDf = pd.read_csv('Data/jesseOutput.csv')
+finalDf.columns = ['scan'] + ratioStr
+finalDf = finalDf[finalDf['scan'].isin(ScanListDIA)]
+finalDf.boxplot(column=ratioStr)
+plt.axhline(y=-3, color='blue', linestyle='dashed')
+plt.axhline(y=-2, color='blue', linestyle='dashed')
+plt.axhline(y=-1, color='blue', linestyle='dashed')
+plt.axhline(y=0, color='blue', linestyle='dashed')
+plt.axhline(y=1, color='blue', linestyle='dashed')
+plt.axhline(y=2, color='blue', linestyle='dashed')
+plt.axhline(y=3, color='blue', linestyle='dashed')
+plt.ylim(-6.2, 6.2)
+plt.savefig('Data/QuantifyCompare/BoxPlots/JesseOriginal_peptideMatches.png')
+
+
+dfDIACaleb.columns = ['peptide','scan'] + ratioStr
+
+plt.clf()
+set_plot_settings('','')
+dfDIACaleb.boxplot(column=ratioStr)
+plt.axhline(y=-3, color='blue', linestyle='dashed')
+plt.axhline(y=-2, color='blue', linestyle='dashed')
+plt.axhline(y=-1, color='blue', linestyle='dashed')
+plt.axhline(y=0, color='blue', linestyle='dashed')
+plt.axhline(y=1, color='blue', linestyle='dashed')
+plt.axhline(y=2, color='blue', linestyle='dashed')
+plt.axhline(y=3, color='blue', linestyle='dashed')
+plt.ylim(-6.2, 6.2)
+plt.savefig('Data/QuantifyCompare/BoxPlots/caleb_peptideMatches.png')

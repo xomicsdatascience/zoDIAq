@@ -65,7 +65,7 @@ def write_ppm_offset_tolerance(inFile, corrected=0, hist=False):
     ppmList = cbf.return_ppm_spread(df, ppmFile)
 
     outFile = re.sub('(.*).csv', r'\1_offset_tolerance.csv', inFile)
-    if hist: histFile = re.sub('Data/Output/(.*).csv', r'Data/Figures/\1_histogram.png', inFile)
+    if hist: histFile = re.sub('(.*).csv', r'\1_histogram.png', inFile)
     else: histFile = 0
 
     offset, tolerance = cbf.find_offset_tol(ppmList, histFile)
@@ -238,7 +238,7 @@ def heavy_light_quantification(inFile, libFile, expFolder):
 
                     if graph:
                         temp = dfDIA.drop('peptide', axis=1)
-                        temp.to_csv('Data/QuantifyCompare/RatioFiles/lib'+strVar+'.csv')
+                        temp.to_csv('Data/QuantifyCompare/RatioFiles/lib'+strVar+'.csv', index=False)
                         plt.clf()
                         set_plot_settings('','')
 
