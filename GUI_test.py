@@ -1,70 +1,39 @@
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QPlainTextEdit,
-                                QVBoxLayout, QWidget)
-from PyQt5.QtCore import QProcess
-import sys
+import argparse
 
 
-class MainWindow(QMainWindow):
-
-    def __init__(self):
-        super().__init__()
-
-        self.p = None
-
-        self.btn = QPushButton("Execute")
-        self.btn.pressed.connect(self.start_process)
-        self.text = QPlainTextEdit()
-        self.text.setReadOnly(True)
-
-        l = QVBoxLayout()
-        l.addWidget(self.btn)
-        l.addWidget(self.text)
-
-        w = QWidget()
-        w.setLayout(l)
-
-        self.setCentralWidget(w)
-
-    def message(self, s):
-        self.text.appendPlainText(s)
-
-    def start_process(self):
-        if self.p is None:  # No process running.
-            self.message("Executing process")
-            self.p = QProcess()  # Keep a reference to the QProcess (e.g. on self) while it's running.
-            self.p.readyReadStandardOutput.connect(self.handle_stdout)
-            self.p.readyReadStandardError.connect(self.handle_stderr)
-            self.p.stateChanged.connect(self.handle_state)
-            self.p.finished.connect(self.process_finished)  # Clean up once complete.
-            self.p.start("python3", ['dummy_script.py'])
-
-    def handle_stderr(self):
-        data = self.p.readAllStandardError()
-        stderr = bytes(data).decode("utf8")
-        self.message(stderr)
-
-    def handle_stdout(self):
-        data = self.p.readAllStandardOutput()
-        stdout = bytes(data).decode("utf8")
-        self.message(stdout)
-
-    def handle_state(self, state):
-        states = {
-            QProcess.NotRunning: 'Not running',
-            QProcess.Starting: 'Starting',
-            QProcess.Running: 'Running',
-        }
-        state_name = states[state]
-        self.message(f"State changed: {state_name}")
-
-    def process_finished(self):
-        self.message("Process finished.")
-        self.p = None
+def main(command_line=None):
+    parser = argparse.ArgumentParser('Blame Praise app')
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        help='Print debug info'
+    )
+    subprasers = parser.add_subparsers(dest='command')
+    blame = subprasers.add_parser('blame', help='blame people')
+    blame.add_argument(
+        '--dry-run',
+        help='do not blame, just pretend',
+        action='store_true'
+    )
+    blame.add_argument('name', nargs='+', help='name(s) to blame')
+    praise = subprasers.add_parser('praise', help='praise someone')
+    praise.add_argument('name', help='name of person to praise')
+    praise.add_argument(
+        'reason',
+        help='what to praise for (optional)',
+        default="no reason",
+        nargs='?'
+    )
+    args = parser.parse_args(command_line)
+    if args.debug:
+        print("debug: " + str(args))
+    if args.command == 'blame':
+        if args.dry_run:
+            print("Not for real")
+        print("blaming " + ", ".join(args.name))
+    elif args.command == 'praise':
+        print('praising ' + args.name + ' for ' + args.reason)
 
 
-app = QApplication(sys.argv)
-
-w = MainWindow()
-w.show()
-
-app.exec_()
+if __name__ == '__main__':
+    main()

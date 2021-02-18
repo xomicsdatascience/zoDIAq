@@ -12,6 +12,7 @@ import re
 from collections import defaultdict
 from os import listdir
 from os.path import isfile, join
+import sys
 
 
 pd.set_option('display.max_rows', None)
@@ -97,8 +98,8 @@ def traml_library_upload(fileName):
         lib_df = pd.read_csv(fileName)
 
     # Print statement for timing the program
-    print("#Enter library dictionary upload: ")
-    print('#'+str(timedelta(seconds=timer())))
+    print('\nEnter library dictionary upload: ',flush=True)
+    print(str(timedelta(seconds=timer())),flush=True)
 
     # Unneeded columns are removed from the dataframe
     lib_df = lib_df.loc[:, lib_df.columns.intersection(['PrecursorMz','FullUniModPeptideName','PrecursorCharge','ProductMz','LibraryIntensity','transition_group_id','ProteinName'])]
@@ -141,8 +142,8 @@ def mgf_library_upload(fileName):
     libMGF = mgf.read(fileName)
 
     # Print statement for timing the program
-    print('#Enter library dictionary upload: ')
-    print('#'+str(timedelta(seconds=timer())))
+    print('\nEnter library dictionary upload: ',flush=True)
+    print(str(timedelta(seconds=timer())),flush=True)
 
     # return value is initialized
     lib = {}
@@ -541,7 +542,8 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
             count += 1
             if count % 100 == 0:
                 time = timer()
-                print(str(count)+','+str(time-prevtime)+','+str(len(spec['m/z array']))+','+str(spec['precursorMz'][0]['precursorMz'])+','+str(len(libKeys))+','+outFile)
+                print(str(count)+ ', ' + str(time-prevtime),flush=True)
+                #print(str(count)+','+str(time-prevtime)+','+str(len(spec['m/z array']))+','+str(spec['precursorMz'][0]['precursorMz'])+','+str(len(libKeys))+','+outFile,flush=True)
                 prevtime = time
 
             quePeakDict[w] = sorted(quePeakDict[w])
@@ -579,7 +581,7 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
                     ppmWriter.writerow([key[1], key[0][1], lib[key[0]]['ProteinName']] + sorted(ppmDict[key]))
 
     # Prints the final number of experimental spectra analyzed.
-    print('#'+str(count))
+    print('Count: '+str(count),flush=True)
 
 
 #############################################################################################################################
@@ -665,7 +667,7 @@ Returns:
     'offset' - float corresponding to the calculated ppm offset to be used in future corrected analyses.
     'tolerance' - float corresponding to the calculated ppm tolerance to be used in future corrected analyses.
 '''
-def find_offset_tol(data, histFile, stdev=2, mean=False):
+def find_offset_tol(data, histFile, stdev=2, mean=True):
     if len(data)==0: return 0, 10
 
     hist, bins = np.histogram(data, bins=200)
@@ -1135,7 +1137,7 @@ def heavy_light_quantification(fragDict, libDict, mzxmlFiles, var):
             if var[2]<1: stringVar[2] = 'P'+stringVar[2].split('.')[-1]
             offset, tolerance = find_offset_tol(sorted(ppmDiffs), 'Data/QuantifyCompare/Histograms/hist'+'_'.join(stringVar)+'.png', stdev=stdev)
 
-        print(str(offset)+','+str(tolerance))
+        #print(str(offset)+','+str(tolerance),flush=True)
         # @DEBUG: Remove these
         #offset, tolerance = 0,10
         #print(offset)
