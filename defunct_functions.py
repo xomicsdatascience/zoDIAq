@@ -218,3 +218,47 @@ def pooled_library_peak_comparison(libSpectrum, libKeys, expMz, expIntensity, pp
         j += 1
         if j < len(expMz): expPeakMz = expMz[j] - ppm_offset(expMz[j], ppmYOffset)
     return cosDict, countDict, ionDict, ppmDict
+
+'''
+Function:
+Purpose:
+Parameters:
+Returns:
+
+def write_ppm_spread(inFile, corrected=0):
+    print('#enter csodiaq ppm spread file creation:')
+    print('#'+str(timedelta(seconds=timer())))
+    if corrected: inFile = re.sub('(.*).csv', r'\1_corrected.csv', inFile)
+
+
+    ppmFile = re.sub('(.*).csv', r'\1_unfilteredPpmPerRow.csv', inFile)
+    outFile = re.sub('(.*).csv', r'\1_ppmSpread.csv', inFile)
+    tag = re.sub('Data/Output/(.*).csv', r'\1_filteredBestMatch', inFile)
+    files = list(os.listdir('Data/Output'))
+    for x in files:
+        if tag in x: inFile = 'Data/Output/'+x
+    cbf.write_ppm_spread(inFile, ppmFile, outFile)
+    print('#Complete')
+    print('#'+str(timedelta(seconds=timer())))
+'''
+'''
+Function:
+Purpose:
+Parameters:
+Returns:
+
+def write_ppm_offset_tolerance(inFile, corrected=0, hist=False):
+    if corrected: inFile = re.sub('(.*).csv', r'\1_corrected.csv', inFile)
+    ppmSpreadFile = re.sub('(.*).csv', r'\1_ppmSpread.csv', inFile)
+    with open(ppmSpreadFile, newline='') as f: ppmList = list(csv.reader(f))[0]
+    ppmList = [float(x) for x in ppmList]
+    outFile = re.sub('(.*).csv', r'\1_offset_tolerance.csv', inFile)
+    if hist: histFile = re.sub('Data/Output/(.*).csv', r'Data/Figures/\1_histogram.png', inFile)
+    else: histFile = 0
+
+    offset, tolerance = cbf.find_offset_tol(ppmList, histFile)
+    with open(outFile, 'w', newline='') as csvFile:
+        writer = csv.writer(csvFile)
+        writer.writerow(['offset','tolerance'])
+        writer.writerow([offset, tolerance])
+'''

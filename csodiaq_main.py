@@ -34,17 +34,18 @@ libDict = {
 #'lib-human-noloss-400to2000-pt2mz-goodTop_':'Data/Input/human_31peaks_noloss_400to2000_pt2mz_goodTop.csv'
 }
 
-for lib in libDict:
-    libFile = libDict[lib]
-    libDict = cbf.library_file_to_dict(libFile)
+for libTag in libDict:
+    libFile = libDict[libTag]
+#    lib = cbf.library_file_to_dict(libFile)
 
     for exp in sorted(expDict):
         expFile = expDict[exp]
-        outFile = 'Data/Output/csodiaq_'+lib+exp+'.csv'
-        menu.write_csodiaq_output(libDict, expFile, outFile)
-        menu.write_ppm_offset_tolerance(outFile, hist=True)
-        menu.write_csodiaq_fdr_outputs(outFile)
+        outFile = 'Data/Output/csodiaq_'+libTag+exp+'.csv'
+#        menu.write_csodiaq_output(lib, expFile, outFile)
+#        menu.write_ppm_offset_tolerance(outFile, hist=True)
 
-        menu.write_csodiaq_output(libDict, expFile, outFile, corrected=True)
-        menu.write_ppm_offset_tolerance(outFile, corrected=True, hist=True)
-        menu.write_csodiaq_fdr_outputs(outFile, corrected=True)
+#        menu.write_csodiaq_output(lib, expFile, outFile, corrected=True)
+#        menu.write_csodiaq_fdr_outputs(outFile, corrected=True)
+#        menu.write_DISPA_targeted_reanalysis_files(outFile)
+
+        menu.heavy_light_quantification(outFile, libFile, 'Data/Input/jesse/')

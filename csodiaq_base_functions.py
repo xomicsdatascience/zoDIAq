@@ -1,5 +1,5 @@
 import pandas as pd
-from pyteomics import mzxml, mgf
+from pyteomics import mzxml, mgf, mass
 from bisect import bisect
 from timeit import default_timer as timer
 from datetime import timedelta
@@ -10,11 +10,25 @@ import numpy as np
 import idpicker as idp
 import re
 from collections import defaultdict
+from os import listdir
+from os.path import isfile, join
+import sys
+
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#
 # Template for function descriptions
+#
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
 '''
 Function:
 Purpose:
@@ -22,6 +36,17 @@ Parameters:
 Returns:
 '''
 
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#
+# PSM Scoring: Identification
+#
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
 '''
 Function: library_file_to_dict()
 Purpose: This function reads the file type of the input file (accepts .mgf, .csv and .tsv formats) and runs it through the
@@ -50,12 +75,12 @@ def library_file_to_dict(inFile):
     if fileType == 'mgf':
         lib = mgf_library_upload(inFile)
     else:
-        lib = traml_library_upload_csv(inFile)
+        lib = traml_library_upload(inFile)
     return lib
 
 
 '''
-Function: traml_library_upload_csv()
+Function: traml_library_upload()
 Purpose: Given a traml file in .tsv or .csv format representing the library spectra, this function generates a dictionary to
             be used for future analysis. key:value pairings are described in the "Returns" section of this comment. Note that
             the tuple key format was chosen because library spectra will need to be sorted and chosen by precursor mass, so
@@ -65,7 +90,7 @@ Parameters:
 Returns:
     dictionary 'lib' - See dictionary 'lib' key explanation in function library_file_to_dict().
 '''
-def traml_library_upload_csv(fileName):
+def traml_library_upload(fileName):
     # Library spectra file is read as a pandas dataframe - conditional statement allows for both .tsv and .csv files to be uploaded.
     if fileName.endswith('.tsv'):
         lib_df = pd.read_csv(fileName, sep='\t')
@@ -73,8 +98,8 @@ def traml_library_upload_csv(fileName):
         lib_df = pd.read_csv(fileName)
 
     # Print statement for timing the program
-    print("#Enter library dictionary upload: ")
-    print('#'+str(timedelta(seconds=timer())))
+    print('\nEnter library dictionary upload: ',flush=True)
+    print(str(timedelta(seconds=timer())),flush=True)
 
     # Unneeded columns are removed from the dataframe
     lib_df = lib_df.loc[:, lib_df.columns.intersection(['PrecursorMz','FullUniModPeptideName','PrecursorCharge','ProductMz','LibraryIntensity','transition_group_id','ProteinName'])]
@@ -117,8 +142,8 @@ def mgf_library_upload(fileName):
     libMGF = mgf.read(fileName)
 
     # Print statement for timing the program
-    print('#Enter library dictionary upload: ')
-    print('#'+str(timedelta(seconds=timer())))
+    print('\nEnter library dictionary upload: ',flush=True)
+    print(str(timedelta(seconds=timer())),flush=True)
 
     # return value is initialized
     lib = {}
@@ -224,9 +249,11 @@ Parameters:
     'ppmTol' - ppm used to determine tolerance.
 Returns:
     float - Returns the difference (in ppm) of the two values if the difference is less than the provided tolerance.
-            If the difference is outside the provided tolerance, 0 is returned instead for conditional purposes.
+            If the difference is outside the provided tolerance, 0 is returned instead for conditional purposes. If the
+            values are exactly equal, a value close to 0 is returned instead (1x10e-7).
 '''
 def approx(x, y, ppmTol):
+    if x==y: return 1e-7
     ppmDiff = ((x-y)*1000000)/x
     return (ppmDiff if abs(ppmDiff) < ppmTol else 0)
 
@@ -238,16 +265,17 @@ Purpose: Given a peak mz value and a ppm offset value, this function calculates 
 Parameters:
     'mz' - Mz value of a given peak (generally a query peak)
     'ppm' - Ppm offset value. This is generally calculated from an uncorrected csodiaq output. During the uncorrected
-        csodiaq output generation, this value is generally 0, which in turn makes the returned mz offset 0.
+        csodiaq output generation, this value is generally 0, which in turn makes the returned mz offset 0. NOTE: the
+        ppm offset is made negative to apply appropriately to the dataset.
 Returns:
     float - Mz offset value.
 '''
 def ppm_offset(mz, ppm):
-    return (mz*ppm)/1000000
+    return (mz*-ppm)/1000000
 
 
 '''
-Function: pooled_all_peak_comparison()
+Function: spectra_peak_comparison()
 Purpose: This function determines peaks that are within a sufficiently close tolerance to one another. Various functions
             requiring peak comparison then take place inside this function, including compiling data for a cosine
             similarity score. The specifics of the various functions can be found in the return values below.
@@ -261,39 +289,54 @@ Parameters:
         of an uncorrected csodiaq output, being applied to the experimental spectra to generate a corrected
         csodiaq calculation output.
 Returns:
-    dictionary 'cosDict'
-        key - ((float, string),int) tuple. See dictionary 'lib' key explanation in function library_file_to_dict() for
-            the first part of the tuple. The second part is the scan number of a query spectrum.
-        value - list of floats
-            float - sum of products of intensities between matched library and query peaks. In context of the cosine
-                similarity score algorithm, this is the "A*B" sum.
-            float - sum of squared query peak intensities when matched to a library peaks. In context of the cosine
-                similarity score algorithm, this is the "B^2" sum.
-            float - sum of squared library peak intensities when matched to a query peaks. In context of the cosine
-                similarity score algorithm, this is the "A^2" sum.
-    dictionary 'countDict'
-        key - ((float, string),int) tuple. See dictionary 'cosDict' key explanation in this function.
-        value - int
-            Representing the number of matched peaks. This value will be the 'shared' column value in the output file.
-    dictionary 'ionDict'
-        key - ((float, string),int) tuple. See dictionary 'cosDict' key explanation in this function.
-        value - set representing the indices of the query peaks that matched the library spectrum represented in this
-                dictionary value. The sum of these query peak intensities will be returned as the 'ionCount' column
-                value in the output file.
-    dictionary 'ppmDict'
-        key - ((float, string),int) tuple. See dictionary 'cosDict' key explanation in this function.
-        value - list of floats represents the ppm difference of all peak matches that were within the given ppm tolerance. This is
-                most directly used for determining the ppm offset and standard deviation of an uncorrected
-                csodiaq output to be used in generating a corrected csodiaq output. For a corrected csodiaq output,
-                it is primarily used for figure generation to compare with uncorrected csodiaq output.
+    tag 'identify':
+        dictionary 'cosDict'
+            key - ((float, string),int) tuple. See dictionary 'lib' key explanation in function library_file_to_dict() for
+                the first part of the tuple. The second part is the scan number of a query spectrum.
+            value - list of floats
+                float - sum of products of intensities between matched library and query peaks. In context of the cosine
+                    similarity score algorithm, this is the "A*B" sum.
+                float - sum of squared query peak intensities when matched to a library peaks. In context of the cosine
+                    similarity score algorithm, this is the "B^2" sum.
+                float - sum of squared library peak intensities when matched to a query peaks. In context of the cosine
+                    similarity score algorithm, this is the "A^2" sum.
+        dictionary 'countDict'
+            key - ((float, string),int) tuple. See dictionary 'cosDict' key explanation in this function.
+            value - int
+                Representing the number of matched peaks. This value will be the 'shared' column value in the output file.
+        dictionary 'ionDict'
+            key - ((float, string),int) tuple. See dictionary 'cosDict' key explanation in this function.
+            value - set representing the indices of the query peaks that matched the library spectrum represented in this
+                    dictionary value. The sum of these query peak intensities will be returned as the 'ionCount' column
+                    value in the output file.
+        dictionary 'ppmDict'
+            key - ((float, string),int) tuple. See dictionary 'cosDict' key explanation in this function.
+            value - list of floats represents the ppm difference of all peak matches that were within the given ppm tolerance. This is
+                    most directly used for determining the ppm offset and standard deviation of an uncorrected
+                    csodiaq output to be used in generating a corrected csodiaq output. For a corrected csodiaq output,
+                    it is primarily used for figure generation to compare with uncorrected csodiaq output.
+    tag 'qPPM':
+        dictionary 'lightPPM' -
+            'key' - string representing the peptide of interest.
+            'value' - list of ppm differences between light library peak and a query peak.
+        dictionary 'heavyPPM' -
+            'key' - string representing the peptide of interest.
+            'value' - list of ppm differences between heavy library peak and a query peak.
+    tag 'ratio':
+        dictionary 'lightRatio'
+            'key' - string representing the peptide of interest.
+            'value' - dictionary 'intensityRank'
+                key - int representing intensity rank of the light library peak that matched a query peak.
+                value - float representing the intensity of the matched query peak.
+        dictionary 'heavyRatio'
+            'key' - string representing the peptide of interest.
+            'value' - dictionary 'intensityRank'
+                key - int representing intensity rank of the heavy library peak that matched a query peak.
+                value - float representing the intensity of the matched query peak.
 '''
-def pooled_all_peak_comparison(libSpectrum, expSpectrum, ppmTol, ppmYOffset):
+def spectra_peak_comparison(libSpectrum, expSpectrum, ppmTol, ppmYOffset, tag='identify'):
     # final dictionary returned is initialized. See function description for details on contents.
-    def cosDictValues(): return [0.0, 0.0, 0.0]
-    cosDict = defaultdict(cosDictValues)
-    countDict = defaultdict(int)
-    ionDict = defaultdict(set)
-    ppmDict = defaultdict(list)
+    returns = initialize_return_values(tag)
 
     # By tracking the indices of the current library/query peaks we reduce the time complexity of the algorithm
     i, j = 0, 0
@@ -315,36 +358,94 @@ def pooled_all_peak_comparison(libSpectrum, expSpectrum, ppmTol, ppmYOffset):
         while (p < len(libSpectrum)):
             ppm = approx(libSpectrum[p][0], expPeakMz, ppmTol)
             if p==len(libSpectrum) or not ppm: break
-            key = (libSpectrum[p][2],expSpectrum[j][2])
+            update_return_values(returns, libSpectrum[p], expSpectrum[j], p, j, ppm, tag)
 
-
-            # Data required to calculate the cosine score
-            cosDict[key][0] += libSpectrum[p][1]*expSpectrum[j][1]
-            cosDict[key][1] += expSpectrum[j][1]**2
-            cosDict[key][2] += libSpectrum[p][1]**2
-
-            # Number of matching peaks
-            countDict[key] += 1
-
-            # Ion Count
-            ionDict[key].add(j)
-
-            # ppm differences in matched peaks
-            ppmDict[key].append(ppm)
             p += 1
 
         # Note that the possibility of one library peak matching to multiple query peaks is automatically accounted for
         #   by the fact that the query peak is the next default increment after all match calculations have been made.
         j += 1
         if j < len(expSpectrum): expPeakMz = expSpectrum[j][0] - ppm_offset(expSpectrum[j][0], ppmYOffset)
-    return cosDict, countDict, ionDict, ppmDict
+    return returns
+
+'''
+Function: initialize_return_values()
+Purpose: Initializes the return values for the peak comparison function. Because the same function is used several times for
+            different purposes, this and the update_return_values() function allow for customized use of the same function.
+            Explanations for return values are written under the spectra_peak_comparison() function, separated by tag.
+Parameters:
+    'tag' - string representing the condition under which the peak comparison is happening. This changes the return values.
+Returns:
+    list - contents depend on the value of 'tag'
+'''
+def initialize_return_values(tag):
+    if tag=='identify':
+        def cosDictValues(): return [0.0, 0.0, 0.0]
+        cosDict = defaultdict(cosDictValues)
+        countDict = defaultdict(int)
+        ionDict = defaultdict(set)
+        ppmDict = defaultdict(list)
+        return [cosDict, countDict, ionDict, ppmDict]
+    elif tag=='qPPM':
+        light = defaultdict(list)
+        heavy = defaultdict(list)
+        return [light, heavy]
+    elif tag=='ratio':
+        light = defaultdict(dict)
+        heavy = defaultdict(dict)
+        return [light, heavy]
+
+
+'''
+Function: update_return_values()
+Purpose: Updates the return values for the peak comparison function. Because the same function is used several times for
+            different purposes, this and the initialize_return_values() function allow for customized use of the same
+            function. Explanations for each set of return values are written under the spectra_peak_comparison() function.
+Parameters:
+    'returns' - list of values. See initialize_return_values() for origin and spectra_peak_comparison() for contents.
+    'peak1' - tuple in (float, float, tuple) format, representing a library peak. Contents of tuple are (mz, intensity,
+        identifier).
+    'peak2' - tuple in (float, float, tuple) format, representing a query peak. Contents of tuple are (mz, intensity,
+        identifier).
+    'i1' - index of the library peak.
+    'i2' - index of the query peak.
+    'ppm' - float representing the ppm difference between the mz values of the peaks.
+    'tag' - string representing the condition under which the peak comparison is happening. This changes the return values.
+Returns:
+    no return value. Values in the 'return' parameter are updated.
+'''
+def update_return_values(returns, peak1, peak2, i1, i2, ppm, tag):
+    if tag=='identify':
+        key = (peak1[2],peak2[2])
+
+        # Data required to calculate the cosine score
+        returns[0][key][0] += peak1[1]*peak2[1]
+        returns[0][key][1] += peak2[1]**2
+        returns[0][key][2] += peak1[1]**2
+
+        # Number of matching peaks
+        returns[1][key] += 1
+
+        # Ion Count
+        returns[2][key].add(i2)
+
+        # ppm differences in matched peaks
+        returns[3][key].append(ppm)
+
+    elif tag=='qPPM':
+        if peak1[2][0] == 'light': returns[0][peak1[2][2]].append(ppm)
+        if peak1[2][0] == 'heavy': returns[1][peak1[2][2]].append(ppm)
+    elif tag=='ratio':
+        if peak1[2][0] == 'light': returns[0][peak1[2][2]][peak1[2][1]] = peak2[1]
+        if peak1[2][0] == 'heavy': returns[1][peak1[2][2]][peak1[2][1]] = peak2[1]
+
 
 '''
 Function: cosine_similarity()
-Purpose: Provided a value of the 'cosDict' dictionary output of the peak_comparison() function, this function
+Purpose: Provided a value of the 'cosDict' dictionary output of the spectra_peak_comparison() function, this function
             explicitly calculates the cosine similarity score and returns it.
 Parameters:
-    'row' - list of various values. See dictionary 'cosDict' value explanation in function peak_comparison().
+    'row' - list of various values. See dictionary 'cosDict' value explanation in function spectra_peak_comparison().
 Returns:
     float - represents the cosine similarity score of a library and query spectrum comparison.
 '''
@@ -371,7 +472,7 @@ Parameters:
         to catch a wide number of matches that can later be filtered for the optimal number of minimum
         allowed peak matches.
     'ppmTol' - see 'ppmTol' parameter description for function approx().
-    'ppmYOffset' - see 'ppmYOffset' parameter description for function peak_comparison().
+    'ppmYOffset' - see 'ppmYOffset' parameter description for function spectra_peak_comparison().
 Returns:
     No Return Value. Results are written directly to the output file and ppm file (outFile and ppmFile,
         respectively). The description of specific columns of output file are provided in the function comments.
@@ -416,9 +517,6 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
 
         queValDict = {}
 
-        print("#Pooling query spectra start: ")
-        print('#'+str(timedelta(seconds=timer())))
-
         with mzxml.read(expSpectraFile) as spectra:
             for spec in spectra:
 #                if int(spec['num']) < 3601:
@@ -437,9 +535,6 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
 
                 queValDict[num] = [ precursorMz, precursorCharge, peakCount, CV, window ]
 
-        print("#Spectra Comparison start: ")
-        print('#'+str(timedelta(seconds=timer())))
-
         time = timer()
         prevtime = time
         for w in quePeakDict:
@@ -447,14 +542,15 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
             count += 1
             if count % 100 == 0:
                 time = timer()
-                print(str(count)+','+str(time-prevtime)+','+str(len(spec['m/z array']))+','+str(spec['precursorMz'][0]['precursorMz'])+','+str(len(libKeys))+','+outFile)
+                print(str(count)+ ', ' + str(time-prevtime),flush=True)
+                #print(str(count)+','+str(time-prevtime)+','+str(len(spec['m/z array']))+','+str(spec['precursorMz'][0]['precursorMz'])+','+str(len(libKeys))+','+outFile,flush=True)
                 prevtime = time
 
             quePeakDict[w] = sorted(quePeakDict[w])
             libKeys = lib_mz_match_query_window( w[0], w[1], allLibKeys )
 
             if len(libKeys) != 0:
-                cosDict, countDict, ionDict, ppmDict = pooled_all_peak_comparison(pool_lib_spectra(lib, libKeys), quePeakDict[w], ppmTol, ppmYOffset)
+                cosDict, countDict, ionDict, ppmDict = spectra_peak_comparison(pool_lib_spectra(lib, libKeys), quePeakDict[w], ppmTol, ppmYOffset)
             else: continue
             for key in cosDict:
                 # Library spectra that had too few matching peaks are excluded. numPeakMatch variable determines the threshold.
@@ -485,53 +581,20 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
                     ppmWriter.writerow([key[1], key[0][1], lib[key[0]]['ProteinName']] + sorted(ppmDict[key]))
 
     # Prints the final number of experimental spectra analyzed.
-    print('#'+str(count))
+    print('Count: '+str(count),flush=True)
 
 
-
-'''
-Function: fdr_calculation()
-Purpose: Given the output of the query_spectra_analysis() function as contained in a csodiaq output file and an
-            FDR cutoff point, this function returns the number of rows in the dataframe above the FDR cutoff
-            point. Note that this function is usually applied to various subsets of the actual csodiaq output
-            file after filtering for minimum allowed peak matches. A higher return value from this function
-            indicates a more optimal minimum allowed peak match number.
-Parameters:
-    'df' - Pandas Data Frame representing the contents of a csodiaq output file.
-    'FDRCutoff' - float representing the minumum allowed FDR of the csodiaq output.
-Returns:
-    'fdr' - int representing number of rows in dataframe 'df' that are above the 'FDRCutoff' FDR cutoff point.
-    'numDecoys' - int representing the number of rows represented by decoys specifically. NOTE: This return
-        value is not currently used by the program, but is being kept here for possible future use.
-'''
-def fdr_calculation(df, fdrList=False):
-    # initializing the two return values at 0
-    fdrValues = []
-    numDecoys = 0
-    df.fillna("nan",inplace=True)
-    # for every row in the dataframe
-    for i in range(len(df)):
-
-        # current criteria for 'decoys' is to have 'decoy' in the protein name. This may change in the future.
-        if 'DECOY' in df.loc[i]['protein']:
-            numDecoys += 1
-
-        # calculates the FDR up to this point in the data frame.
-        curFDR = numDecoys/(i+1)
-
-        # conditional statement comparing the current FDR to the FDR Cutoff. If larger, function values are returned.
-        if curFDR > 0.01:
-
-            # if the number of rows has not yet reached the minimum number that allows for the FDR cutoff, 0 is returned instead.
-            if len(fdrValues) < 1/0.01:
-                if fdrList: return [], 0
-                else: return 0, 0
-            if fdrList: return fdrValues, numDecoys-1
-            else: return len(fdrValues), numDecoys-1
-        fdrValues.append(curFDR)
-    if fdrList: return fdrValues, numDecoys-1
-    else: return len(fdrValues), numDecoys-1
-
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#
+# PSM Scoring: Scoring
+#
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
 '''
 Function:read_ppm_file_to_dict()
 Purpose: After filtering the csodiaq output for the optimal minimum allowed peak match number, the returned
@@ -604,28 +667,100 @@ Returns:
     'offset' - float corresponding to the calculated ppm offset to be used in future corrected analyses.
     'tolerance' - float corresponding to the calculated ppm tolerance to be used in future corrected analyses.
 '''
-def find_offset_tol(data, histFile):
+def find_offset_tol(data, histFile, stdev=2, mean=True):
+    if len(data)==0: return 0, 10
+
+    hist, bins = np.histogram(data, bins=200)
+    width = 0.7 * (bins[1] - bins[0])
+    center = (bins[:-1] + bins[1:]) / 2
 
     # offset is calculated as the mean value of the provided data
-    offset = sum(data)/len(data)
-
+    if mean: offset = sum(data)/len(data)
+    else: offset = data[len(data)//2]
     # tolerance is calculated as the second standard deviation of the provided data
-    tolerance = statistics.pstdev(data)*2
+    tolerance = statistics.pstdev(data)*stdev
+    if not stdev:
+        index_max = max(range(len(hist)), key=hist.__getitem__)
+        histList = list(hist)
+        noise = np.mean(hist[:10] + hist[-10:])
+        min_i = 0
+        max_i = len(hist)-1
+        for i in range(index_max, 0, -1):
+            if hist[i] < noise: min_i = i; break
+        for i in range(index_max, len(hist)):
+            if hist[i] < noise: max_i = i; break
+
+        offset = center[index_max]
+        if index_max - min_i >= max_i - index_max: tolerance = offset - center[min_i]
+        else: tolerance = center[max_i] - offset
+        #tolerance = (center[max_i] - center[min_i])/2
 
     # if a histogram file is provided, it is created, with offset (black) and tolerance (red) lines drawn for reference
     if histFile:
-        hist, bins = np.histogram(data, bins=200)
-        width = 0.7 * (bins[1] - bins[0])
-        center = (bins[:-1] + bins[1:]) / 2
         pyplot.clf()
-        set_plot_settings('Difference between Matched Peaks (PPM)','Frequency')
-
+#        set_plot_settings('Difference between Matched Peaks (PPM)','Frequency')
+#        offset, tolerance = 0, 10
         pyplot.bar(center, hist, align='center', width=width)
         pyplot.axvline(x=offset, color='black', linestyle = 'dashed', linewidth=4)
         pyplot.axvline(x=offset-tolerance, color='red', linestyle = 'dashed', linewidth=4)
         pyplot.axvline(x=offset+tolerance, color='red', linestyle = 'dashed', linewidth=4)
         pyplot.savefig(histFile)
     return offset, tolerance
+
+
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#
+# FDR Filtering
+#
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+'''
+Function: fdr_calculation()
+Purpose: Given the output of the query_spectra_analysis() function as contained in a csodiaq output file and an
+            FDR cutoff point, this function returns the number of rows in the dataframe above the FDR cutoff
+            point. Note that this function is usually applied to various subsets of the actual csodiaq output
+            file after filtering for minimum allowed peak matches. A higher return value from this function
+            indicates a more optimal minimum allowed peak match number.
+Parameters:
+    'df' - Pandas Data Frame representing the contents of a csodiaq output file.
+    'FDRCutoff' - float representing the minumum allowed FDR of the csodiaq output.
+Returns:
+    'fdr' - int representing number of rows in dataframe 'df' that are above the 'FDRCutoff' FDR cutoff point.
+    'numDecoys' - int representing the number of rows represented by decoys specifically. NOTE: This return
+        value is not currently used by the program, but is being kept here for possible future use.
+'''
+def fdr_calculation(df, fdrList=False):
+    # initializing the two return values at 0
+    fdrValues = []
+    numDecoys = 0
+    df.fillna("nan",inplace=True)
+    # for every row in the dataframe
+    for i in range(len(df)):
+
+        # current criteria for 'decoys' is to have 'decoy' in the protein name. This may change in the future.
+        if 'DECOY' in df.loc[i]['protein']:
+            numDecoys += 1
+
+        # calculates the FDR up to this point in the data frame.
+        curFDR = numDecoys/(i+1)
+
+        # conditional statement comparing the current FDR to the FDR Cutoff. If larger, function values are returned.
+        if curFDR > 0.01:
+
+            # if the number of rows has not yet reached the minimum number that allows for the FDR cutoff, 0 is returned instead.
+            if len(fdrValues) < 1/0.01:
+                if fdrList: return [], 0
+                else: return 0, 0
+            if fdrList: return fdrValues, numDecoys-1
+            else: return len(fdrValues), numDecoys-1
+        fdrValues.append(curFDR)
+    if fdrList: return fdrValues, numDecoys-1
+    else: return len(fdrValues), numDecoys-1
 
 
 '''
@@ -651,7 +786,7 @@ Returns:
 def write_csodiaq_fdr_outputs(inFile, specFile, pepFile, protFile):
 
     # cosine score data is read in
-    overallDf = pd.read_csv(inFile).sort_values('csoDIAq_Score', ascending=False).reset_index(drop=True)
+    overallDf = pd.read_csv(inFile).sort_values('MaCC_Score', ascending=False).reset_index(drop=True)
 
     # spectral FDR is calculated and written to dataframe 'spectralDf'
     spectralDf = add_fdr_to_csodiaq_output(overallDf)
@@ -824,6 +959,713 @@ def add_leading_protein_column(df, verifiedProteinDict):
 
     return finalDf
 
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#
+# DISPA: Targeted Re-Analysis
+#
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+'''
+Function: calc_heavy_mz()
+Purpose: In order to quantify peptides or proteins, we need to re-run DISPA in a targetted fashion on peptides of interest
+            identified in previous experiments. Furthermore, we need to target the "heavy" version of the peptide, namely the
+            version of the peptide that have heavy lysine and arginine instead of their typical, lighter counterparts. This
+            function calculates the expected precursor m/z value for the heavy peptide.
+Parameters:
+    'seq' - string representing the amino acid composition of the peptide.
+    'mz' - float representing the precursor mz for the peptide.
+    'z' - int representing the charge of the peptide.
+Returns:
+    'heavyMz' - float representing the heavy calculation of the precursor mz for the peptide.
+'''
+def calc_heavy_mz(seq, mz, z):
+    hK=8.014199 ## mass of heavy lysine
+    hR=10.00827 ## mass of heavy arg
+
+    nK = seq.count('K')
+    nR = seq.count('R')
+    #nK = len(seq) - len(re.sub('K','',seq))
+    #nR = len(seq) - len(re.sub('R','',seq))
+
+    heavyMz = mz + (nK*hK)/z + (nR*hR)/z
+    return heavyMz
+
+
+'''
+Function: prepare_DIA_rerun_data()
+Purpose: This function takes a protein FDR dataframe and converts it into a format that an MS machine can read for targetted
+            DISPA re-analysis.
+Parameters:
+    'df' - Pandas dataframe, representing the protein FDR output from write_csodiaq_fdr_outputs().
+    'trypsin' - boolean variable that indicates if identified peptides should be filtered for those that resulted from trypsin
+        treatment.
+Returns:
+    'finalDf' - Pandas dataframe. 'finalDf' can be written to a file for direct input to an MS machine.
+'''
+def return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin):
+    df = pd.read_csv(inFile)
+    df = df[~df['protein'].str.contains('DECOY')].reset_index(drop=True)
+    # Necessary?
+    if trypsin: df = df[df['peptide'].str.endswith('R') | df['peptide'].str.endswith('K')].reset_index(drop=True)
+    df = df[df['uniquePeptide']==1].sort_values('ionCount', ascending=False).reset_index(drop=True)
+
+    CVs = set(df['CompensationVoltage'])
+    allDfs = []
+    for CV in CVs:
+        tempDf = df[df['CompensationVoltage']==CV].reset_index(drop=True)
+        if proteins: tempDf.groupby('leadingProtein').head(proteins).reset_index()
+        allDfs.append(tempDf)
+        data = []
+        for i in range(len(tempDf)):
+            compound = tempDf.loc[i]['peptide']
+            formula = ''
+            adduct = '(no adduct)'
+            lightMz = float(tempDf.loc[i]['MzLIB'])
+            charge = tempDf.loc[i]['zLIB']
+            heavyMz = calc_heavy_mz(compound, lightMz, charge)
+            MSXID = i+1
+            data.append([compound, formula, adduct, round(lightMz, ndigits = 2), charge, MSXID])
+            data.append([compound, formula, adduct, round(heavyMz, ndigits = 2), charge, MSXID])
+
+
+
+        finalDf = pd.DataFrame(data, columns=['Compound','Formula','Adduct','m.z','z','MSXID'])
+        finalDf = finalDf.drop_duplicates(subset=['m.z'], keep='first')
+        finalDf.to_csv(header+str(CV)+'.txt', sep='\t', index=False)
+    compDf = pd.concat(allDfs)
+    compDf.to_csv(header+'allCVs.csv', index=False)
+    pass
+
+
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#
+# Light:Heavy Quantification
+#
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+'''
+Function: heavy_light_quantification()
+Purpose: Following DISPA targeted re-analysis, this function calculates changes in quantity of the peptides identified in
+            previous calculations relative to the given (heavy) control. The heavy control represents a culture grown with
+            heavy lysine and arginine, the two amino acids at which trypsin cuts peptides. By mixing the heavy control with
+            a light counterpart representing a change in environment in equal quantities, one can determine the impact of the
+            environment change on the peptide expession. If the heavy and light cultures were grown in the same conditions,
+            it would be expected that the relative ratio for each peptide would be 1:1.
+Parameters:
+    dictionary 'fragDict'
+        key - string representing the scan number of the DISPA re-analysis. Scan numbers are consistent across datasets from
+            the same run.
+        value - dictionary of various values.
+            'seq': sequence of the peptide corresponding to the scan of interest.
+            'mz': precursor mass of the peptide.
+            'z': charge of the peptide.
+            'CV': Compensation Voltage setting where the peptide was originally found.
+    dictionary 'libDict'
+        key - string representing the scan number of the DISPA re-analysis. Scan numbers are consistent across datasets from
+            the same run. NOTE: this library dictionary ONLY represents peptides of interest.
+        value - See dictionary 'lib' value 'Peaks' explanation in function library_file_to_dict(), with one difference.
+            Rather than being be tagged by a library-specific tuple, the tags are tuples of (str, int) composition. The
+            string differentiates between 'light' and 'heavy' peaks, and the int represents the rank of peak intensity (0
+            being high).
+    'mzxmlFiles' - list of strings representing the path to files from the DISPA re-analysis.
+    'var' - @DEBUG: It is expected that this parameter will be removed by the end of this project. It currently holds
+        variables that will be constant, but for testing/automating purposes are putting then in this list.
+Returns:
+    'finalDf' - pandas dataframe. The first two columns of the dataframe are the scans and peptides, respectively. Each
+        subsequent column represents the ratios for those peptides derived from each data file of the DISPA re-analysis.
+
+'''
+def heavy_light_quantification(fragDict, libDict, mzxmlFiles, var):
+
+    # @DEBUG: See above 'var' parameter description. These will be removed by the end of the project.
+    minMatch = var[0]
+    m = var[1]
+    stdev = var[2]
+
+    # final return value initialized, and the first two columns set.
+    finalDf = pd.DataFrame()
+
+    tempKeys = []
+    for scan in libDict:
+        for tempDict in fragDict[scan]:
+            tempKeys.append((scan, tempDict['seq']))
+
+    scans = []
+    peptides = []
+    for x in sorted(tempKeys):
+        scans.append(x[0])
+        peptides.append(x[1])
+
+    finalDf['scan'] = scans
+    finalDf['peptide'] = peptides
+
+    # Heavy:Light Ratio for each peptide is calculated for every DISPA reanalysis file. Looping over the files begins here.
+    for f in mzxmlFiles:
+        if stdev == -1: offset, tolerance = 0,10
+        else:
+            # In order to apply a ppm correction, optimal offset and tolerance for the data.
+            ppmDiffs = []
+            with mzxml.read(f, use_index =True) as file:
+                for scan in sorted(libDict.keys()):
+
+                    # experimental spectrum is formatted for peak comparison (see 'libDict' parameter value for peak description)
+                    spec = file.get_by_id(scan)
+                    spec['intensity array'] = [x for x in spec['intensity array']]
+                    peakIDs = [scan for x in range(len(spec['m/z array']))]
+                    expSpectrum = list(tuple(zip(spec['m/z array'],spec['intensity array'],peakIDs)))
+                    expSpectrum.sort(key=lambda x:x[0])
+
+                    # all PPM differences from matches of interest are included for consideration
+                    l, h = spectra_peak_comparison(sorted(libDict[scan]), expSpectrum, 50, 0, tag='qPPM')
+                    for pep in l:
+                        if len(l[pep]) >= minMatch: ppmDiffs += l[pep]
+                    for pep in h:
+                        if len(h[pep]) >= minMatch: ppmDiffs += h[pep]
+
+            # offset and tolerance determined from the list of PPM differences
+            stringVar = [str(x) for x in var]
+            if var[2]<1: stringVar[2] = 'P'+stringVar[2].split('.')[-1]
+            offset, tolerance = find_offset_tol(sorted(ppmDiffs), 'Data/QuantifyCompare/Histograms/hist'+'_'.join(stringVar)+'.png', stdev=stdev)
+
+        #print(str(offset)+','+str(tolerance),flush=True)
+        # @DEBUG: Remove these
+        #offset, tolerance = 0,10
+        #print(offset)
+        #print(tolerance)
+        #print('\n')
+
+        # Now that an offset and tolerance has been established specific to the data, the program runs the algorithm to calculate heavy:light ratios
+        data = []
+        ratioDict = {}
+        ppmDiffs = []
+        with mzxml.read(f, use_index =True) as file:
+            for scan in sorted(libDict.keys()):
+
+                # as above, the scan spectrum is formatted appropriately.
+                spec = file.get_by_id(scan)
+                spec['intensity array'] = [x for x in spec['intensity array']]
+                peakIDs = [scan for x in range(len(spec['m/z array']))]
+                expSpectrum = list(tuple(zip(spec['m/z array'],spec['intensity array'],peakIDs)))
+                expSpectrum.sort(key=lambda x:x[0])
+                lightPeps, heavyPeps = spectra_peak_comparison(sorted(libDict[scan]), expSpectrum, tolerance, offset, tag='ratio')
+                peps = [x['seq'] for x in fragDict[scan]]
+                for pep in peps:
+                    l = lightPeps[pep]
+                    h = heavyPeps[pep]
+                    # for light or heavy peaks that are identified without a match, a psuedo peak is created
+                    #   with an intensity equal to the average of 10 least intense peaks divided by two.
+                    smallPeakIntensity = np.mean(sorted(spec['intensity array'])[:10])/2
+
+                    # creating the psuedo peaks
+                    lightSet = set(l.keys())
+                    heavySet = set(h.keys())
+                    onlyLight = lightSet - heavySet
+                    for key in onlyLight: h[key] = smallPeakIntensity
+                    onlyHeavy = heavySet - lightSet
+                    for key in onlyHeavy: l[key] = smallPeakIntensity
+
+                    # @DEBUG: For seeing output relating to a specific scan. When blank, nothing happens.
+                    scanEx = ''
+                    if scan == scanEx:
+                        print('\n')
+                        print(f)
+                        print(list(l.values()))
+                        print(list(h.values()))
+
+                    # ratio is calculated if there are enough peaks to warrant a match.
+                    if minMatch: check = (len(l) >= minMatch)
+                    else: check = match_score(list(l.keys()))
+                    if check:
+                        ratio = return_ratio(l, h, m)
+
+                        # @DEBUG: For seeing output relating to a specific scan. When blank, nothing happens.
+                        if scan == scanEx:
+                            keys = list(l.keys())
+                            lightInt = [l[key] for key in keys]
+                            heavyInt = [h[key] for key in keys]
+                            for i in range(len(lightInt)):
+                                print(str(heavyInt[i])+'/'+str(lightInt[i])+'='+str(heavyInt[i]/lightInt[i]))
+                            print(ratio)
+
+                    # if there are not enough peaks to warrant a match, the ratio is returned as NaN.
+                    else:
+                        ratio=np.nan
+
+                    # This dictionary maps scans to calculated ratios.
+                    ratioDict[scan, pep] = ratio
+
+        # column of ratios from the just-analyzed file is added to the output
+        finalDf[f] = [ratioDict[key] for key in sorted(ratioDict.keys())]
+
+    # @DEBUG: Final output is written to a file here - may be elsewhere in the future
+    if var[2]<1: var[2] = 'P'+str(var[2]).split('.')[-1]
+    var = [str(x) for x in var]
+    finalDf.to_csv('Data/oldOutput/test_'+'_'.join(var)+'.csv', index=False)
+    return finalDf
+
+
+def match_score(keys):
+    if len(keys) == 0: return False
+    if min(keys) < 3: return True
+    return False
+
+'''
+Function: make_quant_dicts()
+Purpose: This function prepares the dictionaries used by the heavy_light_quantification() function.
+Parameters:
+    'inFile' - string representing the path to output from the FDR calculation specific to the data that was used to target
+        the DISPA re-analysis.
+    'libFile' - string representing the path to the library spectra, ideally the same library that was used in steps leading
+        up to FDR analysis.
+    'mzxmlFiles' - list of strings representing the path to files from the DISPA re-analysis.
+    'maxPeaks' - maximum number of peaks to be included in each library (light and heavy combined will have at most double
+        this number)
+Returns:
+    'fragVarDict' - see parameter 'fragDict' in heavy_light_quantification() function.
+    'libPeakDict' - see parameter 'libDict' in heavy_light_quantification() function.
+'''
+def make_quant_dicts(inFile, libFile, mzxmlFiles, maxPeaks):
+    fileType = inFile.split('.')[-1]
+    if fileType == 'csv': fragDf = pd.read_csv(inFile)
+    else: fragDf = pd.read_csv(inFile, sep='\t')
+
+    # Dictionary is created that can match FDR calculation variables to the scan number of the DISPA re-analysis.
+    # NOTE: all DISPA re-analysis files should have corresponding scan numbers. The first of the list is arbitrarily chosen there.
+    fragScanDict = {}
+
+    with mzxml.read(mzxmlFiles[0]) as spectra:
+        for x in spectra:
+
+            # @MAKE NOTE
+            key = ( round(x['precursorMz'][0]['precursorMz'], 2),
+                    round(x['precursorMz'][1]['precursorMz'], 2),
+                    x['compensationVoltage']
+                    )
+            fragScanDict[key] = x['num']
+
+    fragVarDict = defaultdict(list)
+    libScanDict = {}
+    print('total scans: ' + str(len(fragScanDict)))
+    # each peptide of interest should have a corresponding scan. This runs over each peptide.
+    for i in range(len(fragDf)):
+
+        # @DEBUG: Top line for my ouput, bottom for Jesse's old output.
+        #seq, mz, z, CV = fragDf.loc[i]['peptide'], fragDf.loc[i]['MzLIB'], fragDf.loc[i]['zLIB'], fragDf.loc[i]['CompensationVoltage']
+        seq, mz, z, CV = fragDf.loc[i]['Peptide'], fragDf.loc[i]['prec_light_mz'], fragDf.loc[i]['z'], fragDf.loc[i]['CV']
+
+
+        '''
+        # @DEBUG: error 1
+        # heavy and light mz values are ####CHANGE#### rounded to 2 decimal places in case differences exist between FDR file and experiment file
+        heavyMz = calc_heavy_mz(seq, mz, z)
+
+        # Because the keys might not match up perfectly (for example, if you're using a different library), approximation is taken into account
+        key = (float(mz), float(heavyMz), int(CV))
+        tempKey = tuple([round(key[0],2),round(key[1],2),int(CV)])
+        if tempKey=='(582.79, 586.8, -50)':
+            print(key)
+        keyMatch = tuple_key_match(keyList, key)
+
+        # @DEBUG: Presumably, you won't need this if statement if the re-analysis data was based off the same file
+        if keyMatch:
+
+
+
+            # @DEBUG: error 1
+            # corresponding scan identified
+            scan = fragScanDict[keyMatch]
+
+
+            # FDR calculation variables are put into a new dictionary that can be identified by scan number.
+            fragVarDict[scan] = {'seq':seq, 'mz':mz, 'z':z, 'CV':CV}
+
+            #seq = re.sub(r'\+\d+\.\d+', '', seq)
+            # @DEBUG: error 1
+            # a dictionary that can match library spectrum identifying features to scan number is created.
+            #libScanDict[float(mz), str(seq)] = scan
+            libScanDict[round(mz,2), seq] = scan
+        '''
+        lightMz = round(mz, 2)
+        heavyMz = round(calc_heavy_mz(seq, mz, z), 2)
+        key = (lightMz, heavyMz, CV)
+        if key in fragScanDict:
+            scan = fragScanDict[key]
+            libScanDict[lightMz, seq] = scan
+            fragVarDict[scan].append({'seq':seq, 'mz':mz, 'z':z, 'CV':CV})
+
+
+    print('scans identified: '+str(len(libScanDict)))
+    # dictionary with a scan:peaks entries is created.
+    libPeakDict = make_lib_dict_quant(libFile, libScanDict, fragDf, maxPeaks)
+    print('libraries identified: '+str(len(libPeakDict)))
+    return fragVarDict, libPeakDict
+
+
+'''
+Function: tuple_key_match() *****DEFUNCT*****
+Purpose: Given a list of tuple keys and a key that may be in the list, this function determines if an approximately equal key
+            exists. String values must be exact, but float values must be withit 10 ppm to be considered a match.
+Parameters:
+    'keyList' - a list of tuples. Composition of the tuples in the list should be consistent with each other.
+    'key' - a tuple of the same composition as the tuples in keyList.
+Returns:
+    boolean - if 'key' is found in 'keyList', this function returns true, else false.
+
+Defunct Reasons: We've opted to just round float values to 2 decimal places rather than finding values within a ppm
+                    tolerance. At the time we chose not to use this function, I was debugging instances where 1) a different
+                    CV match was being chosen first and 2) the wrong heavy-mz values were being identified, possibly because
+                    the light-mz value (ordered before heavy) was different.
+'''
+def tuple_key_match(keyList, key):
+    i = bisect(keyList, key)
+    if i != 0 and approx_tuple(key, keyList[i-1]): return keyList[i-1]
+    if i != len(keyList) and approx_tuple(key, keyList[i]): return keyList[i]
+    #print('neither')
+    #print(key)
+    #print(keyList[i-1])
+    #print(keyList[i])
+    if i<3 and i < len(keyList)-4:
+        print('i: '+str(i))
+        for j in range(i-2,i+2):
+            print(str(j) + str(keyList[i-1]))
+        print(key)
+    return False
+
+
+'''
+Function: approx_tuple() *****DEFUNCT*****
+Purpose: This function compares each value of two tuples to determine if they are approximately (in the case of float values)
+            or exactly (in the case of string or int values) the same.
+Parameters:
+    't1' - a tuple.
+    't2' - a tuple.
+    'ppmTol' - the ppm tolerance for float values to be considered a match. Default is 10ppm.
+Returns:
+    boolean - if each value of tuples match this function returns true, else false.
+
+Defunct Reasons: We've opted to just round float values to 2 decimal places rather than finding values within a ppm
+                    tolerance.
+'''
+def approx_tuple(t1, t2, ppmTol=10):
+
+    # @DEBUG: I kept deleting this (and the 'check' lines below) but needing it later, so I'm keeping it here for now.
+    #check = False
+    #if t1 == (-40, 814.4, 820.4074896666666):
+    #    check = True
+    #    print('\n')
+    #    print(t1)
+    #    print(t2)
+
+    # if the tuples aren't the same length, return False. This shouldn't happen, I'm just being careful.
+    if len(t1) != len(t2): return False
+    l = []
+    for i in range(len(t1)):
+        # @DEBUG: see above
+        #if check: print(str(t1[i])+';'+str(t2[i])+'---'+str(type(t1[i]))+';'+str(type(t2[i])))
+
+        # if the tuple values aren't the same type, return False. This also shouldn't happen.
+        if type(t1[i]) != type(t2[i]): return False
+
+        # if the values are strings and don't match, return False.
+        if type(t1[i]) is str and t1[i] != t2[i]: return False
+
+        # If the values are numeric and not within the ppm tolerance, return False.
+        if not approx(t1[i], t2[i], ppmTol): return False
+
+    # @DEBUG: see above
+    #if check: print('success')
+
+    return True
+
+'''
+Function: make_lib_dict_quant()
+Purpose: This function reads the file type of the input file (accepts .mgf, .csv and .tsv formats) and runs it through the
+            appropriate reading function. Basically, this function is a catch-all used in the corresponding menu function to
+            determine how to best read in a particular library spectra file. This is similar to the library_file_to_dict()
+            function, but is specific to quantification library prep.
+Parameters:
+    'libFile' - string representing the path to the library spectra, ideally the same library that was used in steps leading
+        up to FDR analysis.
+    dictionary 'libScanDict'
+        key - (float, string) tuple.
+            float - corresponding to the precursor m/z value of the library spectrum.
+            string - corresponding to the full UniMode peptide name/sequence represented by the library
+                    spectrum.
+        value - string representing the scan number of the DISPA re-analysis. Scan numbers are consistent across datasets
+            from the same run.
+    'fragDf' - Pandas dataframe, created from 'inFile' parameter of make_quant_dicts() function.
+    'maxPeaks' - maximum number of peaks to be included in each library (light and heavy combined will have at most double
+        this number)
+Returns:
+    dictionary - see parameter 'libDict' in heavy_light_quantification() function.
+
+'''
+def make_lib_dict_quant(libFile, libScanDict, fragDf, maxPeaks):
+    fileType = libFile.split('.')[-1]
+    if fileType == 'mgf':
+
+        # all code before the return statement assumes that the peptides have decimal values corresponding to non-standard modifications.
+        uniquePeps = set(fragDf['Peptide'])
+        digPat = r'\+\d+\.\d+'
+        uniqueDigs = set()
+        for pep in uniquePeps: uniqueDigs.update(re.findall(digPat, pep))
+        digDict = dict(zip(uniqueDigs, [str(x) for x in list(range(len(uniqueDigs)))]))
+
+        #NOTE: If you have more than 10 custom entries you'll have problems
+        customAAmass = dict(mass.std_aa_mass)
+        for key in digDict: customAAmass[digDict[key]] = float(key[1:])
+        return mgf_library_upload_quant(libFile, libScanDict, digDict, customAAmass, maxPeaks)
+    else:
+        return traml_library_upload_quant(libFile, libScanDict, maxPeaks)
+
+
+'''
+Function: mgf_library_upload_quant()
+Purpose: This function creates a dictionary with scan:peak entries for identifying library spectra based on scan number. This
+            function is specific to MGF library files, but is specific to quantification, distinguishing it from the
+            mgf_library_upload() function.
+Parameters:
+    'fileName' - string representing the path to the library spectra, ideally the same library that was used in steps leading
+        up to FDR analysis.
+    dictionary 'scanDict' - see parameter 'libScanDict' in make_lib_dict_quant() function.
+    dictionary 'digDict'
+        key - numeric, single-digit string representing a modification found in a peptide sequence.
+        value - string representing the mass of the modification (float).
+    dictionary 'aaDict' - same as mass.std_aa_mass, but with values from digDict added.
+    'maxPeaks' - maximum number of peaks to be included in each library (light and heavy combined will have at most double
+        this number)
+Returns:
+    dictionary 'lib' - see parameter 'libDict' in heavy_light_quantification() function.
+'''
+def mgf_library_upload_quant(fileName, scanDict, digDict, aaDict, maxPeaks):
+
+    # mgf file is read in using the pyteomics mgf module
+    libMGF = mgf.read(fileName)
+
+    # return value is initialized
+    lib = defaultdict(list)
+
+    keyList = sorted(list(scanDict.keys()))
+    # each spectrum in the mgf file
+    for spec in libMGF:
+
+        seq = spec['params']['seq']
+        precMz = spec['params']['pepmass'][0]
+
+        key = (round(precMz,2), seq)
+        if key not in scanDict: continue
+
+        # Decimal values are replaced with numeric placeholders to be included in the analysis.
+        sequence = re.sub(r'\+\d+\.\d+', lambda m: digDict.get(m.group()), seq)
+
+        # peaks of the library file are intialized
+        mz = list(spec['m/z array'])
+        intensity = [x for x in list(spec['intensity array'])]
+        z = spec['params']['charge'][0]
+
+        # The y-ion mz value for each fragment of the peptide is calculated. If it is in the library, it and it's intensity are stored in a list
+        # NOTE: y-ions are singled out because they should have at least one lysine or arginine, so will have a heavy counterpart that can show up. B-ions don't have that guarantee.
+        fragList = []
+        for x in range(1, len(sequence)-1):
+            fragseq = sequence[x:]
+            lightfragmz = mass.fast_mass(sequence=sequence[x:], ion_type='y', charge=1, aa_mass = aaDict) # Do I need to use different possible charges?
+            i = approx_list(lightfragmz, mz)
+            if i==-1: continue
+            fragList.append((intensity[i], lightfragmz, fragseq))
+
+        # y-ion peaks are sorted by intensity, and lower-intensity peaks are filtered out.
+        fragList.sort(reverse=True)
+        if type(maxPeaks) is not str and len(fragList) >= maxPeaks: fragList = fragList[:maxPeaks]
+
+        # heavy counterpart mz is calculated. Light and heavy pairs are additionally tagged by their intensity rank and included in the final output.
+        peaks = []
+        for i in range(len(fragList)):
+            fragMz = fragList[i][1]
+            fragInt = fragList[i][0]
+            peaks.append((fragMz, fragInt, ('light', i, seq)))
+            peaks.append((calc_heavy_mz(fragList[i][2], fragMz, 1), fragInt, ('heavy', i, seq)))
+
+        # peaks are sorted by mz value (as they appear in a spectrum)
+        peaks.sort(key=lambda x:x[0])
+
+        # @DEBUG: error 1
+        # entry placed in final dictionary
+        #lib[scanDict[keyMatch]] = peaks
+        lib[scanDict[key]] += peaks
+    return lib
+
+
+'''
+Function: traml_library_upload_quant()
+Purpose: This function creates a dictionary with scan:peak entries for identifying library spectra based on scan number. This
+            function is specific to TraML library files, but is specific to quantification, distinguishing it from the
+            traml_library_upload() function.
+Parameters:
+    'fileName' - string representing the path to the library spectra, ideally the same library that was used in steps leading
+        up to FDR analysis.
+    dictionary 'scanDict' - see parameter 'libScanDict' in make_lib_dict_quant() function.
+    'maxPeaks' - maximum number of peaks to be included in each library (light and heavy combined will have at most double
+        this number)
+Returns:
+'''
+def traml_library_upload_quant(fileName, scanDict, maxPeaks):
+
+    # Library spectra file is read as a pandas dataframe - conditional statement allows for both .tsv and .csv files to be uploaded.
+    if fileName.endswith('.tsv'):
+        lib_df = pd.read_csv(fileName, sep='\t')
+    else:
+        lib_df = pd.read_csv(fileName)
+
+    # to save on time, an initial filtering step removes all non-relevant peptides from consideration
+    peptides = set([x[1] for x in scanDict])
+    lib_df = lib_df[lib_df['FullUniModPeptideName'].isin(peptides)]
+
+    # Unneeded columns are removed from the dataframe
+    lib_df = lib_df.loc[:, lib_df.columns.intersection(['PrecursorMz','PeptideSequence','FullUniModPeptideName','ProductMz','LibraryIntensity','FragmentCharge','FragmentType','FragmentSeriesNumber'])]
+
+    # Rounding to two decimal places to match the re-analysis files
+    lib_df['PrecursorMz'] = [round(x,2) for x in lib_df['PrecursorMz']]
+
+    # ID created to become the key of the resulting dictionary
+    lib_df['ID'] = list(zip(lib_df['PrecursorMz'].tolist(),lib_df['FullUniModPeptideName'].tolist()))
+
+    # Dataframe filters out rows with an ID that is not found in the scanDict dictionary
+    lib_df = lib_df[lib_df['ID'].isin(scanDict)]
+
+    # b-ions are removed from consideration.
+    # NOTE: y-ions are singled out because they should have at least one lysine or arginine, so will have a heavy counterpart that can show up. B-ions don't have that guarantee.
+    lib_df = lib_df[lib_df['FragmentType']=='y']
+
+    # M/z and intensity columns are grouped by ID to be later combined as a list of peaks included in the dictionary
+    mz_dict = lib_df.groupby("ID")['ProductMz'].apply(list).to_dict()
+    intensity_dict = lib_df.groupby("ID")['LibraryIntensity'].apply(list).to_dict()
+
+    # Dataframe is prepared for and converted to a dictionary
+    lib_df.drop_duplicates(subset="ID",inplace=True)
+    lib_df = lib_df.loc[:, lib_df.columns.intersection(['ID', 'PeptideSequence', 'FragmentCharge', 'FragmentSeriesNumber'])]
+    lib_df.set_index("ID", drop=True, inplace=True)
+    lib = lib_df.to_dict(orient="index")
+
+    # @DEBUG: for printing out results specific to a scan. To be removed by the end.
+    scanEx = ''
+
+    # Peaks list is created and attached to the dictionary
+    finalDict = defaultdict(list)
+    for key in lib:
+
+        # y-ion peaks are sorted by intensity, and lower-intensity peaks are filtered out.
+        fragList = sorted(list(tuple(zip(intensity_dict[key], mz_dict[key]))), reverse=True)
+        # @DEBUG: see above
+        if scanDict[key]==scanEx:
+            for x in fragList: print(x)
+        if type(maxPeaks) is not str and len(fragList) >= maxPeaks: fragList = fragList[:maxPeaks]
+
+        # heavy counterpart mz is calculated. Light and heavy pairs are additionally tagged by their intensity rank and included in the final output.
+        peaks = []
+        for i in range(len(fragList)):
+            fragMz = fragList[i][1]
+            fragInt = fragList[i][0]
+            peaks.append((fragMz, fragInt, ('light',i,key[1])))
+            fragSeq = lib[key]['PeptideSequence'][-lib[key]['FragmentSeriesNumber']:]
+            heavyMz = calc_heavy_mz(fragSeq, fragMz, lib[key]['FragmentCharge'])
+            peaks.append((heavyMz, fragInt, ('heavy',i,key[1])))
+        # @DEBUG: see above
+        if scanDict[key]==scanEx:
+            for x in peaks: print(x)
+
+        # entry placed in final dictionary
+        finalDict[scanDict[key]] += peaks
+
+    return finalDict
+
+'''
+Function: return_ratio()
+Purpose: This function may or may not have use in the future. There are often several ratios calculated for any given
+            peptide, one for each light:heavy peak pair identified. This function con return a different value depending on
+            the type of ratio requested. See comments in the function itself for specifics.
+Parameters:
+    NOTE: both dictionaries have the same keys, but different values.
+    dictionary 'lightDict'
+        key - int representing the rank of intensity for an identified light:heavy peak pair.
+        value - intensity of the light peak of the pair.
+    dictionary 'lightDict'
+        key - int representing the rank of intensity for an identified light:heavy peak pair.
+        value - intensity of the heavy peak of the pair.
+    'type' - string representing the ratio-deciding method of choice.
+Returns:
+    float representing the ratio calculated. Returns string 'invalidType' if an invalid type is provided in the 'type'
+        parameter.
+'''
+def return_ratio(lightDict, heavyDict, type):
+    keys = lightDict.keys()
+
+    # intensity: the ratio from the peak pair with the highest intensity is returned.
+    minKey = min(keys)
+    if type=='intensity': return np.log2((heavyDict[minKey]/lightDict[minKey]))
+
+    lightInt = [lightDict[key] for key in keys]
+    heavyInt = [heavyDict[key] for key in keys]
+    log2Ratios = [np.log2(x/y) for x,y in zip(heavyInt, lightInt)]
+
+    # mean: the mean value of log2(ratio) is returned.
+    if type=='mean': return np.mean(log2Ratios)
+
+    # median: the median value of log2(ratio) is returned.
+    if type=='median': return np.median(log2Ratios)
+
+    # weighted: a weighted mean calculation. Peak pairs with a higher intensity contribute more to the average.
+    if type=='weighted':
+        ratio = 0.0
+        sumInt = sum(lightInt + heavyInt)
+        for i in range(len(lightInt)): ratio += ((lightInt[i]+heavyInt[i])/sumInt)*log2Ratios[i]
+        return ratio
+
+    # ratio_median: the median value of un-normalized, raw ratios is returned.
+    normRatios = [x/y for x,y in zip(heavyInt, lightInt)]
+    if type=='ratio_median': return np.median(normRatios)
+
+    # if the type doesn't match one of the above options, an error message is returned instead.
+    return 'invalidType'
+
+
+'''
+Function: approx_list()
+Purpose: This function determines if a value is within a given ppm tolerance of a value in a list.
+Parameters:
+    'x' - float value.
+    'l' - list of float values.
+    'ppmTol' - the ppm tolerance for float values to be considered a match. Default is 10ppm.
+Returns:
+    int - the index of the match. If there is no match, returns -1 instead.
+'''
+def approx_list(x, l, ppmTol=10):
+    for i in range(len(l)):
+        if approx(x, l[i], ppmTol): return i
+    return -1
+
+
+
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#
+# Miscellaneous Functions
+#
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
+#############################################################################################################################
 '''
 Function: set_plot_settings()
 Purpose: Sets parameters for histogram graphics.
@@ -845,59 +1687,9 @@ def set_plot_settings(xlabel, ylabel, wide=True):
     pyplot.tick_params(axis="x", labelsize=36)
     pyplot.tick_params(axis="y", labelsize=36)
 
-
-'''
-Function: calc_heavy_mz()
-Purpose: In order to quantify peptides or proteins, we need to re-run DISPA in a targetted fashion on peptides of interest
-            identified in previous experiments. Furthermore, we need to target the "heavy" version of the peptide, namely the
-            version of the peptide that have heavy lysine and arginine instead of their typical, lighter counterparts. This
-            function calculates the expected precursor m/z value for the heavy peptide.
-Parameters:
-    'seq' - string representing the amino acid composition of the peptide.
-    'mz' - float representing the precursor mz for the peptide.
-    'z' - int representing the charge of the peptide.
-Returns:
-    'heavyMz' - float representing the heavy calculation of the precursor mz for the peptide.
-'''
-def calc_heavy_mz(seq, mz, z):
-    hK=8.014199 ## mass of heavy lysine
-    hR=10.00827 ## mass of heavy arg
-
-    nR = len(seq) - len(re.sub('R','', seq))
-    nK = len(seq) - len(re.sub('K','', seq))
-
-    heavyMz = mz + (nK*hK)/z + (nR*hR)/z
-    return heavyMz
-
-
-'''
-Function: prepare_DIA_rerun_data()
-Purpose: This function takes a protein FDR dataframe and converts it into a format that an MS machine can read for targetted
-            DISPA re-analysis.
-Parameters:
-    'df' - Pandas dataframe, representing the protein FDR output from write_csodiaq_fdr_outputs().
-    'trypsin' - boolean variable that indicates if identified peptides should be filtered for those that resulted from trypsin
-        treatment.
-Returns:
-    'finalDf' - Pandas dataframe. 'finalDf' can be written to a file for direct input to an MS machine.
-'''
-def prepare_DIA_rerun_data(df, trypsin=True):
-
-    # Necessary?
-    if trypsin: df = df[df['peptide'].str.endswith('R') | df['peptide'].str.endswith('K')].reset_index(drop=True)
-    df = df[df['uniquePeptide']==1].sort_values('ionCount', ascending=False).drop_duplicates(subset='leadingProtein', keep='first').reset_index(drop=True)
-
-    data = []
-    for i in range(len(df)):
-        compound = df.loc[i]['peptide']
-        formula = ''
-        adduct = '(no adduct)'
-        lightMz = float(df.loc[i]['MzLIB'])
-        charge = df.loc[i]['zLIB']
-        heavyMz = calc_heavy_mz(compound, lightMz, charge)
-        MSXID = i+1
-        data.append([compound, formula, adduct, round(lightMz, ndigits = 2), charge, MSXID])
-        data.append([compound, formula, adduct, round(heavyMz, ndigits = 2), charge, MSXID])
-
-    finalDf = pd.DataFrame(data, columns=['Compound','Formula','Adduct','m.z','z','MSXID'])
-    return finalDf
+def plot_spec(SPECTRA, COLOR):
+    pyplot.vlines(SPECTRA.columns, np.repeat(0, len(SPECTRA.columns)), SPECTRA, colors=COLOR)
+#    pyplot.ylim(-8000,8000)
+#    ax = pyplot.gca()
+#    ax.axes.xaxis.set_visible(False)
+#    ax.axes.yaxis.set_visible(False)
