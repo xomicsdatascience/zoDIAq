@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys, csv, argparse
 from os import path
 import csodiaq_menu_functions as menu
@@ -32,14 +34,15 @@ def main():
             if not restricted_str(file, permittedTypes=['mzxml']): arg_parser.error('The -f or --files argument must be an existing file of type mzxml')
         if not restricted_str(args['library'], permittedTypes=['mgf','csv','tsv']): arg_parser.error('The -l or --library argument must be an existing file of type MGF (.mgf) or TraML (.tsv or .csv) format')
         if not restricted_str(args['outDirectory']): arg_parser.error('The -o or --outDirectory argument must be an existing directory')
-        lib = cbf.library_file_to_dict(args['library'])
 
+
+        lib = cbf.library_file_to_dict(args['library'])
         for i in range(len(args['files'])):
             outFileHeader = 'CsoDIAq-file' +str(i+1)+'_'+ '.'.join(args['files'][i].split('/')[-1].split('.')[:-1])
             outFile = args['outDirectory'] + outFileHeader + '.csv'
 
 
-            #menu.write_csodiaq_output(lib, args['files'][i], outFile, initialTol=args['fragmentMassTolerance'])
+            menu.write_csodiaq_output(lib, args['files'][i], outFile, initialTol=args['fragmentMassTolerance'])
             if args['correction']!=-1:
                 menu.write_ppm_offset_tolerance(outFile, corrected=args['correction'], hist=args['histogram'])
                 menu.write_csodiaq_output(lib, args['files'][i], outFile, corrected=True)

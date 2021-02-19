@@ -10,7 +10,7 @@ import csv
 import matplotlib.pyplot as plt
 import numpy as np
 import statistics
-from scipy.stats import linregress
+#from scipy.stats import linregress
 import pickle
 
 

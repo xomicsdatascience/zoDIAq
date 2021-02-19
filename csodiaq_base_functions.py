@@ -1012,7 +1012,7 @@ def return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin):
     df = df[~df['protein'].str.contains('DECOY')].reset_index(drop=True)
     # Necessary?
     if trypsin: df = df[df['peptide'].str.endswith('R') | df['peptide'].str.endswith('K')].reset_index(drop=True)
-    df = df[df['uniquePeptide']==1].sort_values('ionCount', ascending=False).reset_index(drop=True)
+    if 'uniquePeptide' in df.columns: df = df[df['uniquePeptide']==1].sort_values('ionCount', ascending=False).reset_index(drop=True)
 
     CVs = set(df['CompensationVoltage'])
     allDfs = []
