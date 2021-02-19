@@ -821,9 +821,6 @@ def write_csodiaq_fdr_outputs(inFile, specFile, pepFile, protFile):
 
     # Protein FDR is calculated using the highest-scoring peptide for each protein group.
     tempProtDf = add_fdr_to_csodiaq_output(proteinDf, filterType='leadingProtein')
-
-    tempProtDf.to_csv('Data/oldOutput/protein.csv')
-
     proteinDict = tempProtDf.set_index('leadingProtein').T.to_dict()
 
     # Peptides that don't map to a protein above the FDR cutoff are excluded (indices of rows to be removed are added to this list)
