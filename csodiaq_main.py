@@ -48,4 +48,16 @@ for libTag in libDict:
 #        menu.write_csodiaq_fdr_outputs(outFile, corrected=True)
 #        menu.write_DISPA_targeted_reanalysis_files(outFile)
 
-        menu.heavy_light_quantification(outFile, libFile, 'Data/Input/jesse/')
+
+        expFiles = [
+            'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to8_01.mzXML',
+            'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to4_01.mzXML',
+            'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to2_01.mzXML',
+            'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_1to1_01.mzXML',
+            'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_2to1_01.mzXML',
+            'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_4to1_01.mzXML',
+            'Data/Input/jesse/20190503_DI2A_tMS2_OTmostint_A549_8to1_01.mzXML',
+        ]
+        inFile = 'Data/GUIOutput/CsoDIAq-file1_20190411_DI2A_1to16_n1b_corrected_mostIntenseTargs_allCVs.csv'
+        menu.heavy_light_quantification(inFile, libFile, expFiles, 'Data/GUIOutput/', 20, 0, 0, 'ratio_median', 0, 'Data/GUIOutput/SILAC_histogram.png')
+        #menu.heavy_light_quantification(outFile, libFile, 'Data/Input/jesse/')

@@ -483,7 +483,6 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
         'fileName', # Name of the query spectra file.
         'scan', # Scan number, corresponding to scans in the query spectra file.
         'MzEXP', # precursor m/z for query spectrum. Column 'windowWideness' corresponds to this value.
-        'zEXP', # precursor charge for query spectrum. Note that this is likely an estimate, as the exact charge of every compound in the scan is unknown.
         'peptide', # Peptide sequence for the library spectrum corresponding to this row.
         'protein', # Protein name the peptide corresponds to, also derived from the library spectrum corresponding to this row.
         'MzLIB', # precursor m/z for the library spectrum corresponding to this row.
@@ -519,10 +518,8 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
 
         with mzxml.read(expSpectraFile) as spectra:
             for spec in spectra:
-#                if int(spec['num']) < 3601:
                 num = spec['num']
                 precursorMz = spec['precursorMz'][0]['precursorMz']
-                precursorCharge = spec['precursorMz'][0]['precursorCharge']
                 peakCount = len(spec['intensity array'])
                 CV = spec['compensationVoltage']
                 window = spec['precursorMz'][0]['windowWideness']
@@ -532,9 +529,7 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
                 top_mz = precursorMz + window / 2
                 bottom_mz = precursorMz - window / 2
                 quePeakDict[(top_mz, bottom_mz)] += zip(spec['m/z array'],spec['intensity array'],peakIDs)
-
-                queValDict[num] = [ precursorMz, precursorCharge, peakCount, CV, window ]
-
+                queValDict[num] = [ precursorMz, peakCount, CV, window ]
         time = timer()
         prevtime = time
         for w in quePeakDict:
@@ -562,7 +557,6 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
                         expSpectraFile, #fileName
                         key[1], #scan
                         queValDict[key[1]][0], #MzEXP
-                        queValDict[key[1]][1], #zEXP
                         key[0][1], #peptide
                         lib[key[0]]['ProteinName'], #protein
                         key[0][0], #MzLIB
@@ -573,8 +567,8 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
                         len(lib[key[0]]['Peaks']), #Peaks(Library)
                         countDict[key], #shared
                         ionCount, #ionCount
-                        queValDict[key[1]][3], #compensationVoltage
-                        queValDict[key[1]][4], #totalWindowWidth
+                        queValDict[key[1]][2], #compensationVoltage
+                        queValDict[key[1]][3], #totalWindowWidth
                         (countDict[key]**(1/5))*cosine
                     ]
                     writer.writerow(temp)
@@ -1082,12 +1076,7 @@ Returns:
         subsequent column represents the ratios for those peptides derived from each data file of the DISPA re-analysis.
 
 '''
-def heavy_light_quantification(fragDict, libDict, mzxmlFiles, var):
-
-    # @DEBUG: See above 'var' parameter description. These will be removed by the end of the project.
-    minMatch = var[0]
-    m = var[1]
-    stdev = var[2]
+def heavy_light_quantification(fragDict, libDict, mzxmlFiles, outDir, massTol, minMatch, ratioType, correction, hist):
 
     # final return value initialized, and the first two columns set.
     finalDf = pd.DataFrame()
@@ -1108,7 +1097,7 @@ def heavy_light_quantification(fragDict, libDict, mzxmlFiles, var):
 
     # Heavy:Light Ratio for each peptide is calculated for every DISPA reanalysis file. Looping over the files begins here.
     for f in mzxmlFiles:
-        if stdev == -1: offset, tolerance = 0,10
+        if correction == -1: offset, tolerance = 0, massTol
         else:
             # In order to apply a ppm correction, optimal offset and tolerance for the data.
             ppmDiffs = []
@@ -1123,23 +1112,14 @@ def heavy_light_quantification(fragDict, libDict, mzxmlFiles, var):
                     expSpectrum.sort(key=lambda x:x[0])
 
                     # all PPM differences from matches of interest are included for consideration
-                    l, h = spectra_peak_comparison(sorted(libDict[scan]), expSpectrum, 50, 0, tag='qPPM')
+                    l, h = spectra_peak_comparison(sorted(libDict[scan]), expSpectrum, massTol, 0, tag='qPPM')
                     for pep in l:
                         if len(l[pep]) >= minMatch: ppmDiffs += l[pep]
                     for pep in h:
                         if len(h[pep]) >= minMatch: ppmDiffs += h[pep]
 
-            # offset and tolerance determined from the list of PPM differences
-            stringVar = [str(x) for x in var]
-            if var[2]<1: stringVar[2] = 'P'+stringVar[2].split('.')[-1]
-            offset, tolerance = find_offset_tol(sorted(ppmDiffs), 'Data/QuantifyCompare/Histograms/hist'+'_'.join(stringVar)+'.png', stdev=stdev)
 
-        #print(str(offset)+','+str(tolerance),flush=True)
-        # @DEBUG: Remove these
-        #offset, tolerance = 0,10
-        #print(offset)
-        #print(tolerance)
-        #print('\n')
+            offset, tolerance = find_offset_tol(sorted(ppmDiffs), hist, stdev=correction)
 
         # Now that an offset and tolerance has been established specific to the data, the program runs the algorithm to calculate heavy:light ratios
         data = []
@@ -1171,28 +1151,11 @@ def heavy_light_quantification(fragDict, libDict, mzxmlFiles, var):
                     onlyHeavy = heavySet - lightSet
                     for key in onlyHeavy: l[key] = smallPeakIntensity
 
-                    # @DEBUG: For seeing output relating to a specific scan. When blank, nothing happens.
-                    scanEx = ''
-                    if scan == scanEx:
-                        print('\n')
-                        print(f)
-                        print(list(l.values()))
-                        print(list(h.values()))
-
                     # ratio is calculated if there are enough peaks to warrant a match.
                     if minMatch: check = (len(l) >= minMatch)
                     else: check = match_score(list(l.keys()))
                     if check:
-                        ratio = return_ratio(l, h, m)
-
-                        # @DEBUG: For seeing output relating to a specific scan. When blank, nothing happens.
-                        if scan == scanEx:
-                            keys = list(l.keys())
-                            lightInt = [l[key] for key in keys]
-                            heavyInt = [h[key] for key in keys]
-                            for i in range(len(lightInt)):
-                                print(str(heavyInt[i])+'/'+str(lightInt[i])+'='+str(heavyInt[i]/lightInt[i]))
-                            print(ratio)
+                        ratio = return_ratio(l, h, ratioType)
 
                     # if there are not enough peaks to warrant a match, the ratio is returned as NaN.
                     else:
@@ -1203,11 +1166,6 @@ def heavy_light_quantification(fragDict, libDict, mzxmlFiles, var):
 
         # column of ratios from the just-analyzed file is added to the output
         finalDf[f] = [ratioDict[key] for key in sorted(ratioDict.keys())]
-
-    # @DEBUG: Final output is written to a file here - may be elsewhere in the future
-    if var[2]<1: var[2] = 'P'+str(var[2]).split('.')[-1]
-    var = [str(x) for x in var]
-    finalDf.to_csv('Data/oldOutput/test_'+'_'.join(var)+'.csv', index=False)
     return finalDf
 
 
@@ -1257,8 +1215,8 @@ def make_quant_dicts(inFile, libFile, mzxmlFiles, maxPeaks):
     for i in range(len(fragDf)):
 
         # @DEBUG: Top line for my ouput, bottom for Jesse's old output.
-        #seq, mz, z, CV = fragDf.loc[i]['peptide'], fragDf.loc[i]['MzLIB'], fragDf.loc[i]['zLIB'], fragDf.loc[i]['CompensationVoltage']
-        seq, mz, z, CV = fragDf.loc[i]['Peptide'], fragDf.loc[i]['prec_light_mz'], fragDf.loc[i]['z'], fragDf.loc[i]['CV']
+        seq, mz, z, CV = fragDf.loc[i]['peptide'], fragDf.loc[i]['MzLIB'], fragDf.loc[i]['zLIB'], fragDf.loc[i]['CompensationVoltage']
+        #seq, mz, z, CV = fragDf.loc[i]['Peptide'], fragDf.loc[i]['prec_light_mz'], fragDf.loc[i]['z'], fragDf.loc[i]['CV']
 
 
         '''
@@ -1482,7 +1440,7 @@ def mgf_library_upload_quant(fileName, scanDict, digDict, aaDict, maxPeaks):
 
         # y-ion peaks are sorted by intensity, and lower-intensity peaks are filtered out.
         fragList.sort(reverse=True)
-        if type(maxPeaks) is not str and len(fragList) >= maxPeaks: fragList = fragList[:maxPeaks]
+        if maxPeaks !=0 and len(fragList) >= maxPeaks: fragList = fragList[:maxPeaks]
 
         # heavy counterpart mz is calculated. Light and heavy pairs are additionally tagged by their intensity rank and included in the final output.
         peaks = []
@@ -1565,7 +1523,7 @@ def traml_library_upload_quant(fileName, scanDict, maxPeaks):
         # @DEBUG: see above
         if scanDict[key]==scanEx:
             for x in fragList: print(x)
-        if type(maxPeaks) is not str and len(fragList) >= maxPeaks: fragList = fragList[:maxPeaks]
+        if maxPeaks !=0 and len(fragList) >= maxPeaks: fragList = fragList[:maxPeaks]
 
         # heavy counterpart mz is calculated. Light and heavy pairs are additionally tagged by their intensity rank and included in the final output.
         peaks = []
@@ -1630,6 +1588,9 @@ def return_ratio(lightDict, heavyDict, type):
     # ratio_median: the median value of un-normalized, raw ratios is returned.
     normRatios = [x/y for x,y in zip(heavyInt, lightInt)]
     if type=='ratio_median': return np.median(normRatios)
+
+    # ratio_mean: the mean value of un-normalized, raw ratios is returned.
+    if type=='ratio_mean': return np.mean(normRatios)
 
     # if the type doesn't match one of the above options, an error message is returned instead.
     return 'invalidType'

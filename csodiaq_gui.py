@@ -22,6 +22,7 @@ from PyQt5.QtWidgets import QCheckBox
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QTabWidget
 from PyQt5.QtWidgets import QListWidget
+from PyQt5.QtWidgets import QComboBox
 from PyQt5.QtCore import Qt
 
 import csodiaq_base_functions as cbf
@@ -40,78 +41,31 @@ __version__ = '0.1'
 __author__ = 'Caleb Webster Cranney'
 
 
-class IdWindow(QWidget):
-    """Dialog."""
-    def __init__(self, parent=None):
-        """Initializer."""
-        super().__init__(parent)
+class csodiaqWindow(QWidget):
+    def __init__(self):
+        super().__init__()
 
         self.p = None
         self.dict = None
         self.INVALID = -1
         self.VALID_COLOR = 'lightgreen'
         self.INVALID_COLOR = 'rgb(255,99,71)'
+        self.debug_dicts = []
 
 
         dlgLayout = QVBoxLayout()
-
-        dlgLayout.addWidget(QLabel('File Input:'))
-        self.diaFiles = QListWidget()
-        self.delBtn = QPushButton('Delete')
-        self.delBtn.clicked.connect(self.delete_selected_values)
-        self.clrBtn = QPushButton('Clear')
-        self.clrBtn.clicked.connect(self.diaFiles.clear)
-        self.diaFileText = QLabel('*DIA Data File:')
-        self.btn1 = QPushButton('Browse')
-        self.btn1.clicked.connect(lambda:self.getfile(self.diaFiles))
-        self.libFileText = QLabel('*Library File:')
-        self.btn2 = QPushButton('Browse')
-        self.btn2.clicked.connect(lambda:self.getfile(self.libFile))
-        self.libFile = QLineEdit()
-        self.outDirText = QLabel('*Outfile Directory:')
-        self.btn3 = QPushButton('Browse')
-        self.outDir = QLineEdit()
-        self.btn3.clicked.connect(lambda:self.getfile(self.outDir, isFile=False))
         fileLayout = QFormLayout()
-        fileLayout.addRow(self.diaFileText, self.btn1)
-        fileLayout.addRow(self.diaFiles)
-        fileLayout.addRow(self.delBtn, self.clrBtn)
-        fileLayout.addRow(self.libFileText, self.btn2)
-        fileLayout.addRow(self.libFile)
-        fileLayout.addRow(self.outDirText, self.btn3)
-        fileLayout.addRow(self.outDir)
+        settingLayout = QFormLayout()
+
+        self.set_files_parent(fileLayout)
+        self.set_files_child(fileLayout)
+        dlgLayout.addWidget(QLabel('File Input:'))
         dlgLayout.addLayout(fileLayout)
 
+        self.set_settings_parent(settingLayout)
+        self.set_settings_child(settingLayout)
         dlgLayout.addWidget(QLabel('Settings:'))
-        self.fragMassTolText = QLabel('Initial Fragment Mass Tolerance (in ppm):')
-        self.fragMassTol = QLineEdit()
-        self.corr = QLineEdit()
-        self.histCheckBox = QCheckBox()
-        self.protCheckBox = QCheckBox()
-        self.corrCheckBox = QCheckBox()
-        self.corrText = QLabel('Corrective Standard Deviations:')
-        self.protTarg = QLineEdit()
-        self.protTargText = QLabel('Number of Target Peptides per Protein: ')
-        self.protCheckBox.stateChanged.connect(lambda:self.check_grey(self.protCheckBox, self.protTarg,filledText='1'))
-        self.corrCheckBox.stateChanged.connect(lambda:self.check_grey(self.corrCheckBox, self.corr))
-        self.corrCheckBox.stateChanged.connect(lambda:self.enable_second_box(self.corrCheckBox, self.histCheckBox))
-        settingLayout = QFormLayout()
-        settingLayout.addRow(self.fragMassTolText, self.fragMassTol)
-        settingLayout.addRow('Correction:', self.corrCheckBox)
-        settingLayout.addRow(self.corrText, self.corr)
-        settingLayout.addRow('Protein Inference:', self.protCheckBox)
-        settingLayout.addRow(self.protTargText, self.protTarg)
-        settingLayout.addRow('Create Histogram:', self.histCheckBox)
         dlgLayout.addLayout(settingLayout)
-        self.fragMassTol.setPlaceholderText('20')
-        self.corr.setPlaceholderText('customized')
-        self.corr.setEnabled(False)
-        self.protTarg.setPlaceholderText('untargeted peptide analysis')
-        self.protTarg.setEnabled(False)
-        self.libFile.setEnabled(False)
-        self.outDir.setEnabled(False)
-        self.histCheckBox.setEnabled(False)
-
 
         self.runBtn = QPushButton('Execute')
         self.text = QPlainTextEdit()
@@ -119,10 +73,63 @@ class IdWindow(QWidget):
         dlgLayout.addWidget(self.runBtn)
         dlgLayout.addWidget(self.text)
         self.runBtn.setDefault(True)
+#        self.runBtn.clicked.connect(self.debug)
         self.runBtn.clicked.connect(self.start_process)
-#        self.runBtns.button(QDialogButtonBox.Ok).setText('Run')
 
         self.setLayout(dlgLayout)
+
+    def set_files_parent(self, fileLayout):
+        self.diaFiles = QListWidget()
+        self.delBtn = QPushButton('Delete')
+        self.delBtn.clicked.connect(self.delete_selected_values)
+        self.clrBtn = QPushButton('Clear')
+        self.clrBtn.clicked.connect(self.diaFiles.clear)
+        self.diaFileText = QLabel('DIA Data File:')
+        self.diaBtn = QPushButton('Browse')
+        self.diaBtn.clicked.connect(lambda:self.getfile(self.diaFiles))
+        self.libFileText = QLabel('Library File:')
+        self.libBtn = QPushButton('Browse')
+        self.libBtn.clicked.connect(lambda:self.getfile(self.libFile))
+        self.libFile = QLineEdit()
+        self.outDirText = QLabel('Outfile Directory:')
+        self.dirBtn = QPushButton('Browse')
+        self.outDir = QLineEdit()
+        self.dirBtn.clicked.connect(lambda:self.getfile(self.outDir, isFile=False))
+        fileLayout.addRow(self.diaFileText, self.diaBtn)
+        fileLayout.addRow(self.diaFiles)
+        fileLayout.addRow(self.delBtn, self.clrBtn)
+        fileLayout.addRow(self.libFileText, self.libBtn)
+        fileLayout.addRow(self.libFile)
+        fileLayout.addRow(self.outDirText, self.dirBtn)
+        fileLayout.addRow(self.outDir)
+
+    def set_files_child(self, fileLayout):
+        pass
+
+    def set_settings_parent(self, settingLayout):
+        self.fragMassTolText = QLabel('Initial Fragment Mass Tolerance (in ppm):')
+        self.fragMassTol = QLineEdit()
+        self.corr = QLineEdit()
+        self.corrCheckBox = QCheckBox()
+        self.corrText = QLabel('Corrective Standard Deviations:')
+        self.histCheckBox = QCheckBox()
+
+        self.corrCheckBox.stateChanged.connect(lambda:self.check_grey(self.corrCheckBox, self.corr))
+        self.corrCheckBox.stateChanged.connect(lambda:self.enable_second_box(self.corrCheckBox, self.histCheckBox))
+        settingLayout.addRow(self.fragMassTolText, self.fragMassTol)
+        settingLayout.addRow('Correction:', self.corrCheckBox)
+        settingLayout.addRow(self.corrText, self.corr)
+        settingLayout.addRow('Create Histogram:', self.histCheckBox)
+        self.fragMassTol.setPlaceholderText('20')
+        self.corr.setPlaceholderText('customized')
+        self.corr.setEnabled(False)
+        self.libFile.setEnabled(False)
+        self.outDir.setEnabled(False)
+        self.histCheckBox.setEnabled(False)
+
+
+    def set_settings_child(self, settingLayout):
+        pass
 
     def check_grey(self, checkBox, lineEdit, filledText=''):
         if checkBox.isChecked():
@@ -151,7 +158,13 @@ class IdWindow(QWidget):
 
     def set_dict(self):
         tempDict = {}
-        #print(self.libFile.text())
+        self.set_dict_parent(tempDict)
+        self.set_dict_child(tempDict)
+
+        if -1 in list(tempDict.values()): self.dict = None; return
+        else: self.dict = tempDict
+
+    def set_dict_parent(self, tempDict):
         tempDict['diaFiles'] = self.return_dia_file_values(self.diaFiles, self.diaFileText, permittedTypes=['mzxml'])
         tempDict['libFile'] = self.return_file_path_value(self.libFile.text(), self.libFileText, permittedTypes=['mgf','csv','tsv'])
         tempDict['outDir'] = self.return_file_path_value(self.outDir.text(), self.outDirText)
@@ -160,12 +173,10 @@ class IdWindow(QWidget):
         else: tempDict['corr'] = self.return_valid(self.corrText, False)
         if self.histCheckBox.isChecked(): tempDict['hist'] = True
         else: tempDict['hist'] = False
-        if self.protCheckBox.isChecked(): tempDict['protTarg'] = self.return_integer_above_0(self.protTarg.text(), self.protTargText)
-        else: tempDict['protTarg'] = self.return_valid(self.protTargText, False)
 
 
-        if -1 in list(tempDict.values()): self.dict = None; return
-        else: self.dict = tempDict
+    def set_dict_child(self, tempDict):
+        pass
 
     def return_dia_file_values(self, filesObject, text, permittedTypes=[]):
         if filesObject.count() == 0:
@@ -217,52 +228,34 @@ class IdWindow(QWidget):
     def start_process(self):
         self.set_dict()
         if self.dict==None: return
-        '''
-        self.dict = {'diaFiles': ['/Users/calebcranney/Desktop/Meyer Lab Project/csoDIAq/Data/Input/20190411_DI2A_1to16_n1b.mzXML'],
-        'libFile': '/Users/calebcranney/Desktop/Meyer Lab Project/csoDIAq/Data/Input/human_31peaks_noloss_400to2000_pt2mz.tsv',
-        'outDir': '/Users/calebcranney/Desktop/Meyer Lab Project/csoDIAq/Data/GUIOutput',
-        'fragMassTol': '50',
-        'corr': '1',
-        'hist': True,
-        'protTarg': '1'}
-        '''
+        print(self.dict)
+        #self.dict = {'diaFiles': ['/Users/calebcranney/Desktop/0_DataFiles/20210222_DISPA_hela_03.mzXML'], 'libFile': '/Users/calebcranney/Desktop/0_DataFiles/lib_tsv.tsv', 'outDir': '/Users/calebcranney/Desktop/0_DataFiles/GUIOutput', 'fragMassTol': 'default', 'corr': 'default', 'hist': True, 'protTarg': '1'}
+
 
         if self.p is None:  # No process running.
+            args = []
+            self.set_args_parent(args)
+            self.set_args_child(args)
 
-            args = ['id']
-            for file in self.dict['diaFiles']: args += ['-f', file]
-
-            args += ['-l', self.dict['libFile']]
-            args += ['-o', self.dict['outDir']+'/']
-            if self.dict['fragMassTol']!= 'default': args += ['-m', self.dict['fragMassTol']]
-            if self.dict['corr'] == 'default': args += ['-c']
-            elif self.dict['corr']: args += ['-c', self.dict['corr']]
-            if self.dict['hist']: args += ['-hist']
-            if self.dict['protTarg']: args += ['-p', self.dict['protTarg']]
-
-            '''
-            #print(args)
-            dummyFile = '/Users/calebcranney/Desktop/a4551d2b-9e7b-4f90-99ca-dfd0e711a922.jpg'
-            dummyMGF = '/Users/calebcranney/Desktop/Meyer Lab Project/csoDIAq/Data/Input/human.faims.fixed.decoy.mgf'
-            dummyCSV = '/Users/calebcranney/Desktop/Meyer Lab Project/csoDIAq/Data/Input/human_31peaks_noloss_400to2000_pt2mz_subset.csv'
-
-            args = [ 'id',
-                '-f', '/Users/calebcranney/Desktop/Meyer Lab Project/csoDIAq/Data/Input/20190411_DI2A_1to16_n1b.mzXML',
-                '-l', '/Users/calebcranney/Desktop/Meyer Lab Project/csoDIAq/Data/Input/human_31peaks_noloss_400to2000_pt2mz.tsv',
-                '-o', '/Users/calebcranney/Desktop/Meyer Lab Project/csoDIAq/Data/GUIOutput/',
-                '-m', '10',
-                '-c', '1',
-                '-hist',
-                '-p', '1'
-            ]
-            '''
             self.message("Executing process")
             self.p = QProcess()  # Keep a reference to the QProcess (e.g. on self) while it's running.
             self.p.readyReadStandardOutput.connect(self.handle_stdout)
             self.p.readyReadStandardError.connect(self.handle_stderr)
             self.p.finished.connect(self.process_finished)  # Clean up once complete.
 
-            self.p.start("python3", ['csodiaq.py'] + args)
+            self.p.start('python3', ['csodiaq.py'] + args)
+
+    def set_args_parent(self, args):
+        for file in self.dict['diaFiles']: args += ['-f', file]
+        args += ['-l', self.dict['libFile']]
+        args += ['-o', self.dict['outDir']+'/']
+        if self.dict['fragMassTol']!= 'default': args += ['-t', self.dict['fragMassTol']]
+        if self.dict['corr'] == 'default': args += ['-c']
+        elif self.dict['corr']: args += ['-c', self.dict['corr']]
+        if self.dict['hist']: args += ['-hist']
+
+    def set_args_child(self, args):
+        pass
 
     def handle_stderr(self):
         data = self.p.readAllStandardError()
@@ -278,28 +271,517 @@ class IdWindow(QWidget):
         self.message("Process finished.")
         self.p = None
 
-class quantWindow(QWidget):
-    """Dialog."""
-    def __init__(self, parent=None):
-        """Initializer."""
-        super().__init__(parent)
-        dlgLayout = QVBoxLayout()
+    def set_variables_debug(self, tempDict):
 
-        formLayout = QFormLayout()
-        formLayout.addRow('Outfile Directory and Header:', QLineEdit())
-        formLayout.addRow('Library Spectrum Path:', QLineEdit())
-        formLayout.addRow('FDR Output:', QLineEdit())
-        formLayout.addRow('DISPA Targetted Re-Analysis Directory:', QLineEdit())
-        dlgLayout.addLayout(formLayout)
-        self.runBtn = QPushButton('Execute')
-        dlgLayout.addWidget(self.runBtn)
-        self.runBtn.setDefault(True)
+        self.__init__()
 
-        self.setLayout(dlgLayout)
+        if 'diaFiles' in tempDict and tempDict['diaFiles'] != 'default': self.diaFiles.addItems([x for x in tempDict['diaFiles']])
+        if 'libFile' in tempDict and tempDict['libFile'] != 'default': self.libFile.setText(tempDict['libFile'])
+        if 'outDir' in tempDict and tempDict['outDir'] != 'default': self.outDir.setText(tempDict['outDir'])
+        if 'fragMassTol' in tempDict and tempDict['fragMassTol'] != 'default': self.fragMassTol.setText(tempDict['fragMassTol'])
+        if 'corr' in tempDict:
+            self.corrCheckBox.setCheckState(True)
+            if tempDict['corr'] != 'default': self.corr.setText(tempDict['corr'])
+        if 'hist' in tempDict and tempDict['hist'] == 'default': self.histCheckBox.setCheckState(True)
+
+    def debug(self):
+        for tempDict in self.debug_dicts:
+            self.dict = None
+
+            print(tempDict['title'] + ': ' + tempDict['result'])
+            gui = False
+
+            if tempDict['result']=='CMD Only (Fail)': print('GUI: N/A')
+            else:
+                self.set_variables_debug(tempDict)
+                self.set_dict()
+                print(self.dict)
+                print(tempDict['result'])
+                if self.dict==None and tempDict['result']=='Fail': print('GUI: PASS')
+                elif self.dict!=None and tempDict['result']=='Succeed': print('GUI: PASS'); gui=True
+                else: print('GUI: FAIL XXXXXXXXXXXXXXXXXX')
+
+            if gui:
+                args = []
+                self.set_args_parent(args)
+                self.set_args_child(args)
+            else:
+                args = self.set_args_debug(tempDict)
+
+            noError = [True]
+            tempP = QProcess()
+            tempP.start('python3', ['csodiaq.py'] + args)
+            tempP.waitForFinished(5000)
+
+            if len(tempP.readAllStandardError())==0:
+                if tempDict['result']=='Succeed': print('CMD: PASS')
+                else: print('CMD: FAIL XXXXXXXXXXXXXXXXXX')
+                tempP.kill()
+            else:
+                if tempDict['result']=='Fail' or tempDict['result']=='CMD Only (Fail)': print('CMD: PASS')
+                else: print('CMD: FAIL XXXXXXXXXXXXXXXXXX')
+            print('\n')
 
 
-    def return_values(self):
-        return False
+
+    def set_args_debug(self, tempDict):
+        args = []
+        if 'diaFiles' in tempDict:
+            if tempDict['diaFiles'] == 'default': args += ['-f']
+            else:
+                for file in tempDict['diaFiles']: args += ['-f', file]
+        if 'libFile' in tempDict:
+            if tempDict['libFile'] == 'default': args += ['-l']
+            else: args += ['-l', tempDict['libFile']]
+        if 'outDir' in tempDict:
+            if tempDict['outDir'] == 'default': args += ['-o']
+            else: args += ['-o', tempDict['outDir']+'/']
+        if 'fragMassTol' in tempDict:
+            if tempDict['fragMassTol'] == 'default': args += ['-t']
+            else: args += ['-t', tempDict['fragMassTol']]
+        if 'corr' in tempDict:
+            if tempDict['corr'] == 'default': args += ['-c']
+            else: args += ['-c', tempDict['corr']]
+        if 'hist' in tempDict:
+            if tempDict['hist'] == 'default': args += ['-hist']
+            else: args += ['-hist', tempDict['hist']]
+        return args
+
+class IdWindow(csodiaqWindow):
+    def __init__(self):
+        super().__init__()
+        self.debug_baseline_dict = {
+            'title': 'Baseline',
+            'result': 'Succeed',
+            'diaFiles': ['/Users/calebcranney/Desktop/0_DataFiles/ID1.mzXML', '/Users/calebcranney/Desktop/0_DataFiles/ID2.mzXML'],
+            'libFile': '/Users/calebcranney/Desktop/0_DataFiles/lib_tsv.tsv',
+            'outDir': '/Users/calebcranney/Desktop/0_DataFiles/GUIOutput',
+            'fragMassTol': '20',
+            'corr': '1',
+            'hist': 'default',
+            'protTarg': '1'
+        }
+        self.debug_dicts = [
+            {
+                'title': self.debug_baseline_dict['title'],
+                'result': self.debug_baseline_dict['result'],
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-f) no flag passed',
+                'result': 'Fail',
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-f) no argument provided',
+                'result': 'Fail',
+                'diaFiles': 'default',
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-f) incorrect file type',
+                'result': 'CMD Only (Fail)',
+                'diaFiles': ['/Users/calebcranney/Desktop/test.txt'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-f) file does not exist',
+                'result': 'CMD Only (Fail)',
+                'diaFiles': ['/Users/calebcranney/Desktop/t.txt'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-l) no flag raised',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-l) no argument provided',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': 'default',
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-l) file type MGF',
+                'result': 'Succeed',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': '/Users/calebcranney/Desktop/0_DataFiles/lib_mgf.mgf',
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-l) file type CSV',
+                'result': 'Succeed',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': '/Users/calebcranney/Desktop/0_DataFiles/lib_csv.csv',
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-l) Wrong file type',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': '/Users/calebcranney/Desktop/test.txt',
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-l) File does not exist',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': '/Users/calebcranney/Desktop/t.txt',
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-o) no flag raised',
+                'result': 'Fail',
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-o) no argument provided',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': 'default',
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-o) not a working directory',
+                'result': 'CMD Only',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': '/Users/calebcranney/Desktop/noDir/',
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-o) a file, not a directory',
+                'result': 'CMD Only',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': '/Users/calebcranney/Desktop/test.txt',
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-m) no flag raised',
+                'result': 'Succeed',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-m) no argument provided',
+                'result': 'CMD Only',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': 'default',
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-m) non-integer provided',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': 'test',
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-m) 0 provided',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': '0',
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-m) Value less than 0 provided',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': '-1',
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+
+            {
+                'title': '(-c) no flag raised (and no histogram flag raised)',
+                'result': 'Succeed',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-c) no flag raised (and histogram flag raised)',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-c) or argument provided',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': 'default',
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-c) non-float provided',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': 'test',
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-c) 0.5 provided',
+                'result': 'Succeed',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': '0.5',
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-c) 2 provided',
+                'result': 'Succeed',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': '2',
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-c) 0.4999 provided',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': '0.4999',
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-c) 2.001 provided',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': '2.001',
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-h) no flag raised',
+                'result': 'Succeed',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            {
+                'title': '(-h) argument provided',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': 'test',
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            '''
+            {
+                'title': '(-h) ',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': self.debug_baseline_dict['protTarg']
+            },
+            '''
+        ]
+
+
+    def set_settings_child(self, settingLayout):
+        self.protTarg = QLineEdit()
+        self.protTargText = QLabel('Number of Target Peptides per Protein: ')
+        self.protCheckBox = QCheckBox()
+        settingLayout.addRow(self.protTargText, self.protTarg)
+        settingLayout.addRow('Protein Inference:', self.protCheckBox)
+        self.protCheckBox.stateChanged.connect(lambda:self.check_grey(self.protCheckBox, self.protTarg,filledText='1'))
+        self.protTarg.setPlaceholderText('untargeted peptide analysis')
+        self.protTarg.setEnabled(False)
+
+    def set_dict_child(self, tempDict):
+        if self.protCheckBox.isChecked(): tempDict['protTarg'] = self.return_integer_above_0(self.protTarg.text(), self.protTargText)
+        else: tempDict['protTarg'] = self.return_valid(self.protTargText, False)
+
+    def set_args_child(self, args):
+        args.insert(0,'id')
+        if self.dict['protTarg']: args += ['-p', self.dict['protTarg']]
+
+    def set_variables_debug(self, tempDict):
+        super().set_variables_debug(tempDict)
+        if 'protTarg' in tempDict and tempDict['protTarg'] != 'default': self.protTarg.setText(tempDict['protTarg'])
+
+    def set_args_debug(self, tempDict):
+        args = super().set_args_debug(tempDict)
+        args.insert(0,'id')
+        if 'protTarg' in tempDict:
+            if tempDict['protTarg'] == 'default': args += ['-p']
+            else: args += ['-p', tempDict['protTarg']]
+        return args
+
+class quantWindow(csodiaqWindow):
+    def __init__(self):
+        super().__init__()
+
+    def set_files_child(self, fileLayout):
+        self.idFileText = QLabel('CsoDIAq ID Output File:')
+        self.idFile = QLineEdit()
+        self.idBtn = QPushButton('Browse')
+        self.idBtn.clicked.connect(lambda:self.getfile(self.idFile))
+        fileLayout.addRow(self.idFileText, self.idBtn)
+        fileLayout.addRow(self.idFile)
+
+
+    def set_settings_child(self, settingLayout):
+        self.libPeaks = QLineEdit()
+        self.libPeaks.setPlaceholderText('all spectra peaks')
+        self.libPeaksText = QLabel('Number of Max Peaks per Library Spectra: ')
+        self.minMatch = QLineEdit()
+        self.minMatch.setPlaceholderText('default: 1 of 3 most intense peaks')
+        self.minMatchText = QLabel('Number of Min Peak Matches Required: ')
+        self.ratioType = QComboBox()
+        self.ratioType.addItem('median')
+        self.ratioType.addItem('mean')
+        settingLayout.addRow(self.libPeaksText, self.libPeaks)
+        settingLayout.addRow(self.minMatchText, self.minMatch)
+        settingLayout.addRow(QLabel('Ratio Selection Method:'), self.ratioType)
+
+    def set_dict_child(self, tempDict):
+        tempDict['idFile'] = self.return_file_path_value(self.idFile.text(), self.idFileText, permittedTypes=['csv'])
+        tempDict['libPeaks'] = self.return_integer_above_0(self.libPeaks.text(), self.libPeaksText)
+        tempDict['minMatch'] = self.return_integer_above_0(self.minMatch.text(), self.minMatchText)
+        tempDict['ratioType'] = self.ratioType.currentText()
+
+
+    def set_args_child(self, args):
+        args.insert(0,'quant')
+        args += ['-i', self.dict['idFile']]
+        if self.dict['libPeaks']!= 'default': args += ['-p', self.dict['libPeaks']]
+        if self.dict['minMatch']!= 'default': args += ['-m', self.dict['minMatch']]
+        args += ['-r', self.dict['ratioType']]
+
+    def set_variables_debug(self, tempDict):
+        super().set_variables_debug(tempDict)
+        if 'idFile' in tempDict: self.idFile.setText(tempDict['idFile'])
+        if 'libPeaks' in tempDict: self.libPeaks.setText(tempDict['libPeaks'])
+        if 'minMatch' in tempDict: self.minMatch.setText(tempDict['minMatch'])
+        if 'ratioType' in tempDict: self.ratioType.setText(tempDict['ratioType'])
+
+    def set_args_debug(self, tempDict):
+        args = super().set_args_debug(tempDict)
+
 
 class MyTableWidget(QWidget):
 
