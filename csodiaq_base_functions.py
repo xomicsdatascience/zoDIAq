@@ -1038,7 +1038,7 @@ def return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin):
         tempDf['scanLightMzs'] = scanLightMzs
         tempDf['scanHeavyMzs'] = scanHeavyMzs
 
-        tempDf.to_csv('/Users/calebcranney/Desktop/0_DataFiles/delete'+str(CV)+'.csv',index=False)
+        #tempDf.to_csv('/Users/calebcranney/Desktop/0_DataFiles/delete'+str(CV)+'.csv',index=False)
         allDfs.append(tempDf)
 
         binDict = defaultdict(list)
@@ -1061,6 +1061,7 @@ def bin_assignment(mzValues):
     maxi = max(mzValues)+0.5
     mini = min(mzValues)
     bins = np.arange(mini, maxi, 0.5)
+    bins = [round(x,2) for x in bins]
     values = np.digitize(mzValues, bins)
     #print(mzValues)
     #print(values)
@@ -1252,42 +1253,10 @@ def make_quant_dicts(inFile, libFile, mzxmlFiles, maxPeaks):
         # @DEBUG: Top line for my ouput, bottom for Jesse's old output.
         seq, mz, z, CV = fragDf.loc[i]['peptide'], fragDf.loc[i]['MzLIB'], fragDf.loc[i]['zLIB'], fragDf.loc[i]['CompensationVoltage']
         #seq, mz, z, CV = fragDf.loc[i]['Peptide'], fragDf.loc[i]['prec_light_mz'], fragDf.loc[i]['z'], fragDf.loc[i]['CV']
-
-
-        '''
-        # @DEBUG: error 1
-        # heavy and light mz values are ####CHANGE#### rounded to 2 decimal places in case differences exist between FDR file and experiment file
-        heavyMz = calc_heavy_mz(seq, mz, z)
-
-        # Because the keys might not match up perfectly (for example, if you're using a different library), approximation is taken into account
-        key = (float(mz), float(heavyMz), int(CV))
-        tempKey = tuple([round(key[0],2),round(key[1],2),int(CV)])
-        if tempKey=='(582.79, 586.8, -50)':
-            print(key)
-        keyMatch = tuple_key_match(keyList, key)
-
-        # @DEBUG: Presumably, you won't need this if statement if the re-analysis data was based off the same file
-        if keyMatch:
-
-
-
-            # @DEBUG: error 1
-            # corresponding scan identified
-            scan = fragScanDict[keyMatch]
-
-
-            # FDR calculation variables are put into a new dictionary that can be identified by scan number.
-            fragVarDict[scan] = {'seq':seq, 'mz':mz, 'z':z, 'CV':CV}
-
-            #seq = re.sub(r'\+\d+\.\d+', '', seq)
-            # @DEBUG: error 1
-            # a dictionary that can match library spectrum identifying features to scan number is created.
-            #libScanDict[float(mz), str(seq)] = scan
-            libScanDict[round(mz,2), seq] = scan
-        '''
         lightMz = round(mz, 2)
-        heavyMz = round(calc_heavy_mz(seq, mz, z), 2)
-        key = (lightMz, heavyMz, CV)
+
+        key = (round(fragDf.loc[i]['scanLightMzs'],2), round(fragDf.loc[i]['scanHeavyMzs'],2), CV)
+        #key = (lightMz, heavyMz, CV)
         if key in fragScanDict:
             scan = fragScanDict[key]
             libScanDict[lightMz, seq] = scan
