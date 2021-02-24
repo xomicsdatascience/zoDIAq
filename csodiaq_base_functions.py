@@ -168,6 +168,10 @@ def mgf_library_upload(fileName):
         intensity = [x**0.5 for x in intensity]
         keyList = [key for x in mz]
         peaks = list(tuple(zip(mz,intensity,keyList)))
+
+        #peaks.sort(key=lambda x:x[1],reverse=True)
+        #if len(peaks) > 40: peaks = peaks[:40]
+
         peaks.sort(key=lambda x:x[0])
 
         # final dictionary value is created
@@ -563,7 +567,7 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
                         lib[key[0]]['PrecursorCharge'], #zLIB
                         cosine, #cosine
                         lib[key[0]]['transition_group_id'], #name
-                        queValDict[key[1]][2], #Peaks(Query)
+                        queValDict[key[1]][1], #Peaks(Query)
                         len(lib[key[0]]['Peaks']), #Peaks(Library)
                         countDict[key], #shared
                         ionCount, #ionCount
@@ -857,6 +861,8 @@ def write_csodiaq_fdr_outputs(inFile, specFile, pepFile, protFile):
 
     uniquePeps = []
     for i in range(len(proteinDf)):
+        p = proteinDf.loc[i]['peptide']
+        if p=='LLLLGAGESGK': print(uniquePepsDict[proteinDf.loc[i]['peptide']])
         if len(uniquePepsDict[proteinDf.loc[i]['peptide']]) == 1: uniquePeps.append(1)
         else: uniquePeps.append(0)
 
@@ -1009,28 +1015,57 @@ def return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin):
     allDfs = []
     for CV in CVs:
         tempDf = df[df['CompensationVoltage']==CV].reset_index(drop=True)
-        if proteins: tempDf.groupby('leadingProtein').head(proteins).reset_index()
-        allDfs.append(tempDf)
-        data = []
-        for i in range(len(tempDf)):
-            compound = tempDf.loc[i]['peptide']
-            formula = ''
-            adduct = '(no adduct)'
+        if proteins: tempDf = tempDf.groupby(['leadingProtein']).head(proteins).reset_index()
+        lightMzs = []
+        heavyMzs = []
+        peptides = []
+        rows = len(tempDf)
+        for i in range(rows):
+            peptide = tempDf.loc[i]['peptide']
             lightMz = float(tempDf.loc[i]['MzLIB'])
             charge = tempDf.loc[i]['zLIB']
-            heavyMz = calc_heavy_mz(compound, lightMz, charge)
-            MSXID = i+1
-            data.append([compound, formula, adduct, round(lightMz, ndigits = 2), charge, MSXID])
-            data.append([compound, formula, adduct, round(heavyMz, ndigits = 2), charge, MSXID])
+            heavyMz = calc_heavy_mz(peptide, lightMz, charge)
+            lightMzs.append(lightMz)
+            heavyMzs.append(heavyMz)
+            peptides.append(peptide)
 
 
+        lv, lBins = bin_assignment(lightMzs)
+        hv, hBins = bin_assignment(heavyMzs)
+        scanLightMzs = [lBins[lv[i]] for i in range(rows)]
+        scanHeavyMzs = [hBins[hv[i]] for i in range(rows)]
+
+        tempDf['scanLightMzs'] = scanLightMzs
+        tempDf['scanHeavyMzs'] = scanHeavyMzs
+
+        tempDf.to_csv('/Users/calebcranney/Desktop/0_DataFiles/delete'+str(CV)+'.csv',index=False)
+        allDfs.append(tempDf)
+
+        binDict = defaultdict(list)
+        for i in range(rows):
+            binDict[scanLightMzs[i],scanHeavyMzs[i]].append(peptides[i])
+
+        data = []
+        binKeys = sorted(binDict)
+        for i in range(len(binKeys)):
+            data.append(['/'.join(binDict[binKeys[i]]), '', '(no adduct)', binKeys[i][0]-0.25, 2, i+1])
+            data.append(['/'.join(binDict[binKeys[i]]), '', '(no adduct)', binKeys[i][1]-0.25, 2, i+1])
 
         finalDf = pd.DataFrame(data, columns=['Compound','Formula','Adduct','m.z','z','MSXID'])
-        finalDf = finalDf.drop_duplicates(subset=['m.z'], keep='first')
         finalDf.to_csv(header+str(CV)+'.txt', sep='\t', index=False)
     compDf = pd.concat(allDfs)
     compDf.to_csv(header+'allCVs.csv', index=False)
-    pass
+
+
+def bin_assignment(mzValues):
+    maxi = max(mzValues)+0.5
+    mini = min(mzValues)
+    bins = np.arange(mini, maxi, 0.5)
+    values = np.digitize(mzValues, bins)
+    #print(mzValues)
+    #print(values)
+    #print(bins)
+    return values, bins
 
 
 #############################################################################################################################

@@ -43,24 +43,17 @@ def main():
     if not restricted_file(args['outDirectory']): arg_parser.error('The -o or --outDirectory argument must be an existing directory')
 
     if args['command'] == 'id':
-        if (args['histogram'] and args['correction']==-1): arg_parser.error('The -h or --histogram argument requires the -c or -correction argument')
-        for file in args['files']:
-            if not restricted_file(file, permittedTypes=['mzxml']): arg_parser.error('The -f or --files argument must be an existing file of type mzxml')
-        if not restricted_file(args['library'], permittedTypes=['mgf','csv','tsv']): arg_parser.error('The -l or --library argument must be an existing file of type MGF (.mgf) or TraML (.tsv or .csv) format')
-        if not restricted_file(args['outDirectory']): arg_parser.error('The -o or --outDirectory argument must be an existing directory')
-
-
         lib = cbf.library_file_to_dict(args['library'])
         for i in range(len(args['files'])):
             outFileHeader = 'CsoDIAq-file' +str(i+1)+'_'+ '.'.join(args['files'][i].split('/')[-1].split('.')[:-1])
             outFile = args['outDirectory'] + outFileHeader + '.csv'
 
 
-            menu.write_csodiaq_output(lib, args['files'][i], outFile, initialTol=args['fragmentMassTolerance'])
+            #menu.write_csodiaq_output(lib, args['files'][i], outFile, initialTol=args['fragmentMassTolerance'])
             if args['correction']!=-1:
-                menu.write_ppm_offset_tolerance(outFile, corrected=args['correction'], hist=args['histogram'])
-                menu.write_csodiaq_output(lib, args['files'][i], outFile, corrected=True)
-                menu.write_csodiaq_fdr_outputs(outFile, corrected=True)
+                #menu.write_ppm_offset_tolerance(outFile, corrected=args['correction'], hist=args['histogram'])
+                #menu.write_csodiaq_output(lib, args['files'][i], outFile, corrected=True)
+                #menu.write_csodiaq_fdr_outputs(outFile, corrected=True)
                 menu.write_DISPA_targeted_reanalysis_files(outFile, proteins = args['proteinTargets'])
 
     if args['command'] == 'quant':

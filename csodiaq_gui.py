@@ -226,10 +226,11 @@ class csodiaqWindow(QWidget):
         self.text.appendPlainText(s)
 
     def start_process(self):
-        self.set_dict()
-        if self.dict==None: return
-        print(self.dict)
-        #self.dict = {'diaFiles': ['/Users/calebcranney/Desktop/0_DataFiles/20210222_DISPA_hela_03.mzXML'], 'libFile': '/Users/calebcranney/Desktop/0_DataFiles/lib_tsv.tsv', 'outDir': '/Users/calebcranney/Desktop/0_DataFiles/GUIOutput', 'fragMassTol': 'default', 'corr': 'default', 'hist': True, 'protTarg': '1'}
+        #self.set_dict()
+        #if self.dict==None: return
+        #print(self.dict)
+        self.dict = {'diaFiles': ['/Users/calebcranney/Desktop/0_DataFiles/ID1.mzXML'], 'libFile': '/Users/calebcranney/Desktop/0_DataFiles/lib_tsv.tsv', 'outDir': '/Users/calebcranney/Desktop/0_DataFiles/GUIOutput', 'fragMassTol': 'default', 'corr': 'default', 'hist': True, 'protTarg': '1'}
+        #self.dict = {'diaFiles': ['/Users/calebcranney/Desktop/0_DataFiles/quant1.mzXML', '/Users/calebcranney/Desktop/0_DataFiles/quant2.mzXML'], 'libFile': '/Users/calebcranney/Desktop/0_DataFiles/lib_tsv.tsv', 'outDir': '/Users/calebcranney/Desktop/0_DataFiles/GUIOutput', 'fragMassTol': 'default', 'corr': 'default', 'hist': True, 'idFile': '/Users/calebcranney/Desktop/0_DataFiles/CsoDIAq-allCVs.csv', 'libPeaks': '3', 'minMatch': '1', 'ratioType': 'median'}
 
 
         if self.p is None:  # No process running.
@@ -243,7 +244,7 @@ class csodiaqWindow(QWidget):
             self.p.readyReadStandardError.connect(self.handle_stderr)
             self.p.finished.connect(self.process_finished)  # Clean up once complete.
 
-            self.p.start('python3', ['csodiaq.py'] + args)
+            self.p.start('csodiaq', args)
 
     def set_args_parent(self, args):
         for file in self.dict['diaFiles']: args += ['-f', file]
@@ -295,8 +296,6 @@ class csodiaqWindow(QWidget):
             else:
                 self.set_variables_debug(tempDict)
                 self.set_dict()
-                print(self.dict)
-                print(tempDict['result'])
                 if self.dict==None and tempDict['result']=='Fail': print('GUI: PASS')
                 elif self.dict!=None and tempDict['result']=='Succeed': print('GUI: PASS'); gui=True
                 else: print('GUI: FAIL XXXXXXXXXXXXXXXXXX')
@@ -310,7 +309,7 @@ class csodiaqWindow(QWidget):
 
             noError = [True]
             tempP = QProcess()
-            tempP.start('python3', ['csodiaq.py'] + args)
+            tempP.start('csodiaq', args)
             tempP.waitForFinished(5000)
 
             if len(tempP.readAllStandardError())==0:
@@ -353,7 +352,7 @@ class IdWindow(csodiaqWindow):
         self.debug_baseline_dict = {
             'title': 'Baseline',
             'result': 'Succeed',
-            'diaFiles': ['/Users/calebcranney/Desktop/0_DataFiles/ID1.mzXML', '/Users/calebcranney/Desktop/0_DataFiles/ID2.mzXML'],
+            'diaFiles': ['/Users/calebcranney/Desktop/0_DataFiles/ID1.mzXML'],
             'libFile': '/Users/calebcranney/Desktop/0_DataFiles/lib_tsv.tsv',
             'outDir': '/Users/calebcranney/Desktop/0_DataFiles/GUIOutput',
             'fragMassTol': '20',
@@ -504,7 +503,7 @@ class IdWindow(csodiaqWindow):
             },
             {
                 'title': '(-o) not a working directory',
-                'result': 'CMD Only',
+                'result': 'CMD Only (Fail)',
                 'diaFiles': self.debug_baseline_dict['diaFiles'],
                 'libFile': self.debug_baseline_dict['libFile'],
                 'outDir': '/Users/calebcranney/Desktop/noDir/',
@@ -515,7 +514,7 @@ class IdWindow(csodiaqWindow):
             },
             {
                 'title': '(-o) a file, not a directory',
-                'result': 'CMD Only',
+                'result': 'CMD Only (Fail)',
                 'diaFiles': self.debug_baseline_dict['diaFiles'],
                 'libFile': self.debug_baseline_dict['libFile'],
                 'outDir': '/Users/calebcranney/Desktop/test.txt',
@@ -536,7 +535,7 @@ class IdWindow(csodiaqWindow):
             },
             {
                 'title': '(-m) no argument provided',
-                'result': 'CMD Only',
+                'result': 'CMD Only (Fail)',
                 'diaFiles': self.debug_baseline_dict['diaFiles'],
                 'libFile': self.debug_baseline_dict['libFile'],
                 'outDir': self.debug_baseline_dict['outDir'],
@@ -590,7 +589,7 @@ class IdWindow(csodiaqWindow):
             },
             {
                 'title': '(-c) no flag raised (and histogram flag raised)',
-                'result': 'Fail',
+                'result': 'CMD Only (Fail)',
                 'diaFiles': self.debug_baseline_dict['diaFiles'],
                 'libFile': self.debug_baseline_dict['libFile'],
                 'outDir': self.debug_baseline_dict['outDir'],
@@ -599,8 +598,8 @@ class IdWindow(csodiaqWindow):
                 'protTarg': self.debug_baseline_dict['protTarg']
             },
             {
-                'title': '(-c) or argument provided',
-                'result': 'Fail',
+                'title': '(-c) no argument provided',
+                'result': 'Succeed',
                 'diaFiles': self.debug_baseline_dict['diaFiles'],
                 'libFile': self.debug_baseline_dict['libFile'],
                 'outDir': self.debug_baseline_dict['outDir'],
@@ -676,7 +675,7 @@ class IdWindow(csodiaqWindow):
             },
             {
                 'title': '(-h) argument provided',
-                'result': 'Fail',
+                'result': 'CMD Only (Fail)',
                 'diaFiles': self.debug_baseline_dict['diaFiles'],
                 'libFile': self.debug_baseline_dict['libFile'],
                 'outDir': self.debug_baseline_dict['outDir'],
@@ -685,21 +684,61 @@ class IdWindow(csodiaqWindow):
                 'hist': 'test',
                 'protTarg': self.debug_baseline_dict['protTarg']
             },
-            '''
             {
-                'title': '(-h) ',
-                'result': 'Fail',
+                'title': '(-p) no flag raised',
+                'result': 'Succeed',
                 'diaFiles': self.debug_baseline_dict['diaFiles'],
                 'libFile': self.debug_baseline_dict['libFile'],
                 'outDir': self.debug_baseline_dict['outDir'],
                 'fragMassTol': self.debug_baseline_dict['fragMassTol'],
                 'corr': self.debug_baseline_dict['corr'],
                 'hist': self.debug_baseline_dict['hist'],
-                'protTarg': self.debug_baseline_dict['protTarg']
             },
-            '''
+            {
+                'title': '(-p) no argument provided',
+                'result': 'CMD Only (Fail)',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': 'default'
+            },
+            {
+                'title': '(-p) non-integer provided',
+                'result': 'CMD Only (Fail)',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': 'test'
+            },
+            {
+                'title': '(-p) 0 provided',
+                'result': 'CMD Only (Fail)',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': '0'
+            },
+            {
+                'title': '(-p) Value less than 0 provided',
+                'result': 'CMD Only (Fail)',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'protTarg': '-1'
+            },
         ]
-
 
     def set_settings_child(self, settingLayout):
         self.protTarg = QLineEdit()
@@ -734,6 +773,298 @@ class IdWindow(csodiaqWindow):
 class quantWindow(csodiaqWindow):
     def __init__(self):
         super().__init__()
+        self.debug_baseline_dict = {
+            'title': 'Baseline',
+            'result': 'Succeed',
+            'diaFiles': ['/Users/calebcranney/Desktop/0_DataFiles/quant1.mzXML'],
+            'libFile': '/Users/calebcranney/Desktop/0_DataFiles/lib_tsv.tsv',
+            'outDir': '/Users/calebcranney/Desktop/0_DataFiles/GUIOutput',
+            'fragMassTol': '20',
+            'corr': '1',
+            'hist': 'default',
+            'idFile': '/Users/calebcranney/Desktop/0_DataFiles/CsoDIAq-allCVs.csv',
+            'libPeaks': '3',
+            'minMatch': '1',
+            'ratioType': 'median'
+        }
+        self.debug_dicts = [
+            {
+                'title': self.debug_baseline_dict['title'],
+                'result': self.debug_baseline_dict['result'],
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'idFile': self.debug_baseline_dict['idFile'],
+                'libPeaks': self.debug_baseline_dict['libPeaks'],
+                'minMatch': self.debug_baseline_dict['minMatch'],
+                'ratioType': self.debug_baseline_dict['ratioType']
+            },
+            {
+                'title': '(-i) no flag raised',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'libPeaks': self.debug_baseline_dict['libPeaks'],
+                'minMatch': self.debug_baseline_dict['minMatch'],
+                'ratioType': self.debug_baseline_dict['ratioType']
+            },
+            {
+                'title': '(-i) no argument given',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'idFile': 'default',
+                'libPeaks': self.debug_baseline_dict['libPeaks'],
+                'minMatch': self.debug_baseline_dict['minMatch'],
+                'ratioType': self.debug_baseline_dict['ratioType']
+            },
+            {
+                'title': '(-i) wrong file type',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'idFile': '/Users/calebcranney/Desktop/test.txt',
+                'libPeaks': self.debug_baseline_dict['libPeaks'],
+                'minMatch': self.debug_baseline_dict['minMatch'],
+                'ratioType': self.debug_baseline_dict['ratioType']
+            },
+            {
+                'title': '(-i) file does not exist',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'idFile': '/Users/calebcranney/Desktop/t.txt',
+                'libPeaks': self.debug_baseline_dict['libPeaks'],
+                'minMatch': self.debug_baseline_dict['minMatch'],
+                'ratioType': self.debug_baseline_dict['ratioType']
+            },
+            {
+                'title': '(-p) no flag raised',
+                'result': 'Succeed',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'idFile': self.debug_baseline_dict['idFile'],
+                'minMatch': self.debug_baseline_dict['minMatch'],
+                'ratioType': self.debug_baseline_dict['ratioType']
+            },
+            {
+                'title': '(-p) no argument provided',
+                'result': 'CMD Only (Fail)',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'idFile': self.debug_baseline_dict['idFile'],
+                'libPeaks': 'default',
+                'minMatch': self.debug_baseline_dict['minMatch'],
+                'ratioType': self.debug_baseline_dict['ratioType']
+            },
+            {
+                'title': '(-p) non-integer provided',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'idFile': self.debug_baseline_dict['idFile'],
+                'libPeaks': 'test',
+                'minMatch': self.debug_baseline_dict['minMatch'],
+                'ratioType': self.debug_baseline_dict['ratioType']
+            },
+            {
+                'title': '(-p) 0 provided',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'idFile': self.debug_baseline_dict['idFile'],
+                'libPeaks': '0',
+                'minMatch': self.debug_baseline_dict['minMatch'],
+                'ratioType': self.debug_baseline_dict['ratioType']
+            },
+            {
+                'title': '(-p) value less than 0 provided',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'idFile': self.debug_baseline_dict['idFile'],
+                'libPeaks': '-1',
+                'minMatch': self.debug_baseline_dict['minMatch'],
+                'ratioType': self.debug_baseline_dict['ratioType']
+            },
+            {
+                'title': '(-m) no flag raised',
+                'result': 'Succeed',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'idFile': self.debug_baseline_dict['idFile'],
+                'libPeaks': self.debug_baseline_dict['libPeaks'],
+                'ratioType': self.debug_baseline_dict['ratioType']
+            },
+            {
+                'title': '(-m) no argumnt provided',
+                'result': 'CMD Only (Fail)',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'idFile': self.debug_baseline_dict['idFile'],
+                'libPeaks': self.debug_baseline_dict['libPeaks'],
+                'minMatch': 'default',
+                'ratioType': self.debug_baseline_dict['ratioType']
+            },
+            {
+                'title': '(-m) non-integer provided',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'idFile': self.debug_baseline_dict['idFile'],
+                'libPeaks': self.debug_baseline_dict['libPeaks'],
+                'minMatch': 'test',
+                'ratioType': self.debug_baseline_dict['ratioType']
+            },
+            {
+                'title': '(-m) 0 provided',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'idFile': self.debug_baseline_dict['idFile'],
+                'libPeaks': self.debug_baseline_dict['libPeaks'],
+                'minMatch': '0',
+                'ratioType': self.debug_baseline_dict['ratioType']
+            },
+            {
+                'title': '(-m) value less than 0 provided',
+                'result': 'Fail',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'idFile': self.debug_baseline_dict['idFile'],
+                'libPeaks': self.debug_baseline_dict['libPeaks'],
+                'minMatch': '-1',
+                'ratioType': self.debug_baseline_dict['ratioType']
+            },
+            {
+                'title': '(-r) no flag raised',
+                'result': 'Succeed',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'idFile': self.debug_baseline_dict['idFile'],
+                'libPeaks': self.debug_baseline_dict['libPeaks'],
+                'minMatch': self.debug_baseline_dict['minMatch'],
+            },
+            {
+                'title': '(-r) no argument provided',
+                'result': 'CMD Only (Fail)',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'idFile': self.debug_baseline_dict['idFile'],
+                'libPeaks': self.debug_baseline_dict['libPeaks'],
+                'minMatch': self.debug_baseline_dict['minMatch'],
+                'ratioType': 'default'
+            },
+            {
+                'title': '(-r) "median" provided',
+                'result': 'Succeed',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'idFile': self.debug_baseline_dict['idFile'],
+                'libPeaks': self.debug_baseline_dict['libPeaks'],
+                'minMatch': self.debug_baseline_dict['minMatch'],
+                'ratioType': 'median'
+            },
+            {
+                'title': '(-r) "mean" provided',
+                'result': 'Succeed',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'idFile': self.debug_baseline_dict['idFile'],
+                'libPeaks': self.debug_baseline_dict['libPeaks'],
+                'minMatch': self.debug_baseline_dict['minMatch'],
+                'ratioType': 'mean'
+            },
+            {
+                'title': '(-r) Invalid value provided',
+                'result': 'CMD Only (Fail)',
+                'diaFiles': self.debug_baseline_dict['diaFiles'],
+                'libFile': self.debug_baseline_dict['libFile'],
+                'outDir': self.debug_baseline_dict['outDir'],
+                'fragMassTol': self.debug_baseline_dict['fragMassTol'],
+                'corr': self.debug_baseline_dict['corr'],
+                'hist': self.debug_baseline_dict['hist'],
+                'idFile': self.debug_baseline_dict['idFile'],
+                'libPeaks': self.debug_baseline_dict['libPeaks'],
+                'minMatch': self.debug_baseline_dict['minMatch'],
+                'ratioType': 'test'
+            },
+    ]
 
     def set_files_child(self, fileLayout):
         self.idFileText = QLabel('CsoDIAq ID Output File:')
@@ -777,11 +1108,25 @@ class quantWindow(csodiaqWindow):
         if 'idFile' in tempDict: self.idFile.setText(tempDict['idFile'])
         if 'libPeaks' in tempDict: self.libPeaks.setText(tempDict['libPeaks'])
         if 'minMatch' in tempDict: self.minMatch.setText(tempDict['minMatch'])
-        if 'ratioType' in tempDict: self.ratioType.setText(tempDict['ratioType'])
+        if 'ratioType' in tempDict: self.ratioType.setCurrentText(tempDict['ratioType'])
 
     def set_args_debug(self, tempDict):
         args = super().set_args_debug(tempDict)
-
+        args.insert(0,'quant')
+        if 'idFile' in tempDict:
+            if tempDict['idFile'] == 'default': args += ['-i']
+            else: args += ['-i', tempDict['idFile']]
+        args.insert(0,'id')
+        if 'libPeaks' in tempDict:
+            if tempDict['libPeaks'] == 'default': args += ['-p']
+            else: args += ['-p', tempDict['libPeaks']]
+        if 'minMatch' in tempDict:
+            if tempDict['minMatch'] == 'default': args += ['-m']
+            else: args += ['-m', tempDict['minMatch']]
+        if 'ratioType' in tempDict:
+            if tempDict['ratioType'] == 'default': args += ['-r']
+            else: args += ['-r', tempDict['ratioType']]
+        return args
 
 class MyTableWidget(QWidget):
 
