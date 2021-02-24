@@ -1092,8 +1092,8 @@ Parameters:
     dictionary 'fragDict'
         key - string representing the scan number of the DISPA re-analysis. Scan numbers are consistent across datasets from
             the same run.
-        value - dictionary of various values.
-            'seq': sequence of the peptide corresponding to the scan of interest.
+        value - list of dictionaries, dictionary values below.
+            'seq': sequence of a peptide corresponding to the scan of interest.
             'mz': precursor mass of the peptide.
             'z': charge of the peptide.
             'CV': Compensation Voltage setting where the peptide was originally found.
