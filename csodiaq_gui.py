@@ -226,10 +226,10 @@ class csodiaqWindow(QWidget):
         self.text.appendPlainText(s)
 
     def start_process(self):
-        #self.set_dict()
-        #if self.dict==None: return
+        self.set_dict()
+        if self.dict==None: return
         #print(self.dict)
-        self.dict = {'diaFiles': ['/Users/calebcranney/Desktop/0_DataFiles/ID1.mzXML'], 'libFile': '/Users/calebcranney/Desktop/0_DataFiles/lib_tsv.tsv', 'outDir': '/Users/calebcranney/Desktop/0_DataFiles/GUIOutput', 'fragMassTol': 'default', 'corr': 'default', 'hist': True, 'protTarg': '1'}
+        #self.dict = {'diaFiles': ['/Users/calebcranney/Desktop/0_DataFiles/ID1.mzXML'], 'libFile': '/Users/calebcranney/Desktop/0_DataFiles/lib_tsv.tsv', 'outDir': '/Users/calebcranney/Desktop/0_DataFiles/GUIOutput', 'fragMassTol': 'default', 'corr': 'default', 'hist': True, 'protTarg': '1'}
         #self.dict = {'diaFiles': ['/Users/calebcranney/Desktop/0_DataFiles/quant1.mzXML', '/Users/calebcranney/Desktop/0_DataFiles/quant2.mzXML'], 'libFile': '/Users/calebcranney/Desktop/0_DataFiles/lib_tsv.tsv', 'outDir': '/Users/calebcranney/Desktop/0_DataFiles/GUIOutput', 'fragMassTol': 'default', 'corr': 'default', 'hist': True, 'idFile': '/Users/calebcranney/Desktop/0_DataFiles/CsoDIAq-allCVs.csv', 'libPeaks': '3', 'minMatch': '1', 'ratioType': 'median'}
 
 
