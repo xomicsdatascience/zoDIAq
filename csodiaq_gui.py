@@ -68,11 +68,15 @@ class csodiaqWindow(QWidget):
         dlgLayout.addLayout(settingLayout)
 
         self.runBtn = QPushButton('Execute')
+        self.killBtn = QPushButton('Kill Process')
         self.text = QPlainTextEdit()
         self.text.setReadOnly(True)
         dlgLayout.addWidget(self.runBtn)
+        dlgLayout.addWidget(self.killBtn)
         dlgLayout.addWidget(self.text)
         self.runBtn.setDefault(True)
+        self.killBtn.setEnabled(False)
+        self.killBtn.clicked.connect(self.kill_process)
 #        self.runBtn.clicked.connect(self.debug)
         self.runBtn.clicked.connect(self.start_process)
 
@@ -231,7 +235,7 @@ class csodiaqWindow(QWidget):
         #print(self.dict)
         #self.dict = {'diaFiles': ['/Users/calebcranney/Desktop/0_DataFiles/ID1.mzXML'], 'libFile': '/Users/calebcranney/Desktop/0_DataFiles/lib_tsv.tsv', 'outDir': '/Users/calebcranney/Desktop/0_DataFiles/GUIOutput', 'fragMassTol': 'default', 'corr': 'default', 'hist': True, 'protTarg': '1'}
         #self.dict = {'diaFiles': ['/Users/calebcranney/Desktop/0_DataFiles/quant1.mzXML', '/Users/calebcranney/Desktop/0_DataFiles/quant2.mzXML'], 'libFile': '/Users/calebcranney/Desktop/0_DataFiles/lib_tsv.tsv', 'outDir': '/Users/calebcranney/Desktop/0_DataFiles/GUIOutput', 'fragMassTol': 'default', 'corr': 'default', 'hist': True, 'idFile': '/Users/calebcranney/Desktop/0_DataFiles/CsoDIAq-allCVs.csv', 'libPeaks': '3', 'minMatch': '1', 'ratioType': 'median'}
-
+        self.killBtn.setEnabled(True)
 
         if self.p is None:  # No process running.
             args = []
@@ -243,7 +247,6 @@ class csodiaqWindow(QWidget):
             self.p.readyReadStandardOutput.connect(self.handle_stdout)
             self.p.readyReadStandardError.connect(self.handle_stderr)
             self.p.finished.connect(self.process_finished)  # Clean up once complete.
-
             self.p.start('csodiaq', args)
 
     def set_args_parent(self, args):
@@ -268,8 +271,12 @@ class csodiaqWindow(QWidget):
         stdout = bytes(data).decode("utf8")
         self.message(stdout)
 
+    def kill_process(self):
+        self.p.kill()
+
     def process_finished(self):
         self.message("Process finished.")
+        self.killBtn.setEnabled(False)
         self.p = None
 
     def set_variables_debug(self, tempDict):
