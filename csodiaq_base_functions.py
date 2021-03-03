@@ -524,7 +524,7 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
 
         with mzxml.read(expSpectraFile) as spectra:
             for spec in spectra:
-                if spectralCount % 10000 == 0 and spectralCount != 0:
+                if spectralCount % 500 == 0 and spectralCount != 0:
                     print(timer())
                     print(spectralCount)
                 spectralCount += 1
