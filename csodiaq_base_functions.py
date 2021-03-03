@@ -520,8 +520,14 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
 
         queValDict = {}
 
+        spectralCount = 0
+
         with mzxml.read(expSpectraFile) as spectra:
             for spec in spectra:
+                if spectralCount % 10000 == 0 and spectralCount != 0:
+                    print(timer())
+                    print(spectralCount)
+                spectralCount += 1
                 if 'precursorMz' not in spec: continue
                 num = spec['num']
                 precursorMz = spec['precursorMz'][0]['precursorMz']
@@ -536,15 +542,18 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
                 bottom_mz = precursorMz - window / 2
                 quePeakDict[(top_mz, bottom_mz)] += zip(spec['m/z array'],spec['intensity array'],peakIDs)
                 queValDict[num] = [ precursorMz, peakCount, CV, window ]
+                print('Number of Unpooled MS/MS Query Spectra: ' + str(spectraCount))
+                print('Number of Pooled MS/MS Query Spectra: ' + str(len(queValDict)),flush=True)
+
         time = timer()
         prevtime = time
         for w in quePeakDict:
             # Printing time taken to analyze every 100 spectra.
             count += 1
-            if count % 100 == 0:
+            if count % 1 == 0 and count != 0:
                 time = timer()
-                print(str(count)+ ', ' + str(time-prevtime),flush=True)
-                #print(str(count)+','+str(time-prevtime)+','+str(len(spec['m/z array']))+','+str(spec['precursorMz'][0]['precursorMz'])+','+str(len(libKeys))+','+outFile,flush=True)
+                print('\nNumber of Pooled Experimental Spectra Analyzed: ' + str(count))
+                print('Time Since Last Checkpoint: ' + str(round(time-prevtime,2)) + ' Seconds', flush=True)
                 prevtime = time
 
             quePeakDict[w] = sorted(quePeakDict[w])
