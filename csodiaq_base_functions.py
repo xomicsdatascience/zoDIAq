@@ -522,6 +522,7 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
 
         with mzxml.read(expSpectraFile) as spectra:
             for spec in spectra:
+                print(spec)
                 num = spec['num']
                 precursorMz = spec['precursorMz'][0]['precursorMz']
                 peakCount = len(spec['intensity array'])
