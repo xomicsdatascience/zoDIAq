@@ -1016,6 +1016,8 @@ def return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin):
     CVs = set(filter(notNan, CVs))
 
     allDfs = []
+    if len(CVs)==0: CVs.add('')
+
     for CV in CVs:
         tempDf = df[df['CompensationVoltage']==CV].reset_index(drop=True)
         if proteins: tempDf = tempDf.groupby(['leadingProtein']).head(proteins).reset_index()
@@ -1056,8 +1058,11 @@ def return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin):
 
         finalDf = pd.DataFrame(data, columns=['Compound','Formula','Adduct','m.z','z','MSXID'])
         finalDf.to_csv(header+str(CV)+'.txt', sep='\t', index=False)
-    compDf = pd.concat(allDfs)
-    compDf.to_csv(header+'allCVs.csv', index=False)
+    if len(CVs) > 1:
+        compDf = pd.concat(allDfs)
+        compDf.to_csv(header+'allCVs.csv', index=False)
+
+
 
 
 def bin_assignment(mzValues):
