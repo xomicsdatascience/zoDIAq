@@ -1012,6 +1012,9 @@ def return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin):
     if 'uniquePeptide' in df.columns: df = df[df['uniquePeptide']==1].sort_values('ionCount', ascending=False).reset_index(drop=True)
 
     CVs = set(df['CompensationVoltage'])
+    def notNan(x): return ~np.isnan(x)
+    CVs = set(filter(notNan, CVs))
+
     allDfs = []
     for CV in CVs:
         tempDf = df[df['CompensationVoltage']==CV].reset_index(drop=True)
