@@ -526,7 +526,8 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
                 num = spec['num']
                 precursorMz = spec['precursorMz'][0]['precursorMz']
                 peakCount = len(spec['intensity array'])
-                CV = spec['compensationVoltage']
+                if 'compensationVoltage' in spec: CV = spec['compensationVoltage']
+                else: CV = ''
                 window = spec['precursorMz'][0]['windowWideness']
 
                 spec['intensity array'] = [x**0.5 for x in spec['intensity array']]
