@@ -543,7 +543,7 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
                 quePeakDict[(top_mz, bottom_mz)] += zip(spec['m/z array'],spec['intensity array'],peakIDs)
                 queValDict[num] = [ precursorMz, peakCount, CV, window ]
         print('Number of Unpooled MS/MS Query Spectra: ' + str(spectralCount))
-        print('Number of Pooled MS/MS Query Spectra: ' + str(len(queValDict)),flush=True)
+        print('Number of Pooled MS/MS Query Spectra: ' + str(len(quePeakDict)),flush=True)
 
         time = timer()
         prevtime = time
