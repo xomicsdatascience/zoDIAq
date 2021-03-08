@@ -24,6 +24,7 @@ def main():
     quant_parser = subparsers.add_parser('quant', parents=[parent_parser], help='Quantify peptides and/or proteins from DISPA targetted re-analysis data corresponding to a SILAC experiment.')
 
     id_parser.add_argument('-p', '--proteinTargets', type=restricted_int, default=0, help='Protein Targets - The number of peptide targets per protein that should be written to the DISPA re-analysis files. Value must be a positive, non-zero integer. When not specified, the program will do an untargeted peptide analysis by default.')
+    id_parser.add_argument('-q', '--NoQueryPooling', action='store_false', help='Enable Query Pooling - This flag indicates that query spectra should NOT be pooled. This action increases the overall time complexity of the algorithm while reducing memory complexity.')
 
     quant_parser.add_argument('-i', '--idFile', type=str, required=True, help='Protein/Identification File - Output from the identification portion of QsoDIAq. The file ending will have "all_CVs.csv"')
     quant_parser.add_argument('-p', '--libraryPeaks', type=restricted_int, default=0, help='Maximum Number of Library Peaks - Maximum number of library peaks allowed in library spectra, prioritizing intensity. Program allows all peaks by default.')
@@ -49,17 +50,17 @@ def main():
             outFile = args['outDirectory'] + outFileHeader + '.csv'
 
 
-            menu.write_csodiaq_output(lib, args['files'][i], outFile, initialTol=args['fragmentMassTolerance'])
+            menu.write_csodiaq_output(lib, args['files'][i], outFile, initialTol=args['fragmentMassTolerance'], queryPooling=args['NoQueryPooling'])
             if args['correction']!=-1:
                 menu.write_ppm_offset_tolerance(outFile, corrected=args['correction'], hist=args['histogram'])
-                menu.write_csodiaq_output(lib, args['files'][i], outFile, corrected=True)
+                menu.write_csodiaq_output(lib, args['files'][i], outFile, corrected=True,queryPooling=args['NoQueryPooling'])
                 menu.write_csodiaq_fdr_outputs(outFile, corrected=True)
                 menu.write_DISPA_targeted_reanalysis_files(outFile, proteins = args['proteinTargets'])
 
     if args['command'] == 'quant':
         if args['histogram']: hist = args['outDirectory'] + 'SILAC_Quantification_histogram.png'
         else: hist = ''
-        menu.heavy_light_quantification(args['idFile'], args['library'], args['files'], args['outDirectory'], args['libraryPeaks'], args['fragmentMassTolerance'], args['minimumMatches'], args['ratioType'], args['correction'], hist)
+        menu.heavy_light_quantification(args['idFile'], args['library'], args['files'], args['outDirectory'], args['libraryPeaks'], args['fragmentMassTolerance'], args['minimumMatches'], args['ratioType'], args['correction'])
 
 
 def restricted_float(x):

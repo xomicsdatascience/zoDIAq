@@ -247,6 +247,8 @@ class csodiaqWindow(QWidget):
             self.p.readyReadStandardOutput.connect(self.handle_stdout)
             self.p.readyReadStandardError.connect(self.handle_stderr)
             self.p.finished.connect(self.process_finished)  # Clean up once complete.
+
+            #print(args)
             self.p.start('csodiaq', args)
 
     def set_args_parent(self, args):
@@ -751,19 +753,25 @@ class IdWindow(csodiaqWindow):
         self.protTarg = QLineEdit()
         self.protTargText = QLabel('Number of Target Peptides per Protein: ')
         self.protCheckBox = QCheckBox()
+        self.queryCheckBox = QCheckBox()
+
         settingLayout.addRow(self.protTargText, self.protTarg)
         settingLayout.addRow('Protein Inference:', self.protCheckBox)
+        settingLayout.addRow('Query Pooling:', self.queryCheckBox)
         self.protCheckBox.stateChanged.connect(lambda:self.check_grey(self.protCheckBox, self.protTarg,filledText='1'))
         self.protTarg.setPlaceholderText('untargeted peptide analysis')
         self.protTarg.setEnabled(False)
+        self.queryCheckBox.setChecked(True)
 
     def set_dict_child(self, tempDict):
         if self.protCheckBox.isChecked(): tempDict['protTarg'] = self.return_integer_above_0(self.protTarg.text(), self.protTargText)
         else: tempDict['protTarg'] = self.return_valid(self.protTargText, False)
+        tempDict['noQueryPooling'] = self.queryCheckBox.isChecked()
 
     def set_args_child(self, args):
         args.insert(0,'id')
         if self.dict['protTarg']: args += ['-p', self.dict['protTarg']]
+        if not self.dict['noQueryPooling']: args += ['-q']
 
     def set_variables_debug(self, tempDict):
         super().set_variables_debug(tempDict)
