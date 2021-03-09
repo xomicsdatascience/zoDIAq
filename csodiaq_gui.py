@@ -759,25 +759,27 @@ class IdWindow(csodiaqWindow):
         self.protTargText = QLabel('Number of Target Peptides per Protein: ')
         self.protTargText.setToolTip('Target Peptide Requirements:\n-Must be blank or an integer greater than 0')
         self.protCheckBox = QCheckBox()
-        self.queryCheckBox = QCheckBox()
+        self.query = QLineEdit()
+        self.queryText = QLabel('Maximum Number of Query Spectra to Pool: ')
+        self.queryText.setToolTip('Query Spectra Pooling Requirements:\n-Must be blank or an integer greater than 0')
 
         settingLayout.addRow(self.protTargText, self.protTarg)
         settingLayout.addRow('Protein Inference:', self.protCheckBox)
-        settingLayout.addRow('Query Pooling:', self.queryCheckBox)
+        settingLayout.addRow(self.queryText, self.query)
         self.protCheckBox.stateChanged.connect(lambda:self.check_grey(self.protCheckBox, self.protTarg,filledText='1'))
         self.protTarg.setPlaceholderText('untargeted peptide analysis')
         self.protTarg.setEnabled(False)
-        self.queryCheckBox.setChecked(True)
+        self.query.setPlaceholderText('pool all matching query spectra')
 
     def set_dict_child(self, tempDict):
         if self.protCheckBox.isChecked(): tempDict['protTarg'] = self.return_integer_above_0(self.protTarg.text(), self.protTargText)
         else: tempDict['protTarg'] = self.return_valid(self.protTargText, False)
-        tempDict['noQueryPooling'] = self.queryCheckBox.isChecked()
+        tempDict['query'] = self.return_integer_above_0(self.query.text(), self.queryText)
 
     def set_args_child(self, args):
         args.insert(0,'id')
         if self.dict['protTarg']: args += ['-p', self.dict['protTarg']]
-        if not self.dict['noQueryPooling']: args += ['-q']
+        if not self.dict['query']: args += ['-q', self.dict['query']]
 
     def set_variables_debug(self, tempDict):
         super().set_variables_debug(tempDict)

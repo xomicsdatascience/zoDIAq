@@ -5,7 +5,7 @@ import re
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-
+import csv
 
 '''
 Function: write_csodiaq_output()
@@ -13,7 +13,7 @@ Purpose:
 Parameters:
 Returns:
 '''
-def write_csodiaq_output(lib, expFile, outFile, initialTol=10, corrected=False, queryPooling=True ):
+def write_csodiaq_output(lib, expFile, outFile, initialTol=10, corrected=False, queryPooling=0 ):
     print('enter spectra comparison:', flush=True)
     print(str(timedelta(seconds=timer())), flush=True)
     if corrected:
@@ -26,20 +26,14 @@ def write_csodiaq_output(lib, expFile, outFile, initialTol=10, corrected=False, 
         ppmTol=initialTol,
         ppmOffset=0
     ppmFile = re.sub('(.*).csv', r'\1_unfilteredPpmPerRow.csv', outFile)
-    if queryPooling:
-        cbf.pooled_all_query_spectra_analysis( expFile,
-                                    outFile,
-                                    ppmFile,
-                                    lib,
-                                    ppmTol,
-                                    ppmOffset)
-    else:
-        cbf.pooled_library_only_spectra_analysis( expFile,
-                                    outFile,
-                                    ppmFile,
-                                    lib,
-                                    ppmTol,
-                                    ppmOffset)
+    if not queryPooling: queryPooling = np.inf
+    cbf.pooled_all_query_spectra_analysis( expFile,
+                                outFile,
+                                ppmFile,
+                                lib,
+                                ppmTol,
+                                ppmOffset,
+                                queryPooling)
 
 
 '''
