@@ -27,6 +27,16 @@ def write_csodiaq_output(lib, expFile, outFile, initialTol=10, corrected=False, 
         ppmOffset=0
     ppmFile = re.sub('(.*).csv', r'\1_unfilteredPpmPerRow.csv', outFile)
     if not queryPooling: queryPooling = np.inf
+    print(queryPooling)
+    '''
+    cbf.preFDR_spectra_analysis( expFile,
+                                outFile,
+                                ppmFile,
+                                lib,
+                                ppmTol,
+                                ppmOffset,
+                                queryPooling)
+    '''
     cbf.pooled_all_query_spectra_analysis( expFile,
                                 outFile,
                                 ppmFile,
@@ -34,7 +44,7 @@ def write_csodiaq_output(lib, expFile, outFile, initialTol=10, corrected=False, 
                                 ppmTol,
                                 ppmOffset,
                                 queryPooling)
-
+    #'''
 
 '''
 Function:

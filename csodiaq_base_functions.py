@@ -387,6 +387,11 @@ def initialize_return_values(tag):
         ionDict = defaultdict(set)
         ppmDict = defaultdict(list)
         return [cosDict, countDict, ionDict, ppmDict]
+    elif tag=='iPPM':
+        def cosDictValues(): return [0.0, 0.0, 0.0]
+        cosDict = defaultdict(cosDictValues)
+        countDict = defaultdict(int)
+        return [cosDict, countDict]
     elif tag=='qPPM':
         light = defaultdict(list)
         heavy = defaultdict(list)
@@ -432,6 +437,16 @@ def update_return_values(returns, peak1, peak2, i1, i2, ppm, tag):
 
         # ppm differences in matched peaks
         returns[3][key].append(ppm)
+    elif tag=='iPPM':
+        key = (peak1[2],peak2[2])
+
+        # Data required to calculate the cosine score
+        returns[0][key][0] += peak1[1]*peak2[1]
+        returns[0][key][1] += peak2[1]**2
+        returns[0][key][2] += peak1[1]**2
+
+        # Number of matching peaks
+        returns[1][key] += 1
 
     elif tag=='qPPM':
         if peak1[2][0] == 'light': returns[0][peak1[2][2]].append(ppm)
@@ -608,6 +623,102 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
     print('Count: '+str(count),flush=True)
 
 
+def preFDR_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppmTol, ppmYOffset, queryPooling):
+    # Column headers for the output file are initialized.
+    columns = [
+        'scan', # Scan number, corresponding to scans in the query spectra file.
+        'peptide', # Peptide sequence for the library spectrum corresponding to this row.
+        'protein', # Protein name the peptide corresponds to, also derived from the library spectrum corresponding to this row.
+        'zLIB', # precursor charge for the library spectrum corresponding to this row.
+        'MaCC_Score'# score unique to CsoDIAq, the fifith root of the number of matches ('shared') multiplied by the cosine score ('cosine')
+    ]
+
+    # Output file is opened and column headers are written as the first row.
+
+    with mzxml.read(expSpectraFile, use_index=True) as spectra:
+
+        spectralCount = 0
+        queScanDict = defaultdict(list)
+        for spec in spectra:
+            if 'precursorMz' not in spec: continue
+            queScanDict[spec['precursorMz'][0]['precursorMz'],spec['precursorMz'][0]['windowWideness']].append(spec['num'])
+            spectralCount += 1
+        print('Number of Unpooled MS/MS Query Spectra: ' + str(spectralCount))
+        print('Number of Pooled MS/MS Query Spectra: ' + str(len(queScanDict)),flush=True)
+
+        with open(outFile, 'w', newline='') as csvFile:
+
+            writer = csv.writer(csvFile)
+            writer.writerow(columns)
+
+            # Count variable keeps track of the number of query spectra that have been analyzed for time tracking purposes.
+            count = 0
+
+            # 'lib' dictionary keys are kept as a separate list in this analysis. Note that they are sorted by precursor m/z.
+            allLibKeys = sorted(lib)
+
+            time = timer()
+            prevtime = time
+
+            print('Enter Pooled Spectra Analysis:')
+            print(time, flush=True)
+
+            for precMz_win, scans in queScanDict.items():
+                if count % 10 == 0:
+                    time = timer()
+                    print('\nNumber of Pooled Experimental Spectra Analyzed: ' + str(count))
+                    print('Number of Spectra: ' + str(len(scans)))
+                    print('Time Since Last Checkpoint: ' + str(round(time-prevtime,2)) + ' Seconds', flush=True)
+                    prevtime = time
+                count += 1
+
+
+                top_mz = precMz_win[0] + precMz_win[1] / 2
+                bottom_mz = precMz_win[0] - precMz_win[1] / 2
+
+                libKeys = lib_mz_match_query_window( top_mz, bottom_mz, allLibKeys )
+
+                if len(libKeys) == 0: continue
+
+                pooledQueSpectra = []
+                pooledLibSpectra = pool_lib_spectra(lib, libKeys)
+                t = 0
+                t0 = timer()
+                for i in range(len(scans)):
+
+                    scan = scans[i]
+                    spec = spectra.get_by_id(scan)
+
+                    intensity = [x**0.5 for x in spec['intensity array']]
+                    peakIDs = [scan for x in range(spec['peaksCount'])]
+                    pooledQueSpectra += list(zip(spec['m/z array'],intensity,peakIDs))
+
+                    if (i % queryPooling == 0 or i == len(scans)-1) and i != 0:
+
+                        pooledQueSpectra.sort()
+
+                        cosDict, countDict = spectra_peak_comparison(pooledLibSpectra, pooledQueSpectra, ppmTol, ppmYOffset, tag='iPPM')
+
+                        for key,value in cosDict.items():
+                            # Library spectra that had too few matching peaks are excluded. numPeakMatch variable determines the threshold.
+
+                            if countDict[key] > 2:
+                                cosine = cosine_similarity(cosDict[key])
+                                ionCount = sum([ pooledQueSpectra[j][1]+ppm_offset(pooledQueSpectra[j][1],ppmYOffset) for j in ionDict[key] ])
+                                temp = [
+                                    key[1], #scan
+                                    key[0][1], #peptide
+                                    lib[key[0]]['ProteinName'], #protein
+                                    lib[key[0]]['PrecursorCharge'], #zLIB
+                                    (countDict[key]**(1/5))*cosine
+                                ]
+                                writer.writerow(temp)
+                        pooledQueSpectra.clear()
+                        del cosDict, countDict
+    prevtime = time
+    # Prints the final number of experimental spectra analyzed.
+    print('Total Time (seconds): ' + str(timer()))
+    print('Count: '+str(count),flush=True)
 #############################################################################################################################
 #############################################################################################################################
 #############################################################################################################################

@@ -779,7 +779,7 @@ class IdWindow(csodiaqWindow):
     def set_args_child(self, args):
         args.insert(0,'id')
         if self.dict['protTarg']: args += ['-p', self.dict['protTarg']]
-        if not self.dict['query']: args += ['-q', self.dict['query']]
+        if self.dict['query']!= 'default': args += ['-q', self.dict['query']]
 
     def set_variables_debug(self, tempDict):
         super().set_variables_debug(tempDict)
