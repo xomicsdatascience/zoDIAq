@@ -91,12 +91,15 @@ class csodiaqWindow(QWidget):
         self.diaFileText = QLabel('DIA Data File:')
         self.diaBtn = QPushButton('Browse')
         self.diaBtn.clicked.connect(lambda:self.getfile(self.diaFiles))
+        self.diaFileText.setToolTip('Data File Requirements:\n-Required, must be populated\n-Must be of type MzXML')
         self.libFileText = QLabel('Library File:')
         self.libBtn = QPushButton('Browse')
         self.libBtn.clicked.connect(lambda:self.getfile(self.libFile))
+        self.libFileText.setToolTip('Library Spectra File Requirements:\n-Required, must be populated\n-Must be in MGF (.mgf) or TraML (.csv or .tsv) format')
         self.libFile = QLineEdit()
         self.outDirText = QLabel('Outfile Directory:')
         self.dirBtn = QPushButton('Browse')
+        self.outDirText.setToolTip('Data File Requirements:\n-Required, must be populated')
         self.outDir = QLineEdit()
         self.dirBtn.clicked.connect(lambda:self.getfile(self.outDir, isFile=False))
         fileLayout.addRow(self.diaFileText, self.diaBtn)
@@ -112,10 +115,12 @@ class csodiaqWindow(QWidget):
 
     def set_settings_parent(self, settingLayout):
         self.fragMassTolText = QLabel('Initial Fragment Mass Tolerance (in ppm):')
+        self.fragMassTolText.setToolTip('Fragment Mass Tolerance Requirements:\n-Must be blank or an integer greater than 0')
         self.fragMassTol = QLineEdit()
         self.corr = QLineEdit()
         self.corrCheckBox = QCheckBox()
         self.corrText = QLabel('Corrective Standard Deviations:')
+        self.corrText.setToolTip('Corrective Standard Deviations Requirements:\n-Must be blank or a float (decimal value) between or equal to 0.5 and 2.0')
         self.histCheckBox = QCheckBox()
 
         self.corrCheckBox.stateChanged.connect(lambda:self.check_grey(self.corrCheckBox, self.corr))
@@ -752,6 +757,7 @@ class IdWindow(csodiaqWindow):
     def set_settings_child(self, settingLayout):
         self.protTarg = QLineEdit()
         self.protTargText = QLabel('Number of Target Peptides per Protein: ')
+        self.protTargText.setToolTip('Target Peptide Requirements:\n-Must be blank or an integer greater than 0')
         self.protCheckBox = QCheckBox()
         self.queryCheckBox = QCheckBox()
 
@@ -1083,6 +1089,7 @@ class quantWindow(csodiaqWindow):
 
     def set_files_child(self, fileLayout):
         self.idFileText = QLabel('CsoDIAq ID Output File:')
+        self.idFileText.setToolTip('CsoDIAq ID File Requirements:\n-Required, must be populated')
         self.idFile = QLineEdit()
         self.idBtn = QPushButton('Browse')
         self.idBtn.clicked.connect(lambda:self.getfile(self.idFile))
@@ -1094,9 +1101,11 @@ class quantWindow(csodiaqWindow):
         self.libPeaks = QLineEdit()
         self.libPeaks.setPlaceholderText('all spectra peaks')
         self.libPeaksText = QLabel('Number of Max Peaks per Library Spectra: ')
+        self.libPeaksText.setToolTip('Library Peaks Requirements:\n-Must be blank or an integer greater than 0')
         self.minMatch = QLineEdit()
         self.minMatch.setPlaceholderText('default: 1 of 3 most intense peaks')
         self.minMatchText = QLabel('Number of Min Peak Matches Required: ')
+        self.minMatchText.setToolTip('Minimum Peak Match Requirements:\n-Must be blank or an integer greater than 0')
         self.ratioType = QComboBox()
         self.ratioType.addItem('median')
         self.ratioType.addItem('mean')

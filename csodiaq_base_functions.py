@@ -10,10 +10,6 @@ import numpy as np
 import idpicker as idp
 import re
 from collections import defaultdict
-from os import listdir
-from os.path import isfile, join
-import sys
-from memory_profiler import profile
 
 
 pd.set_option('display.max_rows', None)
@@ -787,7 +783,7 @@ def return_ppm_spread(df, ppmFile):
     ppmDict = read_ppm_file_to_dict(ppmFile)
 
     # list of keys corresponding to ppmDict are generated from the csodiaq data frame.
-    listOfKeys = [(df['scan'].loc[i],df['peptide'].loc[i],df['protein'].loc[i]) for i in range(len(df))]
+    listOfKeys = [(df['scan'].loc[i],df['peptide'].loc[i],df['zLIB'].loc[i]) for i in range(len(df))]
 
     # all values from the ppmFile corresponding to those keys are saved into a single list.
     ppmList = []

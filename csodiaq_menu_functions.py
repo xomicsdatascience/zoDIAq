@@ -3,15 +3,8 @@ from timeit import default_timer as timer
 from datetime import timedelta
 import re
 import pandas as pd
-from os import listdir
-from os.path import isfile, join
-from statistics import pstdev, median
-import csv
 import matplotlib.pyplot as plt
 import numpy as np
-import statistics
-#from scipy.stats import linregress
-import pickle
 
 
 '''
@@ -60,7 +53,8 @@ def write_ppm_offset_tolerance(inFile, corrected=0, hist=False):
     print(str(timedelta(seconds=timer())), flush=True)
 
     #if corrected: inFile = re.sub('(.*).csv', r'\1_corrected.csv', inFile)
-    df = pd.read_csv(inFile, sep=',').sort_values('MaCC_Score', ascending=False).reset_index(drop=True)
+    fields = ['scan','peptide','protein','zLIB','MaCC_Score']
+    df = pd.read_csv(inFile, sep=',', usecols=fields).sort_values('MaCC_Score', ascending=False).reset_index(drop=True)
     hits, decoys = cbf.fdr_calculation(df)
     df = df.loc[:hits]
 
@@ -102,10 +96,10 @@ Purpose:
 Parameters:
 Returns:
 '''
-def write_DISPA_targeted_reanalysis_files(inFile, proteins=1, trypsin=True):
+def write_DISPA_targeted_reanalysis_files(inFile, proteins=1, trypsin=True, corrected=False):
     print('enter DISPA targeted reanalysis file writing:', flush=True)
     print(str(timedelta(seconds=timer())), flush=True)
-    inFile = re.sub('(.*).csv', r'\1_corrected.csv', inFile)
+    if corrected: inFile = re.sub('(.*).csv', r'\1_corrected.csv', inFile)
     header = re.sub('(.*).csv', r'\1_mostIntenseTargs_', inFile)
     if proteins: inFile = re.sub('(.*).csv', r'\1_proteinFDR.csv', inFile)
     else: inFile = re.sub('(.*).csv', r'\1_peptideFDR.csv', inFile)
