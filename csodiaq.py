@@ -45,15 +45,16 @@ def main():
 
     if args['command'] == 'id':
         lib = cbf.library_file_to_dict(args['library'])
+        #lib=''
         for i in range(len(args['files'])):
             outFileHeader = 'CsoDIAq-file' +str(i+1)+'_'+ '.'.join(args['files'][i].split('/')[-1].split('.')[:-1])
             outFile = args['outDirectory'] + outFileHeader + '.csv'
 
 
-            menu.write_csodiaq_output(lib, args['files'][i], outFile, initialTol=args['fragmentMassTolerance'], queryPooling=args['query'])
+            ppmList = menu.write_csodiaq_output(lib, args['files'][i], outFile, initialTol=args['fragmentMassTolerance'], queryPooling=args['query'])
             cor = False
             if args['correction']!=-1:
-                menu.write_ppm_offset_tolerance(outFile, corrected=args['correction'], hist=args['histogram'])
+                menu.write_ppm_offset_tolerance(outFile, ppmList, corrected=args['correction'], hist=args['histogram'])
                 menu.write_csodiaq_output(lib, args['files'][i], outFile, corrected=True,queryPooling=args['query'])
                 cor=True
             menu.write_csodiaq_fdr_outputs(outFile, corrected=cor)

@@ -385,7 +385,7 @@ def initialize_return_values(tag):
         cosDict = defaultdict(cosDictValues)
         countDict = defaultdict(int)
         ionDict = defaultdict(set)
-        ppmDict = defaultdict(list)
+        ppmDict = []
         return [cosDict, countDict, ionDict, ppmDict]
     elif tag=='iPPM':
         def cosDictValues(): return [0.0, 0.0, 0.0]
@@ -436,7 +436,7 @@ def update_return_values(returns, peak1, peak2, i1, i2, ppm, tag):
         returns[2][key].add(i2)
 
         # ppm differences in matched peaks
-        returns[3][key].append(ppm)
+        returns[3].append(ppm)
     elif tag=='iPPM':
         key = (peak1[2],peak2[2])
 
@@ -623,14 +623,14 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
     print('Count: '+str(count),flush=True)
 
 
-def preFDR_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppmTol, ppmYOffset, queryPooling):
+def preFDR_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, queryPooling):
     # Column headers for the output file are initialized.
     columns = [
         'scan', # Scan number, corresponding to scans in the query spectra file.
         'peptide', # Peptide sequence for the library spectrum corresponding to this row.
-        'protein', # Protein name the peptide corresponds to, also derived from the library spectrum corresponding to this row.
-        'zLIB', # precursor charge for the library spectrum corresponding to this row.
-        'MaCC_Score'# score unique to CsoDIAq, the fifith root of the number of matches ('shared') multiplied by the cosine score ('cosine')
+        'mzLIB', # precursor charge for the library spectrum corresponding to this row.
+        'decoy', # Protein name the peptide corresponds to, also derived from the library spectrum corresponding to this row.
+        'MaCC_Score' # score unique to CsoDIAq, the fifith root of the number of matches ('shared') multiplied by the cosine score ('cosine')
     ]
 
     # Output file is opened and column headers are written as the first row.
@@ -704,12 +704,13 @@ def preFDR_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppmTol, ppmYO
 
                             if countDict[key] > 2:
                                 cosine = cosine_similarity(cosDict[key])
-                                ionCount = sum([ pooledQueSpectra[j][1]+ppm_offset(pooledQueSpectra[j][1],ppmYOffset) for j in ionDict[key] ])
+                                if 'DECOY' in lib[key[0]]['ProteinName']: decoy=1
+                                else: decoy=0
                                 temp = [
                                     key[1], #scan
                                     key[0][1], #peptide
-                                    lib[key[0]]['ProteinName'], #protein
-                                    lib[key[0]]['PrecursorCharge'], #zLIB
+                                    key[0][0], #MzLIB
+                                    decoy,
                                     (countDict[key]**(1/5))*cosine
                                 ]
                                 writer.writerow(temp)
@@ -719,6 +720,95 @@ def preFDR_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppmTol, ppmYO
     # Prints the final number of experimental spectra analyzed.
     print('Total Time (seconds): ' + str(timer()))
     print('Count: '+str(count),flush=True)
+
+def postFDR_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, spectraKeys):
+    # Column headers for the output file are initialized.
+    columns = [
+        'fileName', # Name of the query spectra file.
+        'scan', # Scan number, corresponding to scans in the query spectra file.
+        'MzEXP', # precursor m/z for query spectrum. Column 'windowWideness' corresponds to this value.
+        'peptide', # Peptide sequence for the library spectrum corresponding to this row.
+        'protein', # Protein name the peptide corresponds to, also derived from the library spectrum corresponding to this row.
+        'MzLIB', # precursor m/z for the library spectrum corresponding to this row.
+        'zLIB', # precursor charge for the library spectrum corresponding to this row.
+        'cosine', # Cosine score comparing the library spectrum corresponding to this row with the query spectrum.
+        'name', # Title - corresponds to the column "transition_group_id," a library spectrum identifier.
+        'Peak(Query)', # The number of peaks in the query spectrum.
+        'Peaks(Library)', # The number of peaks in the library spectrum.
+        'shared', # The number of peaks that matched between query spectrum/library spectrum.
+        'ionCount', # Sum of query spectrum intensities, excluding possible duplicates - currently uncalculated, set to 0.
+        'CompensationVoltage', # The compensation voltage of the query spectrum.
+        'totalWindowWidth', # width of m/z that was captured in the query spectrum. Corresponds to MzEXP.
+        'MaCC_Score',# score unique to CsoDIAq, the fifith root of the number of matches ('shared') multiplied by the cosine score ('cosine')
+    ]
+
+    # Output file is opened and column headers are written as the first row.
+    with open(outFile, 'w', newline='') as csvFile:
+
+        writer = csv.writer(csvFile)
+        writer.writerow(columns)
+
+        ppmList = []
+
+        # Count variable keeps track of the number of query spectra that have been analyzed for time tracking purposes.
+        count = 0
+
+        with mzxml.read(expSpectraFile) as spectra:
+            time = timer()
+            prevtime = time
+
+            for scan in spectraKeys:
+                spec = spectra.get_by_id(scan)
+                num = spec['num']
+                precursorMz = spec['precursorMz'][0]['precursorMz']
+                peakCount = len(spec['intensity array'])
+                if 'compensationVoltage' in spec: CV = spec['compensationVoltage']
+                else: CV = ''
+                window = spec['precursorMz'][0]['windowWideness']
+
+                spec['intensity array'] = [x**0.5 for x in spec['intensity array']]
+                peakIDs = [num for x in range(len(spec['m/z array']))]
+                queSpectra = sorted(zip(spec['m/z array'],spec['intensity array'],peakIDs))
+        #for w in quePeakDict:
+                # Printing time taken to analyze every 50 spectra.
+                count += 1
+                if count % 50 == 0:
+                    time = timer()
+                    print('\nNumber of Unpooled Experimental Spectra Analyzed: ' + str(count))
+                    print('Time Since Last Checkpoint: ' + str(round(time-prevtime,2)) + ' Seconds', flush=True)
+                    prevtime = time
+
+                cosDict, countDict, ionDict, ppm = spectra_peak_comparison(pool_lib_spectra(lib, spectraKeys[scan]), queSpectra, ppmTol, ppmYOffset)
+                for key in cosDict:
+                # Library spectra that had too few matching peaks are excluded. numPeakMatch variable determines the threshold.
+
+                    cosine = cosine_similarity(cosDict[key])
+                    ionCount = sum([ queSpectra[j][1]+ppm_offset(queSpectra[j][1],ppmYOffset) for j in ionDict[key] ])
+                    temp = [
+                        expSpectraFile, #fileName
+                        key[1], #scan
+                        precursorMz, #MzEXP
+                        key[0][1], #peptide
+                        lib[key[0]]['ProteinName'], #protein
+                        key[0][0], #MzLIB
+                        lib[key[0]]['PrecursorCharge'], #zLIB
+                        cosine, #cosine
+                        lib[key[0]]['transition_group_id'], #name
+                        peakCount, #Peaks(Query)
+                        len(lib[key[0]]['Peaks']), #Peaks(Library)
+                        countDict[key], #shared
+                        ionCount, #ionCount
+                        CV, #compensationVoltage
+                        window, #totalWindowWidth
+                        (countDict[key]**(1/5))*cosine
+                    ]
+                    writer.writerow(temp)
+                ppmList += ppm
+    # Prints the final number of experimental spectra analyzed.
+    print('Total Time (seconds): ' + str(timer()))
+    print('Count: '+str(count),flush=True)
+    print(len(ppmList))
+    return(ppmList)
 #############################################################################################################################
 #############################################################################################################################
 #############################################################################################################################
@@ -898,6 +988,56 @@ def fdr_calculation(df, fdrList=False):
     else: return len(fdrValues), numDecoys-1
 
 
+import linecache
+def fdr_calculation2(df, returnType=0): #***NOTE***make return type
+    # initializing the two return values at 0
+    fdrValues = []
+    indices = []
+    numDecoys = 0
+    df.fillna("nan",inplace=True)
+    # for every row in the dataframe
+    count = 0
+    for index, row in df.iterrows():
+
+        # current criteria for 'decoys' is to have 'decoy' in the protein name. This may change in the future.
+        if row['decoy']:
+            numDecoys += 1
+
+        # calculates the FDR up to this point in the data frame.
+        curFDR = numDecoys/(count+1)
+
+        # conditional statement comparing the current FDR to the FDR Cutoff. If larger, function values are returned.
+        if curFDR > 0.01:
+
+            # if the number of rows has not yet reached the minimum number that allows for the FDR cutoff, 0 is returned instead.
+            if len(fdrValues) < 1/0.01:
+                if returnType: return [], 0
+                else: return 0, 0
+            if returnType==1: return fdrValues, numDecoys-1
+            if returnType==2: return indices, numDecoys-1
+            else: return len(fdrValues), numDecoys-1
+        fdrValues.append(curFDR)
+        indices.append(index)
+        count += 1
+
+    if returnType: return fdrValues, numDecoys-1
+    else: return len(fdrValues), numDecoys-1
+
+import linecache
+def generate_valid_FDR_spectra_keys(inFile):
+
+    print('enter valid FDR spectra calculation:', flush=True)
+    print(str(timedelta(seconds=timer())), flush=True)
+    #if corrected: inFile = re.sub('(.*).csv', r'\1_corrected.csv', inFile)
+    fields = ['decoy','MaCC_Score']
+    df = pd.read_csv(inFile, sep=',', usecols=fields).sort_values('MaCC_Score', ascending=False)#.reset_index(drop=True)
+    hits, decoys = fdr_calculation2(df, returnType=2)
+    spectraKeys = defaultdict(list)
+    for h in hits:
+        line = linecache.getline(inFile,int(h)+2).strip().split(',')
+        spectraKeys[line[0]].append((float(line[2]),line[1]))
+    return spectraKeys
+
 '''
 Function: write_csodiaq_fdr_outputs()
 Purpose: This function takes the output of the query_spectra_analysis() function, calculates the spectral, peptide, and
@@ -1033,7 +1173,7 @@ def add_fdr_to_csodiaq_output(df, filterType='spectral', bestMatchNum=0):
     if filterType != 'spectral': finalDf = finalDf.drop_duplicates(subset=filterType, keep='first').reset_index(drop=True)
 
     # FDR is calculated
-    fdrList, decoyNum = fdr_calculation(finalDf, fdrList=True)
+    fdrList, decoyNum = fdr_calculation(finalDf, fdrList=1)
 
     # All rows below the FDR cutoff are removed
     finalDf = finalDf.truncate(after=len(fdrList)-1)
