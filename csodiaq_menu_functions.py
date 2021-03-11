@@ -15,6 +15,7 @@ Parameters:
 Returns:
 '''
 def write_csodiaq_output(lib, expFile, outFile, initialTol=10, corrected=False, queryPooling=0 ):
+    print('\n'*100)
     print('enter spectra comparison:', flush=True)
     print(str(timedelta(seconds=timer())), flush=True)
     if corrected:
@@ -28,20 +29,19 @@ def write_csodiaq_output(lib, expFile, outFile, initialTol=10, corrected=False, 
         ppmOffset=0
     ppmFile = re.sub('(.*).csv', r'\1_unfilteredPpmPerRow.csv', outFile)
     if not queryPooling: queryPooling = np.inf
-    print(queryPooling)
     initialOutFile = re.sub('(.*).csv', r'\1_delete.csv', outFile)
     #'''
     cbf.preFDR_spectra_analysis( expFile,
-                                outFile,
+                                initialOutFile,
                                 lib,
                                 ppmTol,
                                 ppmOffset,
                                 queryPooling)
     #'''
-    spectraKeys = cbf.generate_valid_FDR_spectra_keys(outFile)
+    spectraKeys = cbf.generate_valid_FDR_spectra_keys(initialOutFile)
     print(len(spectraKeys))
     #'''
-    ppmList = cbf.postFDR_spectra_analysis( expFile,
+    ppmList = cbf.postFDR_spectra_analysis2( expFile,
                                 outFile,
                                 lib,
                                 ppmTol,

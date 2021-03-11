@@ -5,6 +5,7 @@ from os import path
 import csodiaq_menu_functions as menu
 import csodiaq_base_functions as cbf
 import csodiaq_gui as gui
+import pickle
 
 def main():
     fragMassTol, corrStDev, hist, protTarg = 20, 0, 0, 1
@@ -52,6 +53,8 @@ def main():
 
 
             ppmList = menu.write_csodiaq_output(lib, args['files'][i], outFile, initialTol=args['fragmentMassTolerance'], queryPooling=args['query'])
+            #pickle.dump(ppmList, open(args['outDirectory']+'ppmList_pickle_ID1.p', 'wb'))
+            #ppmList = pickle.load(open(args['outDirectory']+'ppmList_pickle_ID1.p', 'rb'))
             cor = False
             if args['correction']!=-1:
                 menu.write_ppm_offset_tolerance(outFile, ppmList, corrected=args['correction'], hist=args['histogram'])
