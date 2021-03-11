@@ -10,6 +10,7 @@ import numpy as np
 import idpicker as idp
 import re
 from collections import defaultdict
+import linecache
 
 
 pd.set_option('display.max_rows', None)
@@ -959,37 +960,7 @@ Returns:
     'numDecoys' - int representing the number of rows represented by decoys specifically. NOTE: This return
         value is not currently used by the program, but is being kept here for possible future use.
 '''
-def fdr_calculation(df, fdrList=False):
-    # initializing the two return values at 0
-    fdrValues = []
-    numDecoys = 0
-    df.fillna("nan",inplace=True)
-    # for every row in the dataframe
-    for i in range(len(df)):
-
-        # current criteria for 'decoys' is to have 'decoy' in the protein name. This may change in the future.
-        if 'DECOY' in df.loc[i]['protein']:
-            numDecoys += 1
-
-        # calculates the FDR up to this point in the data frame.
-        curFDR = numDecoys/(i+1)
-
-        # conditional statement comparing the current FDR to the FDR Cutoff. If larger, function values are returned.
-        if curFDR > 0.01:
-
-            # if the number of rows has not yet reached the minimum number that allows for the FDR cutoff, 0 is returned instead.
-            if len(fdrValues) < 1/0.01:
-                if fdrList: return [], 0
-                else: return 0, 0
-            if fdrList: return fdrValues, numDecoys-1
-            else: return len(fdrValues), numDecoys-1
-        fdrValues.append(curFDR)
-    if fdrList: return fdrValues, numDecoys-1
-    else: return len(fdrValues), numDecoys-1
-
-
-import linecache
-def fdr_calculation2(df, returnType=0): #***NOTE***make return type
+def fdr_calculation(df, returnType=0): #***NOTE***make return type
     # initializing the two return values at 0
     fdrValues = []
     indices = []
@@ -1000,7 +971,9 @@ def fdr_calculation2(df, returnType=0): #***NOTE***make return type
     for index, row in df.iterrows():
 
         # current criteria for 'decoys' is to have 'decoy' in the protein name. This may change in the future.
-        if row['decoy']:
+        if (returnType==0 or returnType==1): decoy = 'DECOY' in row['protein']
+        elif returnType==2: decoy = row['decoy']
+        if decoy:
             numDecoys += 1
 
         # calculates the FDR up to this point in the data frame.
@@ -1023,7 +996,6 @@ def fdr_calculation2(df, returnType=0): #***NOTE***make return type
     if returnType: return fdrValues, numDecoys-1
     else: return len(fdrValues), numDecoys-1
 
-import linecache
 def generate_valid_FDR_spectra_keys(inFile):
 
     print('enter valid FDR spectra calculation:', flush=True)
@@ -1031,7 +1003,7 @@ def generate_valid_FDR_spectra_keys(inFile):
     #if corrected: inFile = re.sub('(.*).csv', r'\1_corrected.csv', inFile)
     fields = ['decoy','MaCC_Score']
     df = pd.read_csv(inFile, sep=',', usecols=fields).sort_values('MaCC_Score', ascending=False)#.reset_index(drop=True)
-    hits, decoys = fdr_calculation2(df, returnType=2)
+    hits, decoys = fdr_calculation(df, returnType=2)
     spectraKeys = defaultdict(list)
     for h in hits:
         line = linecache.getline(inFile,int(h)+2).strip().split(',')
@@ -1173,7 +1145,7 @@ def add_fdr_to_csodiaq_output(df, filterType='spectral', bestMatchNum=0):
     if filterType != 'spectral': finalDf = finalDf.drop_duplicates(subset=filterType, keep='first').reset_index(drop=True)
 
     # FDR is calculated
-    fdrList, decoyNum = fdr_calculation(finalDf, fdrList=1)
+    fdrList, decoyNum = fdr_calculation(finalDf, returnType=1)
 
     # All rows below the FDR cutoff are removed
     finalDf = finalDf.truncate(after=len(fdrList)-1)

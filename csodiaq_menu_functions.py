@@ -30,15 +30,15 @@ def write_csodiaq_output(lib, expFile, outFile, initialTol=10, corrected=False, 
     if not queryPooling: queryPooling = np.inf
     print(queryPooling)
     initialOutFile = re.sub('(.*).csv', r'\1_delete.csv', outFile)
-    '''
+    #'''
     cbf.preFDR_spectra_analysis( expFile,
-                                initialOutFile,
+                                outFile,
                                 lib,
                                 ppmTol,
                                 ppmOffset,
                                 queryPooling)
     #'''
-    spectraKeys = cbf.generate_valid_FDR_spectra_keys(initialOutFile)
+    spectraKeys = cbf.generate_valid_FDR_spectra_keys(outFile)
     print(len(spectraKeys))
     #'''
     ppmList = cbf.postFDR_spectra_analysis( expFile,
@@ -103,7 +103,7 @@ Parameters:
 Returns:
 '''
 def write_DISPA_targeted_reanalysis_files(inFile, proteins=1, trypsin=True, corrected=False):
-    print('enter DISPA targeted reanalysis file writing:', flush=True)
+    print('enter DISPA targeted reanalysis file writing:')
     print(str(timedelta(seconds=timer())), flush=True)
     if corrected: inFile = re.sub('(.*).csv', r'\1_corrected.csv', inFile)
     header = re.sub('(.*).csv', r'\1_mostIntenseTargs_', inFile)
@@ -111,7 +111,8 @@ def write_DISPA_targeted_reanalysis_files(inFile, proteins=1, trypsin=True, corr
     else: inFile = re.sub('(.*).csv', r'\1_peptideFDR.csv', inFile)
     cbf.return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin)
 
-
+    print('Complete:')
+    print(str(timedelta(seconds=timer())), flush=True)
 '''
 Function:
 Purpose:
