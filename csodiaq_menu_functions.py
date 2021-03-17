@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import csv
 import linecache
+import pickle
 
 '''
 Function: write_csodiaq_output()
@@ -15,7 +16,6 @@ Parameters:
 Returns:
 '''
 def write_csodiaq_output(lib, expFile, outFile, initialTol=10, corrected=False, queryPooling=0 ):
-    print('\n'*100)
     print('enter spectra comparison:', flush=True)
     print(str(timedelta(seconds=timer())), flush=True)
     if corrected:
@@ -39,7 +39,7 @@ def write_csodiaq_output(lib, expFile, outFile, initialTol=10, corrected=False, 
                                 queryPooling)
     #'''
     spectraKeys = cbf.generate_valid_FDR_spectra_keys(initialOutFile)
-    print(len(spectraKeys))
+    pickle.dump(spectraKeys, open('C:/Users/ccranney/Desktop/Caleb_Files/data/output/spectraKeys.p','wb'))
     #'''
     ppmList = cbf.postFDR_spectra_analysis2( expFile,
                                 outFile,
@@ -86,13 +86,14 @@ Purpose:
 Parameters:
 Returns:
 '''
-def write_csodiaq_fdr_outputs(inFile, corrected=False):
+def write_csodiaq_fdr_outputs(inFile, proteins, corrected=False):
     print('enter csodiaq FDR Calculation:', flush=True)
     print(str(timedelta(seconds=timer())), flush=True)
     if corrected: inFile = re.sub('(.*).csv', r'\1_corrected.csv', inFile)
     spectralFile = re.sub('(.*).csv', r'\1_spectralFDR.csv', inFile)
     peptideFile = re.sub('(.*).csv', r'\1_peptideFDR.csv', inFile)
-    proteinFile = re.sub('(.*).csv', r'\1_proteinFDR.csv', inFile)
+    if proteins: proteinFile = re.sub('(.*).csv', r'\1_proteinFDR.csv', inFile)
+    else: proteinFile = ''
 
     cbf.write_csodiaq_fdr_outputs(inFile, spectralFile, peptideFile, proteinFile)
 

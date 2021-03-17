@@ -153,7 +153,7 @@ def mgf_library_upload(fileName):
         key = (spec['params']['pepmass'][0], spec['params']['seq'])
 
         # final dictionary value values are created
-        charge = spec['params']['charge'][0]
+        charge = int(re.sub('[+-]','',str(spec['params']['charge'][0])))
         name = spec['params']['title']
 
         # note that the protein value is optional in MGF files - if it's nonexistent, protein value initialized as an empty string
@@ -167,8 +167,8 @@ def mgf_library_upload(fileName):
         keyList = [key for x in mz]
         peaks = list(tuple(zip(mz,intensity,keyList)))
 
-        #peaks.sort(key=lambda x:x[1],reverse=True)
-        #if len(peaks) > 40: peaks = peaks[:40]
+        peaks.sort(key=lambda x:x[1],reverse=True)
+        if len(peaks) > 7: peaks = peaks[:7]
 
         peaks.sort(key=lambda x:x[0])
 
@@ -548,7 +548,7 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
             prevtime = time
 
             print('Enter Pooled Spectra Analysis:')
-            print(time, flush=True)
+            print(str(timedelta(seconds=time)), flush=True)
 
             for precMz_win, scans in queScanDict.items():
                 if count % 10 == 0:
@@ -668,14 +668,6 @@ def preFDR_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
             print(time, flush=True)
 
             for precMz_win, scans in queScanDict.items():
-                if count % 10 == 0:
-                    time = timer()
-                    print('\nNumber of Pooled Experimental Spectra Analyzed: ' + str(count))
-                    print('Number of Spectra: ' + str(len(scans)))
-                    print('Time Since Last Checkpoint: ' + str(round(time-prevtime,2)) + ' Seconds', flush=True)
-                    prevtime = time
-                count += 1
-
 
                 top_mz = precMz_win[0] + precMz_win[1] / 2
                 bottom_mz = precMz_win[0] - precMz_win[1] / 2
@@ -720,7 +712,14 @@ def preFDR_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
                                 writer.writerow(temp)
                         pooledQueSpectra.clear()
                         del cosDict, countDict
-    prevtime = time
+                count += 1
+                if count % 1 == 0:
+                    time = timer()
+                    print('\nNumber of Pooled Experimental Spectra Analyzed: ' + str(count))
+                    print('Number of Spectra: ' + str(len(scans)))
+                    print('Time Since Last Checkpoint: ' + str(round(time-prevtime,2)) + ' Seconds', flush=True)
+                    prevtime = time
+
     # Prints the final number of experimental spectra analyzed.
     print('Total Time (seconds): ' + str(timer()))
     print('Count: '+str(count),flush=True)
@@ -788,14 +787,6 @@ def postFDR_spectra_analysis2(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, 
             print(prevtime, flush=True)
 
             for precMz_win, scans in queScanDict.items():
-                count += 1
-                if count % 10 == 0:
-                    time = timer()
-                    print('\nNumber of Pooled Experimental Spectra Analyzed: ' + str(count))
-                    print('Number of Spectra: ' + str(len(scans)))
-                    print('Time Since Last Checkpoint: ' + str(round(time-prevtime,2)) + ' Seconds', flush=True)
-                    prevtime = time
-
 
                 top_mz = precMz_win[0] + precMz_win[1] / 2
                 bottom_mz = precMz_win[0] - precMz_win[1] / 2
@@ -856,13 +847,13 @@ def postFDR_spectra_analysis2(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, 
                         pooledQueSpectra.clear()
                         del cosDict, countDict
                 count += 1
-                if count % 10 == 0:
+                if count % 1 == 0:
                     time = timer()
                     print('\nNumber of Pooled Experimental Spectra Analyzed: ' + str(count))
                     print('Number of Spectra: ' + str(len(scans)))
                     print('Time Since Last Checkpoint: ' + str(round(time-prevtime,2)) + ' Seconds', flush=True)
                     prevtime = time
-    prevtime = time
+
     # Prints the final number of experimental spectra analyzed.
     print('Total Time (seconds): ' + str(timer()))
     print('Count: '+str(count),flush=True)
@@ -950,6 +941,7 @@ def postFDR_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, s
                     ]
                     writer.writerow(temp)
                     ppmList += ppmDict[key]
+
     # Prints the final number of experimental spectra analyzed.
     print('Total Time (seconds): ' + str(timer()))
     print('Count: '+str(count),flush=True)
@@ -1184,85 +1176,89 @@ def write_csodiaq_fdr_outputs(inFile, specFile, pepFile, protFile):
     # peptide FDR is calculated and written to dataframe 'peptideDf'
     peptideDf = add_fdr_to_csodiaq_output(overallDf, filterType='peptide')
 
-    # Connections from peptides-proteins are listed in a file as (string, string) tuples.
-    peptideProteinConnections = []
-
-    for i in range(len(peptideDf)):
-        peptide = peptideDf['peptide'].loc[i]
-
-        # Notably, the protein group from the query_spectra_analysis() function is essentially a list of proteins the peptide is connected to.
-        #   Thus, a connection is added for every protein in these protein groups.
-        proteinGroup = peptideDf['protein'].loc[i]
-
-        # a regular expression is used to separate proteins in the protein group
-        proteins = re.findall('(DECOY_0_)?(sp\|\w{6}\|)', proteinGroup)
-        for pro in proteins:
-
-            # For decoys, 'pro[0]' will be added as the decoy tag. For non-decoys, 'pro[0]' is blank and therefore adds nothing to the protein name.
-            protein = pro[0] + pro[1]
-            peptideProteinConnections.append((peptide,protein))
-
-    # valid proteins are identified using the IDPicker algorithm
-    verifiedProteinDict = idp.find_valid_proteins(peptideProteinConnections)
-
-    # for each protein in the verified list, add all connected peptides found above the peptideFDR cutoff as a new dataframe.
-    #   Note that this means the peptide can appear multiple times if found in more than one protein group provided by the IDPicker algorithm.
-    proteinDf = add_leading_protein_column(peptideDf, verifiedProteinDict)
-
-    # Protein FDR is calculated using the highest-scoring peptide for each protein group.
-    tempProtDf = add_fdr_to_csodiaq_output(proteinDf, filterType='leadingProtein')
-    proteinDict = tempProtDf.set_index('leadingProtein').T.to_dict()
-
-    # Peptides that don't map to a protein above the FDR cutoff are excluded (indices of rows to be removed are added to this list)
-    removables = []
-
-    # protein cosine scores are included as a new column in the output.
-    proteinCosine = []
-
-    # protein FDR scores are included as a new column in the output.
-    proteinFDR = []
-
-     # Loops for every peptide in the recalculated peptide FDR dataframe.
-    for i in range(len(proteinDf)):
-
-        # if the leading protein group is one of the protein groups above the FDR cutoff point, protein cosine and FDR are added.
-        protein = proteinDf['leadingProtein'].loc[i]
-        if protein in proteinDict:
-            proteinCosine.append(proteinDict[protein]['cosine'])
-            proteinFDR.append(proteinDict[protein]['leadingProteinFDR'])
-
-        # if leading protein group is NOT one of the protein groups above the FDR cutoff point, it is marked to be removed.
-        else:
-            removables.append(i)
-
-    # invalid peptides are removed
-    proteinDf = proteinDf.drop(proteinDf.index[removables]).reset_index(drop=True)
-
-    # protein cosine/FDR scores are added as new columns
-    proteinDf['proteinCosine'] = proteinCosine
-    proteinDf['leadingProteinFDR'] = proteinFDR
-
-    # for readability, the output is sorted by peptide cosine score, then leading protein, then protein cosine score
-    #   In this way, you see a dataframe that is primarily sorted by proteins, and peptides inside the protein are ordered by cosine score
-    proteinDf = proteinDf.sort_values(['proteinCosine','leadingProtein', 'cosine'], ascending=[False,False,False]).reset_index(drop=True)
-
-    uniquePepsDict = defaultdict(set)
-
-    for i in range(len(proteinDf)):
-        uniquePepsDict[proteinDf.loc[i]['peptide']].add(proteinDf.loc[i]['leadingProtein'])
-
-    uniquePeps = []
-    for i in range(len(proteinDf)):
-        p = proteinDf.loc[i]['peptide']
-        if len(uniquePepsDict[proteinDf.loc[i]['peptide']]) == 1: uniquePeps.append(1)
-        else: uniquePeps.append(0)
-
-    proteinDf['uniquePeptide'] = uniquePeps
-
     # Data from all of the above dataframes are written to their respective files.
     spectralDf.to_csv(specFile, index=False)
     peptideDf.to_csv(pepFile, index=False)
-    proteinDf.to_csv(protFile, index=False)
+
+
+    if protFile:
+        # Connections from peptides-proteins are listed in a file as (string, string) tuples.
+        peptideProteinConnections = []
+
+        for i in range(len(peptideDf)):
+            peptide = peptideDf['peptide'].loc[i]
+
+            # Notably, the protein group from the query_spectra_analysis() function is essentially a list of proteins the peptide is connected to.
+            #   Thus, a connection is added for every protein in these protein groups.
+            proteinGroup = peptideDf['protein'].loc[i]
+
+            # a regular expression is used to separate proteins in the protein group
+            proteins = re.findall('(DECOY_0_)?(sp\|\w{6}\|)', proteinGroup)
+            for pro in proteins:
+
+                # For decoys, 'pro[0]' will be added as the decoy tag. For non-decoys, 'pro[0]' is blank and therefore adds nothing to the protein name.
+                protein = pro[0] + pro[1]
+                peptideProteinConnections.append((peptide,protein))
+
+        # valid proteins are identified using the IDPicker algorithm
+        verifiedProteinDict = idp.find_valid_proteins(peptideProteinConnections)
+
+        # for each protein in the verified list, add all connected peptides found above the peptideFDR cutoff as a new dataframe.
+        #   Note that this means the peptide can appear multiple times if found in more than one protein group provided by the IDPicker algorithm.
+        proteinDf = add_leading_protein_column(peptideDf, verifiedProteinDict)
+
+        # Protein FDR is calculated using the highest-scoring peptide for each protein group.
+        tempProtDf = add_fdr_to_csodiaq_output(proteinDf, filterType='leadingProtein')
+        proteinDict = tempProtDf.set_index('leadingProtein').T.to_dict()
+
+        # Peptides that don't map to a protein above the FDR cutoff are excluded (indices of rows to be removed are added to this list)
+        removables = []
+
+        # protein cosine scores are included as a new column in the output.
+        proteinCosine = []
+
+        # protein FDR scores are included as a new column in the output.
+        proteinFDR = []
+
+         # Loops for every peptide in the recalculated peptide FDR dataframe.
+        for i in range(len(proteinDf)):
+
+            # if the leading protein group is one of the protein groups above the FDR cutoff point, protein cosine and FDR are added.
+            protein = proteinDf['leadingProtein'].loc[i]
+            if protein in proteinDict:
+                proteinCosine.append(proteinDict[protein]['cosine'])
+                proteinFDR.append(proteinDict[protein]['leadingProteinFDR'])
+
+            # if leading protein group is NOT one of the protein groups above the FDR cutoff point, it is marked to be removed.
+            else:
+                removables.append(i)
+
+        # invalid peptides are removed
+        proteinDf = proteinDf.drop(proteinDf.index[removables]).reset_index(drop=True)
+
+        # protein cosine/FDR scores are added as new columns
+        proteinDf['proteinCosine'] = proteinCosine
+        proteinDf['leadingProteinFDR'] = proteinFDR
+
+        # for readability, the output is sorted by peptide cosine score, then leading protein, then protein cosine score
+        #   In this way, you see a dataframe that is primarily sorted by proteins, and peptides inside the protein are ordered by cosine score
+        proteinDf = proteinDf.sort_values(['proteinCosine','leadingProtein', 'cosine'], ascending=[False,False,False]).reset_index(drop=True)
+
+        uniquePepsDict = defaultdict(set)
+
+        for i in range(len(proteinDf)):
+            uniquePepsDict[proteinDf.loc[i]['peptide']].add(proteinDf.loc[i]['leadingProtein'])
+
+        uniquePeps = []
+        for i in range(len(proteinDf)):
+            p = proteinDf.loc[i]['peptide']
+            if len(uniquePepsDict[proteinDf.loc[i]['peptide']]) == 1: uniquePeps.append(1)
+            else: uniquePeps.append(0)
+
+        proteinDf['uniquePeptide'] = uniquePeps
+        proteinDf.to_csv(protFile, index=False)
+
+
 
 '''
 Function: add_fdr_to_csodiaq_output()
@@ -1377,9 +1373,6 @@ def calc_heavy_mz(seq, mz, z):
 
     nK = seq.count('K')
     nR = seq.count('R')
-    #nK = len(seq) - len(re.sub('K','',seq))
-    #nR = len(seq) - len(re.sub('R','',seq))
-
     heavyMz = mz + (nK*hK)/z + (nR*hR)/z
     return heavyMz
 
@@ -1397,7 +1390,7 @@ Returns:
 '''
 def return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin):
     df = pd.read_csv(inFile)
-    df = df[~df['protein'].str.contains('DECOY')].reset_index(drop=True)
+    df = df[~df['protein'].str.contains('DECOY',na=False)].reset_index(drop=True)
     # Necessary?
     if trypsin: df = df[df['peptide'].str.endswith('R') | df['peptide'].str.endswith('K')].reset_index(drop=True)
     if 'uniquePeptide' in df.columns: df = df[df['uniquePeptide']==1].sort_values('ionCount', ascending=False).reset_index(drop=True)
