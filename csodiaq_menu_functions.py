@@ -103,14 +103,14 @@ Purpose:
 Parameters:
 Returns:
 '''
-def write_DISPA_targeted_reanalysis_files(inFile, proteins=1, trypsin=True, corrected=False):
+def write_DISPA_targeted_reanalysis_files(inFile, proteins=1, trypsin=True, corrected=False, heavy=False):
     print('enter DISPA targeted reanalysis file writing:')
     print(str(timedelta(seconds=timer())), flush=True)
     if corrected: inFile = re.sub('(.*).csv', r'\1_corrected.csv', inFile)
-    header = re.sub('(.*).csv', r'\1_mostIntenseTargs_', inFile)
+    header = re.sub('(.*).csv', r'\1_mostIntenseTargs', inFile)
     if proteins: inFile = re.sub('(.*).csv', r'\1_proteinFDR.csv', inFile)
     else: inFile = re.sub('(.*).csv', r'\1_peptideFDR.csv', inFile)
-    cbf.return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin)
+    cbf.return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin, heavy)
 
     print('Complete:')
     print(str(timedelta(seconds=timer())), flush=True)

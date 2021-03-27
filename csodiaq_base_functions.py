@@ -1,6 +1,6 @@
 import pandas as pd
 from pyteomics import mzxml, mgf, mass
-from bisect import bisect
+from bisect import bisect, bisect_left
 from timeit import default_timer as timer
 from datetime import timedelta
 import csv
@@ -11,6 +11,7 @@ import idpicker as idp
 import re
 from collections import defaultdict
 import linecache
+from Bio import SeqIO
 
 
 pd.set_option('display.max_rows', None)
@@ -99,8 +100,14 @@ def traml_library_upload(fileName):
     print('\nEnter library dictionary upload: ',flush=True)
     print(str(timedelta(seconds=timer())),flush=True)
 
+    headings = traml_column_headings(lib_df.columns)
+
     # Unneeded columns are removed from the dataframe
-    lib_df = lib_df.loc[:, lib_df.columns.intersection(['PrecursorMz','FullUniModPeptideName','PrecursorCharge','ProductMz','LibraryIntensity','transition_group_id','ProteinName'])]
+    lib_df = lib_df.loc[:, lib_df.columns.intersection([headings['PrecursorMz'],headings['FullUniModPeptideName'],headings['PrecursorCharge'],headings['ProductMz'],headings['LibraryIntensity'],headings['transition_group_id'],headings['ProteinName']])]
+
+    lib_df = lib_df[[headings['PrecursorMz'],headings['FullUniModPeptideName'],headings['PrecursorCharge'],headings['ProductMz'],headings['LibraryIntensity'],headings['transition_group_id'],headings['ProteinName']]]
+
+    lib_df.columns = ['PrecursorMz','FullUniModPeptideName','PrecursorCharge','ProductMz','LibraryIntensity','transition_group_id','ProteinName']
 
     # Normalize intensities by finding their square root
     lib_df['LibraryIntensity'] = [x**0.5 for x in list(lib_df['LibraryIntensity'])]
@@ -123,10 +130,35 @@ def traml_library_upload(fileName):
         mz, intensity = (list(t) for t in zip(*sorted(zip(mz_dict[key], intensity_dict[key]))))
         keyList = [key for i in range(len(mz))]
         peaks = list(tuple(zip(mz,intensity,keyList)))
+
+        peaks.sort(key=lambda x:x[1],reverse=True)
+        if len(peaks) > 10: peaks = peaks[:10]
+
         peaks.sort(key=lambda x:x[0])
         lib[key]['Peaks'] = peaks
     return lib
 
+def traml_column_headings(columns):
+    if 'FullUniModPeptideName' in columns:
+        return {
+        'PrecursorMz':'PrecursorMz',
+        'FullUniModPeptideName':'FullUniModPeptideName',
+        'PrecursorCharge':'PrecursorCharge',
+        'ProductMz':'ProductMz',
+        'LibraryIntensity':'LibraryIntensity',
+        'transition_group_id':'transition_group_id',
+        'ProteinName':'ProteinName'
+        }
+    else:
+        return {
+        'PrecursorMz':'PrecursorMz',
+        'FullUniModPeptideName':'ModifiedPeptideSequence',
+        'charge':'PrecursorCharge',
+        'fragMz':'ProductMz',
+        'intensity':'LibraryIntensity',
+        'transition_group_id':'TransitionGroupId',
+        'ProteinName':'ProteinId'
+        }
 
 '''
 Function: mgf_library_upload()
@@ -147,6 +179,10 @@ def mgf_library_upload(fileName):
     lib = {}
 
     # each spectrum in the mgf file
+    #lengths = []
+    #prematch = []
+    #matches = []
+    #print(np.mean([1,2,3]),flush=True)
     for spec in libMGF:
 
         # key for the final dictionary is initialized
@@ -166,9 +202,29 @@ def mgf_library_upload(fileName):
         intensity = [x**0.5 for x in intensity]
         keyList = [key for x in mz]
         peaks = list(tuple(zip(mz,intensity,keyList)))
+        '''
+        num = 1000
+        check = False
+        if randint(0,num) % num == 0 and '+' in spec['params']['seq']: check = True
 
+        mzValues = return_frag_mzs(spec['params']['seq'],1,check)
+        prematch.append(len(peaks))
+
+
+
+
+
+        for i in range(len(peaks)-1,-1,-1):
+            if approx_list(peaks[i][0],mzValues)==-1: peaks.pop(i)
+        lengths.append(len(spec['params']['seq']))
+        matches.append(len(peaks))
+        if check:
+            print(len(mzValues))
+            print(len(peaks))
+            print('\n', flush=True)
+        #'''
         peaks.sort(key=lambda x:x[1],reverse=True)
-        if len(peaks) > 7: peaks = peaks[:7]
+        if len(peaks) > 10: peaks = peaks[:10]
 
         peaks.sort(key=lambda x:x[0])
 
@@ -182,7 +238,37 @@ def mgf_library_upload(fileName):
 
         # entry placed in final dictionary
         lib[key] = tempDict
+
+    #print(np.mean(lengths))
+    #print(np.mean(prematch))
+    #print(np.mean(matches),flush=True)
     return lib
+
+def return_frag_mzs(peptide, z):
+    mzValues = []
+    digPat = r'\+\d+\.\d+'
+    digs = re.findall(digPat, peptide)
+    pepFrags = re.split(digPat, peptide)
+    modValues = {}
+    seq = ''
+    while len(digs) != 0:
+        dig = digs.pop(0)
+        frag = pepFrags.pop(0)
+        seq += frag
+        modValues[len(seq)] = float(dig[1:])/z
+    seq += pepFrags[0]
+    for i in range(1, len(seq)-1):
+        mz = mass.fast_mass(sequence=seq[i:], ion_type='y', charge=z)
+        mz += sum([modValues[x] for x in modValues if x > i])
+        mzValues.append(mz)
+
+    for i in range(len(seq)-1, 1, -1):
+        mz = mass.fast_mass(sequence=seq[:i], ion_type='b', charge=z)
+        mz += sum([modValues[x] for x in modValues if x <= i])
+        mzValues.append(mz)
+    return mzValues
+
+
 
 
 '''
@@ -713,7 +799,7 @@ def preFDR_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
                         pooledQueSpectra.clear()
                         del cosDict, countDict
                 count += 1
-                if count % 1 == 0:
+                if count % 10 == 0:
                     time = timer()
                     print('\nNumber of Pooled Experimental Spectra Analyzed: ' + str(count))
                     print('Number of Spectra: ' + str(len(scans)))
@@ -847,7 +933,7 @@ def postFDR_spectra_analysis2(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, 
                         pooledQueSpectra.clear()
                         del cosDict, countDict
                 count += 1
-                if count % 1 == 0:
+                if count % 10 == 0:
                     time = timer()
                     print('\nNumber of Pooled Experimental Spectra Analyzed: ' + str(count))
                     print('Number of Spectra: ' + str(len(scans)))
@@ -1169,6 +1255,7 @@ def write_csodiaq_fdr_outputs(inFile, specFile, pepFile, protFile):
 
     # cosine score data is read in
     overallDf = pd.read_csv(inFile).sort_values('MaCC_Score', ascending=False).reset_index(drop=True)
+    #overallDf = pd.read_csv(inFile).sort_values('cosine', ascending=False).reset_index(drop=True)
 
     # spectral FDR is calculated and written to dataframe 'spectralDf'
     spectralDf = add_fdr_to_csodiaq_output(overallDf)
@@ -1179,7 +1266,6 @@ def write_csodiaq_fdr_outputs(inFile, specFile, pepFile, protFile):
     # Data from all of the above dataframes are written to their respective files.
     spectralDf.to_csv(specFile, index=False)
     peptideDf.to_csv(pepFile, index=False)
-
 
     if protFile:
         # Connections from peptides-proteins are listed in a file as (string, string) tuples.
@@ -1193,12 +1279,14 @@ def write_csodiaq_fdr_outputs(inFile, specFile, pepFile, protFile):
             proteinGroup = peptideDf['protein'].loc[i]
 
             # a regular expression is used to separate proteins in the protein group
-            proteins = re.findall('(DECOY_0_)?(sp\|\w{6}\|)', proteinGroup)
+            #proteins = re.findall('(DECOY_0_)?(sp\|\w{6}\|)', proteinGroup)
+            proteins = proteinGroup.split('/')[1:]
             for pro in proteins:
 
                 # For decoys, 'pro[0]' will be added as the decoy tag. For non-decoys, 'pro[0]' is blank and therefore adds nothing to the protein name.
-                protein = pro[0] + pro[1]
-                peptideProteinConnections.append((peptide,protein))
+                #protein = pro[0] + pro[1]
+                #peptideProteinConnections.append((peptide,protein))
+                peptideProteinConnections.append((peptide,pro))
 
         # valid proteins are identified using the IDPicker algorithm
         verifiedProteinDict = idp.find_valid_proteins(peptideProteinConnections)
@@ -1206,6 +1294,9 @@ def write_csodiaq_fdr_outputs(inFile, specFile, pepFile, protFile):
         # for each protein in the verified list, add all connected peptides found above the peptideFDR cutoff as a new dataframe.
         #   Note that this means the peptide can appear multiple times if found in more than one protein group provided by the IDPicker algorithm.
         proteinDf = add_leading_protein_column(peptideDf, verifiedProteinDict)
+
+        tempProtFile = re.sub('(.*).csv', r'\1_delete.csv', protFile)
+        proteinDf.to_csv(tempProtFile)
 
         # Protein FDR is calculated using the highest-scoring peptide for each protein group.
         tempProtDf = add_fdr_to_csodiaq_output(proteinDf, filterType='leadingProtein')
@@ -1319,13 +1410,14 @@ def add_leading_protein_column(df, verifiedProteinDict):
 
         # proteins connected to this peptide are separated into a list
         proteinGroup = df['protein'].loc[i]
-        proteins = re.findall('(DECOY_0_)?(sp\|\w{6}\|)', proteinGroup)
-
+        #proteins = re.findall('(DECOY_0_)?(sp\|\w{6}\|)', proteinGroup)
+        proteins = proteinGroup.split('/')[1:]
         # for each protein connected to this peptide
         for pro in proteins:
 
             # this ensures that decoys are tagged while non-decoys are not
-            protein = pro[0] + pro[1]
+            #protein = pro[0] + pro[1]
+            protein = pro
 
             # if the protein is one of the proteins verified by the IDPicker algorithm, a new row is added to the input
             #   with the (IDPicker-determined) protein group added in the new column 'leadingProtein'.
@@ -1388,7 +1480,7 @@ Parameters:
 Returns:
     'finalDf' - Pandas dataframe. 'finalDf' can be written to a file for direct input to an MS machine.
 '''
-def return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin):
+def return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin, heavy):
     df = pd.read_csv(inFile)
     df = df[~df['protein'].str.contains('DECOY',na=False)].reset_index(drop=True)
     # Necessary?
@@ -1401,18 +1493,18 @@ def return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin):
 
     allDfs = []
     if len(CVs)==0: CVs.add('')
-
     for CV in CVs:
-        tempDf = df[df['CompensationVoltage']==CV].reset_index(drop=True)
+        if CV: tempDf = df[df['CompensationVoltage']==CV].reset_index(drop=True)
+        else: tempDf = df
         if proteins: tempDf = tempDf.groupby(['leadingProtein']).head(proteins).reset_index()
         lightMzs = []
         heavyMzs = []
         peptides = []
         rows = len(tempDf)
-        for i in range(rows):
-            peptide = tempDf.loc[i]['peptide']
-            lightMz = float(tempDf.loc[i]['MzLIB'])
-            charge = tempDf.loc[i]['zLIB']
+        for index, row in tempDf.iterrows():
+            peptide = row['peptide']
+            lightMz = float(row['MzLIB'])
+            charge = row['zLIB']
             heavyMz = calc_heavy_mz(peptide, lightMz, charge)
             lightMzs.append(lightMz)
             heavyMzs.append(heavyMz)
@@ -1438,10 +1530,13 @@ def return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin):
         binKeys = sorted(binDict)
         for i in range(len(binKeys)):
             data.append(['/'.join(binDict[binKeys[i]]), '', '(no adduct)', binKeys[i][0]-0.25, 2, i+1])
-            data.append(['/'.join(binDict[binKeys[i]]), '', '(no adduct)', binKeys[i][1]-0.25, 2, i+1])
+            if heavy: data.append(['/'.join(binDict[binKeys[i]]), '', '(no adduct)', binKeys[i][1]-0.25, 2, i+1])
 
         finalDf = pd.DataFrame(data, columns=['Compound','Formula','Adduct','m.z','z','MSXID'])
-        finalDf.to_csv(header+str(CV)+'.txt', sep='\t', index=False)
+        outFile = header
+        if CV: outFile += '_' + str(CV)
+        outFile += '.txt'
+        finalDf.to_csv(outFile, sep='\t', index=False)
     if len(CVs) > 1:
         compDf = pd.concat(allDfs)
         compDf.to_csv(header+'allCVs.csv', index=False)
@@ -1569,6 +1664,7 @@ def heavy_light_quantification(fragDict, libDict, mzxmlFiles, outDir, massTol, m
                     h = heavyPeps[pep]
                     # for light or heavy peaks that are identified without a match, a psuedo peak is created
                     #   with an intensity equal to the average of 10 least intense peaks divided by two.
+
                     smallPeakIntensity = np.mean(sorted(spec['intensity array'])[:10])/2
 
                     # creating the psuedo peaks
@@ -2047,3 +2143,51 @@ def plot_spec(SPECTRA, COLOR):
 #    ax = pyplot.gca()
 #    ax.axes.xaxis.set_visible(False)
 #    ax.axes.yaxis.set_visible(False)
+
+def clean_mgf_file(mgfFile, fasta, ions=False):
+    spectra = mgf.read(mgfFile)
+    fDict = {}
+    longPep = ''
+    for record in SeqIO.parse(open(fasta,'r'),'fasta'):
+        fDict[len(longPep)] = record.id
+        longPep += str(record.seq) + '.'
+    cleaned = []
+    count = 0
+    pepCount = 0
+    for spec in spectra:
+        count += 1
+        #if count % 40 == 0: break
+        if ions:
+            mzValues = return_frag_mzs(spec['params']['seq'],1)
+            peaks = list(tuple(zip(spec['m/z array'],spec['intensity array'])))
+            for i in range(len(peaks)-1,-1,-1):
+                if approx_list(peaks[i][0],mzValues)==-1: peaks.pop(i)
+            if len(peaks)==0: continue
+            peaks.sort(key=lambda x:x[0])
+            spec['m/z array'],spec['intensity array'] = map(list,zip(*peaks))
+        decoy = False
+        if 'protein' in spec['params'] and 'DECOY' in spec['params']['protein']: decoy = True
+        else:
+            seq = re.sub(r'\+\d+\.\d+', '', spec['params']['seq'])
+            listOfI = [m.start() for m in re.finditer(seq, longPep)]
+            sorted_keys = sorted(fDict.keys())
+            proteins = set()
+            for i in listOfI:
+                insertion_point = bisect_left(sorted_keys,i)
+                if insertion_point==len(sorted_keys) or sorted_keys[insertion_point]!=i:
+                    insertion_point-=1
+                protein = fDict[sorted_keys[insertion_point]]
+                proteins.add(fDict[sorted_keys[insertion_point]])
+            if len(proteins)==0: proteins.add('protein_not_in_fasta_'+spec['params']['seq'])
+
+        if decoy: proteins = ['DECOY_0_'+x for x in proteins]
+
+        protein = str(len(proteins)) + '/' + '/'.join(sorted(proteins))
+        if protein != '0/': spec['params']['protein'] = protein; pepCount += 1
+        cleaned.append(spec)
+        if count % 1000 == 0: print(count); print(pepCount); print(protein)
+
+
+    cleanedFile = re.sub('(.*).mgf', r'\1_proteinsAdded.mgf', mgfFile)
+    if ions: cleanedFile = re.sub('(.*).mgf', r'\1_YBionsOnly.mgf', cleanedFile)
+    mgf.write(cleaned, cleanedFile)

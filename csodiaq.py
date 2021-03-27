@@ -13,19 +13,24 @@ def main():
     subparsers = arg_parser.add_subparsers(dest='command', help='CsoDIAq Functions')
     arg_parser.version = '0.1'
     GUI_parser = subparsers.add_parser('gui', help='Launches the (optional) GUI application for using CsoDIAq.')
+    mgf_parser = subparsers.add_parser('mgf', help='Processes an MGF file by adding proteins (from a given FASTA file) and optionally filtering all peaks that don\'t correspond to a y or b ion.')
+    mgf_parser.add_argument('-m', '--mgf', type=str, required=True, help='MGF file to process.')
+    mgf_parser.add_argument('-f', '--fasta', type=str, required=True, help='Protein FASTA reference file for matching peptides to proteins.')
+    mgf_parser.add_argument('-i', '--ions', action='store_true', help='Filter by Y and B ions - This flag indicates if only Y or B ion peaks corresponding to the given peptide should be included in the library.')
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument('-f', '--files', type=str, action='append', required=True, help='DISPA Data Files - argument can be used multiple times for multiple files.')
     parent_parser.add_argument('-l', '--library', type=str, required=True, help='Library Spectra Data File - CsoDIAq accepts MGF and TraML formats.')
     parent_parser.add_argument('-o', '--outDirectory', type=str, required=True, help='Outfile Directory - Folder to write output files to.')
     parent_parser.add_argument('-t', '--fragmentMassTolerance', type=restricted_int, default=20, help='Fragment Mass Tolerance - Initial tolerance allowed between mz values of peaks to be considered a match (in PPM). Default value is 20.')
     parent_parser.add_argument('-c', '--correction', type=restricted_float, nargs='?', const=0, default=-1, help='PPM Correction - The presence of this flag indicates that a second, corrected analysis should be performed. During the initial uncorrected run, PPM differences between all matched peaks for peptides of interest are stored. Generally, these PPM differences concentrate at a non-zero location. Thus, a second, corrected analysis using this point of concentration can provide more accurate results. Floats between 0.5 and 2 can be accepted as arguments, indicating the number of standard deviations around the mean that will be used as the new tolerance (see the fragmentMassTolerance flag). Alternatively, if the flag is present but no standard deviation is specified, a customized offset and tolerance based on the histogram of the uncorrected analysis is used instead. In this analysis, offset is the PPM value of the highest peak, and tolerance is the width of the peak before bars are below the average of the bars representing noise.')
-    parent_parser.add_argument('-hist', '--histogram', action='store_true', help='Histogram - This flag indicates a histogram of the uncorrected PPM values (with lines for the chosen offset/tolerance) should be generated. Flag can onlf be used if the -c or --correction flag is used.')
+    parent_parser.add_argument('-hist', '--histogram', action='store_true', help='Histogram - This flag indicates a histogram of the uncorrected PPM values (with lines for the chosen offset/tolerance) should be generated. Flag can only be used if the -c or --correction flag is used.')
 
     id_parser = subparsers.add_parser('id', parents=[parent_parser], help='Identify peptides and/or proteins from DISPA data and prepare files for DISPA re-analysis.')
     quant_parser = subparsers.add_parser('quant', parents=[parent_parser], help='Quantify peptides and/or proteins from DISPA targetted re-analysis data corresponding to a SILAC experiment.')
 
     id_parser.add_argument('-p', '--proteinTargets', type=restricted_int, default=0, help='Protein Targets - The number of peptide targets per protein that should be written to the DISPA re-analysis files. Value must be a positive, non-zero integer. When not specified, the program will do an untargeted peptide analysis by default.')
     id_parser.add_argument('-q', '--query', type=restricted_int, default=0, help='Enable Query Pooling - This flag indicates that query spectra should NOT be pooled. This action increases the overall time complexity of the algorithm while reducing memory complexity.')
+    id_parser.add_argument('-heavy', '--heavyMz', action='store_true', help='Heavy Mz - Files for targetted re-analysis include heavy fragment isotopes for SILAC quantification.')
 
     quant_parser.add_argument('-i', '--idFile', type=str, required=True, help='Protein/Identification File - Output from the identification portion of QsoDIAq. The file ending will have "all_CVs.csv"')
     quant_parser.add_argument('-p', '--libraryPeaks', type=restricted_int, default=0, help='Maximum Number of Library Peaks - Maximum number of library peaks allowed in library spectra, prioritizing intensity. Program allows all peaks by default.')
@@ -36,6 +41,10 @@ def main():
 
     if args['command'] == 'gui':
         gui.main()
+        return
+
+    if args['command'] == 'mgf':
+        cbf.clean_mgf_file(args['mgf'], args['fasta'], ions=args['ions'])
         return
 
     if (args['histogram'] and args['correction']==-1): arg_parser.error('The -hist or --histogram argument requires the -c or -correction argument')
@@ -53,15 +62,15 @@ def main():
             outFile = args['outDirectory'] + outFileHeader + '.csv'
 
             ppmList = menu.write_csodiaq_output(lib, args['files'][i], outFile, initialTol=args['fragmentMassTolerance'], queryPooling=args['query'])
-            pickle.dump(ppmList, open(args['outDirectory']+'ppmList_pickle_ID1_mgf.p', 'wb'))
-            #ppmList = pickle.load(open(args['outDirectory']+'ppmList_pickle_ID1.p', 'rb'))
+            #pickle.dump(ppmList, open(args['outDirectory']+'ppmList_pickle_ID1_mgf.p', 'wb'))
+            #ppmList = pickle.load(open(args['outDirectory']+'ppmList_pickle_ID1_mgf.p', 'rb'))
             cor = False
             if args['correction']!=-1:
                 menu.write_ppm_offset_tolerance(outFile, ppmList, corrected=args['correction'], hist=args['histogram'])
                 menu.write_csodiaq_output(lib, args['files'][i], outFile, corrected=True,queryPooling=args['query'])
                 cor=True
             menu.write_csodiaq_fdr_outputs(outFile, args['proteinTargets'], corrected=cor)
-            menu.write_DISPA_targeted_reanalysis_files(outFile, proteins = args['proteinTargets'], corrected=cor)
+            menu.write_DISPA_targeted_reanalysis_files(outFile, proteins = args['proteinTargets'], corrected=cor, heavy=args['heavyMz'])
 
     if args['command'] == 'quant':
         if args['histogram']: hist = args['outDirectory'] + 'SILAC_Quantification_histogram.png'
