@@ -125,6 +125,18 @@ def traml_library_upload(fileName):
     lib_df.set_index("ID", drop=True, inplace=True)
     lib = lib_df.to_dict(orient="index")
 
+    if headings['type']=='PanHuman':
+        for key, value in lib.items():
+            proteins = lib[key]['ProteinName'].split('/')
+            num = proteins.pop(0)
+            newProteins = [x for x in proteins if 'DECOY' not in x]
+            proteinStr = str(len(newProteins))
+            for x in newProteins:
+                if 'DECOY' in num: proteinStr += ('/DECOY_'+x)
+                else: proteinStr += ('/'+x)
+            lib[key]['ProteinName'] = proteinStr
+
+
     # Peaks list is created and attached to the dictionary
     for key in lib:
         mz, intensity = (list(t) for t in zip(*sorted(zip(mz_dict[key], intensity_dict[key]))))
@@ -147,17 +159,19 @@ def traml_column_headings(columns):
         'ProductMz':'ProductMz',
         'LibraryIntensity':'LibraryIntensity',
         'transition_group_id':'transition_group_id',
-        'ProteinName':'ProteinName'
+        'ProteinName':'ProteinName',
+        'type':'SpectraST'
         }
     else:
         return {
         'PrecursorMz':'PrecursorMz',
         'FullUniModPeptideName':'ModifiedPeptideSequence',
-        'charge':'PrecursorCharge',
-        'fragMz':'ProductMz',
-        'intensity':'LibraryIntensity',
+        'PrecursorCharge':'PrecursorCharge',
+        'ProductMz':'ProductMz',
+        'LibraryIntensity':'LibraryIntensity',
         'transition_group_id':'TransitionGroupId',
-        'ProteinName':'ProteinId'
+        'ProteinName':'ProteinId',
+        'type':'PanHuman'
         }
 
 '''
@@ -637,7 +651,7 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
             print(str(timedelta(seconds=time)), flush=True)
 
             for precMz_win, scans in queScanDict.items():
-                if count % 10 == 0:
+                if count % 1 == 0:
                     time = timer()
                     print('\nNumber of Pooled Experimental Spectra Analyzed: ' + str(count))
                     print('Number of Spectra: ' + str(len(scans)))
@@ -733,6 +747,7 @@ def preFDR_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
             if 'precursorMz' not in spec: continue
             queScanDict[spec['precursorMz'][0]['precursorMz'],spec['precursorMz'][0]['windowWideness']].append(spec['num'])
             spectralCount += 1
+            #if spectralCount % 10000 == 0: break
         print('Number of Unpooled MS/MS Query Spectra: ' + str(spectralCount))
         print('Number of Pooled MS/MS Query Spectra: ' + str(len(queScanDict)),flush=True)
 
@@ -799,7 +814,7 @@ def preFDR_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
                         pooledQueSpectra.clear()
                         del cosDict, countDict
                 count += 1
-                if count % 10 == 0:
+                if count % 1 == 0:
                     time = timer()
                     print('\nNumber of Pooled Experimental Spectra Analyzed: ' + str(count))
                     print('Number of Spectra: ' + str(len(scans)))
@@ -933,7 +948,7 @@ def postFDR_spectra_analysis2(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, 
                         pooledQueSpectra.clear()
                         del cosDict, countDict
                 count += 1
-                if count % 10 == 0:
+                if count % 1 == 0:
                     time = timer()
                     print('\nNumber of Pooled Experimental Spectra Analyzed: ' + str(count))
                     print('Number of Spectra: ' + str(len(scans)))
@@ -1510,49 +1525,47 @@ def return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin, heav
             heavyMzs.append(heavyMz)
             peptides.append(peptide)
 
-
-        lv, lBins = bin_assignment(lightMzs)
-        hv, hBins = bin_assignment(heavyMzs)
+        binWidth = 1.0
+        lv, lBins = bin_assignment(lightMzs, binWidth)
+        hv, hBins = bin_assignment(heavyMzs, binWidth)
         scanLightMzs = [lBins[lv[i]] for i in range(rows)]
         scanHeavyMzs = [hBins[hv[i]] for i in range(rows)]
 
-        tempDf['scanLightMzs'] = scanLightMzs
-        tempDf['scanHeavyMzs'] = scanHeavyMzs
+        tempDf['scanLightMzs'] = [x-(binWidth/2) for x in scanLightMzs]
+        tempDf['scanHeavyMzs'] = [x-(binWidth/2) for x in scanHeavyMzs]
 
         #tempDf.to_csv('/Users/calebcranney/Desktop/0_DataFiles/delete'+str(CV)+'.csv',index=False)
         allDfs.append(tempDf)
 
         binDict = defaultdict(list)
         for i in range(rows):
-            binDict[scanLightMzs[i],scanHeavyMzs[i]].append(peptides[i])
+            if heavy: binDict[scanLightMzs[i],scanHeavyMzs[i]].append(peptides[i])
+            else: binDict[scanLightMzs[i],0].append(peptides[i])
 
         data = []
         binKeys = sorted(binDict)
         for i in range(len(binKeys)):
-            data.append(['/'.join(binDict[binKeys[i]]), '', '(no adduct)', binKeys[i][0]-0.25, 2, i+1])
-            if heavy: data.append(['/'.join(binDict[binKeys[i]]), '', '(no adduct)', binKeys[i][1]-0.25, 2, i+1])
+            data.append(['/'.join(binDict[binKeys[i]]), '', '(no adduct)', binKeys[i][0]-(binWidth/2), 2, i+1])
+            if heavy: data.append(['/'.join(binDict[binKeys[i]]), '', '(no adduct)', binKeys[i][1]-(binWidth/2), 2, i+1])
 
         finalDf = pd.DataFrame(data, columns=['Compound','Formula','Adduct','m.z','z','MSXID'])
         outFile = header
         if CV: outFile += '_' + str(CV)
         outFile += '.txt'
         finalDf.to_csv(outFile, sep='\t', index=False)
-    if len(CVs) > 1:
-        compDf = pd.concat(allDfs)
-        compDf.to_csv(header+'allCVs.csv', index=False)
+    #if len(CVs) > 1:
+    compDf = pd.concat(allDfs)
+    compDf.to_csv(header+'allCVs.csv', index=False)
 
 
 
 
-def bin_assignment(mzValues):
-    maxi = max(mzValues)+0.5
+def bin_assignment(mzValues, binWidths):
+    maxi = max(mzValues)+binWidths
     mini = min(mzValues)
-    bins = np.arange(mini, maxi, 0.5)
+    bins = np.arange(mini, maxi, binWidths)
     bins = [round(x,2) for x in bins]
     values = np.digitize(mzValues, bins)
-    #print(mzValues)
-    #print(values)
-    #print(bins)
     return values, bins
 
 
