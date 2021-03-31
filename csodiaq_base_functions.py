@@ -140,9 +140,11 @@ def traml_library_upload(fileName):
 
 
     # Peaks list is created and attached to the dictionary
+    id = 0
     for key in lib:
+        id += 1
         mz, intensity = (list(t) for t in zip(*sorted(zip(mz_dict[key], intensity_dict[key]))))
-        keyList = [key for i in range(len(mz))]
+        keyList = [id for i in range(len(mz))]
         peaks = list(tuple(zip(mz,intensity,keyList)))
 
         peaks.sort(key=lambda x:x[1],reverse=True)
@@ -150,6 +152,7 @@ def traml_library_upload(fileName):
 
         peaks.sort(key=lambda x:x[0])
         lib[key]['Peaks'] = peaks
+        lib[key]['ID'] = id
     return lib
 
 def traml_column_headings(columns):
@@ -443,6 +446,7 @@ Returns:
                 key - int representing intensity rank of the heavy library peak that matched a query peak.
                 value - float representing the intensity of the matched query peak.
 '''
+#@njit
 def spectra_peak_comparison(libSpectrum, expSpectrum, ppmTol, ppmYOffset, tag='identify'):
     # final dictionary returned is initialized. See function description for details on contents.
     #returns = initialize_return_values(tag)
@@ -766,6 +770,8 @@ def preFDR_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
 
             # 'lib' dictionary keys are kept as a separate list in this analysis. Note that they are sorted by precursor m/z.
             allLibKeys = sorted(lib)
+            idToKeyDict = {}
+            for key in allLibKeys: idToKeyDict[lib[key]['ID']] = key
 
             time = timer()
             prevtime = time
@@ -813,12 +819,13 @@ def preFDR_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
 
                             if countDict[key] > 2:
                                 cosine = cosine_similarity(cosDict[key])
-                                if 'DECOY' in lib[key[0]]['ProteinName']: decoy=1
+                                libKey = idToKeyDict[key[0]]
+                                if 'DECOY' in lib[libKey]['ProteinName']: decoy=1
                                 else: decoy=0
                                 temp = [
                                     key[1], #scan
-                                    key[0][1], #peptide
-                                    key[0][0], #MzLIB
+                                    libKey[1], #peptide
+                                    libKey[0], #MzLIB
                                     decoy,
                                     (countDict[key]**(1/5))*cosine
                                 ]
@@ -893,6 +900,8 @@ def postFDR_spectra_analysis2(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, 
 
             # 'lib' dictionary keys are kept as a separate list in this analysis. Note that they are sorted by precursor m/z.
             allLibKeys = sorted(allLibKeys)
+            idToKeyDict = {}
+            for key in allLibKeys: idToKeyDict[lib[key]['ID']] = key
 
             prevtime = timer()
 
@@ -937,8 +946,10 @@ def postFDR_spectra_analysis2(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, 
                             check=False
 
                         for key,value in cosDict.items():
+                            libKey = idToKeyDict[key[0]]
+
                             # Library spectra that had too few matching peaks are excluded. numPeakMatch variable determines the threshold.
-                            if (key[0][0],key[0][1]) in spectraKeys[key[1]]:
+                            if (libKey[0],libKey[1]) in spectraKeys[key[1]]:
 
                                 cosine = cosine_similarity(value)
                                 ionCount = sum([ pooledQueSpectra[j][1]+ppm_offset(pooledQueSpectra[j][1],ppmYOffset) for j in ionDict[key] ])
@@ -946,14 +957,14 @@ def postFDR_spectra_analysis2(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, 
                                     expSpectraFile, #fileName
                                     key[1], #scan
                                     precMz_win[0], #MzEXP
-                                    key[0][1], #peptide
-                                    lib[key[0]]['ProteinName'], #protein
-                                    key[0][0], #MzLIB
-                                    lib[key[0]]['PrecursorCharge'], #zLIB
+                                    libKey[1], #peptide
+                                    lib[libKey]['ProteinName'], #protein
+                                    libKey[0], #MzLIB
+                                    lib[libKey]['PrecursorCharge'], #zLIB
                                     cosine, #cosine
-                                    lib[key[0]]['transition_group_id'], #name
+                                    lib[libKey]['transition_group_id'], #name
                                     queValDict[key[1]]['peaksCount'], #Peaks(Query)
-                                    len(lib[key[0]]['Peaks']), #Peaks(Library)
+                                    len(lib[libKey]['Peaks']), #Peaks(Library)
                                     countDict[key], #shared
                                     ionCount, #ionCount
                                     queValDict[key[1]]['CV'], #compensationVoltage
@@ -965,7 +976,7 @@ def postFDR_spectra_analysis2(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, 
                         pooledQueSpectra.clear()
                         del cosDict, countDict
                 count += 1
-                if count % 1 == 0:
+                if count % 10 == 0:
                     time = timer()
                     print('\nNumber of Pooled Experimental Spectra Analyzed: ' + str(count))
                     print('Number of Spectra: ' + str(len(scans)))
