@@ -55,7 +55,7 @@ def main():
 
     if args['command'] == 'id':
         lib = cbf.library_file_to_dict(args['library'])
-        #pickle.dump(lib, open(args['outDirectory']+'mgf_lib.p', 'wb'))
+        pickle.dump(lib, open(args['outDirectory']+'mgf_lib.p', 'wb'))
         #lib = pickle.load(open(args['outDirectory']+'mgf_lib.p', 'rb'))
         for i in range(len(args['files'])):
             outFileHeader = 'CsoDIAq-file' +str(i+1)+'_'+ '.'.join(args['files'][i].split('/')[-1].split('.')[:-1])

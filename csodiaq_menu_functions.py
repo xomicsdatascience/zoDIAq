@@ -25,7 +25,7 @@ def write_csodiaq_output(lib, expFile, outFile, initialTol=10, corrected=False, 
         ppmOffset=(df['offset'].loc[0])
         outFile = re.sub('(.*).csv', r'\1_corrected.csv', outFile)
     else:
-        ppmTol=initialTol,
+        ppmTol=initialTol
         ppmOffset=0
     ppmFile = re.sub('(.*).csv', r'\1_unfilteredPpmPerRow.csv', outFile)
     if not queryPooling: queryPooling = np.inf

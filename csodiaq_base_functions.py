@@ -12,7 +12,9 @@ import re
 from collections import defaultdict
 import linecache
 from Bio import SeqIO
-
+from numba import njit, jit, typeof
+from numba.core import types
+from numba.typed import List
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
@@ -357,6 +359,7 @@ Returns:
             If the difference is outside the provided tolerance, 0 is returned instead for conditional purposes. If the
             values are exactly equal, a value close to 0 is returned instead (1x10e-7).
 '''
+@njit
 def approx(x, y, ppmTol):
     if x==y: return 1e-7
     ppmDiff = ((x-y)*1000000)/x
@@ -375,6 +378,7 @@ Parameters:
 Returns:
     float - Mz offset value.
 '''
+@njit
 def ppm_offset(mz, ppm):
     return (mz*-ppm)/1000000
 
@@ -441,7 +445,7 @@ Returns:
 '''
 def spectra_peak_comparison(libSpectrum, expSpectrum, ppmTol, ppmYOffset, tag='identify'):
     # final dictionary returned is initialized. See function description for details on contents.
-    returns = initialize_return_values(tag)
+    #returns = initialize_return_values(tag)
 
     # By tracking the indices of the current library/query peaks we reduce the time complexity of the algorithm
     i, j = 0, 0
@@ -463,7 +467,8 @@ def spectra_peak_comparison(libSpectrum, expSpectrum, ppmTol, ppmYOffset, tag='i
         while (p < len(libSpectrum)):
             ppm = approx(libSpectrum[p][0], expPeakMz, ppmTol)
             if p==len(libSpectrum) or not ppm: break
-            update_return_values(returns, libSpectrum[p], expSpectrum[j], p, j, ppm, tag)
+            yield libSpectrum[p], expSpectrum[j], p, j, ppm
+            #update_return_values(returns, libSpectrum[p], expSpectrum[j], p, j, ppm, tag)
 
             p += 1
 
@@ -471,7 +476,7 @@ def spectra_peak_comparison(libSpectrum, expSpectrum, ppmTol, ppmYOffset, tag='i
         #   by the fact that the query peak is the next default increment after all match calculations have been made.
         j += 1
         if j < len(expSpectrum): expPeakMz = expSpectrum[j][0] - ppm_offset(expSpectrum[j][0], ppmYOffset)
-    return returns
+    #return returns
 
 '''
 Function: initialize_return_values()
@@ -651,7 +656,7 @@ def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppm
             print(str(timedelta(seconds=time)), flush=True)
 
             for precMz_win, scans in queScanDict.items():
-                if count % 1 == 0:
+                if count % 10 == 0:
                     time = timer()
                     print('\nNumber of Pooled Experimental Spectra Analyzed: ' + str(count))
                     print('Number of Spectra: ' + str(len(scans)))
@@ -794,7 +799,14 @@ def preFDR_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
 
                         pooledQueSpectra.sort()
 
-                        cosDict, countDict = spectra_peak_comparison(pooledLibSpectra, pooledQueSpectra, ppmTol, ppmYOffset, tag='iPPM')
+                        tag='iPPM'
+
+                        #cosDict, countDict = spectra_peak_comparison(pooledLibSpectra, pooledQueSpectra, ppmTol, ppmYOffset, tag='iPPM')
+                        returns = initialize_return_values(tag)
+                        for peak1, peak2, i1, i2, ppm in spectra_peak_comparison(pooledLibSpectra, pooledQueSpectra, ppmTol, ppmYOffset, tag=tag):
+                            update_return_values(returns, peak1, peak2, i1, i2, ppm, tag)
+
+                        cosDict, countDict = returns
 
                         for key,value in cosDict.items():
                             # Library spectra that had too few matching peaks are excluded. numPeakMatch variable determines the threshold.
@@ -814,7 +826,7 @@ def preFDR_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
                         pooledQueSpectra.clear()
                         del cosDict, countDict
                 count += 1
-                if count % 1 == 0:
+                if count % 10 == 0:
                     time = timer()
                     print('\nNumber of Pooled Experimental Spectra Analyzed: ' + str(count))
                     print('Number of Spectra: ' + str(len(scans)))
@@ -910,9 +922,14 @@ def postFDR_spectra_analysis2(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, 
 
                         pooledQueSpectra.sort()
 
+                        tag = 'identify'
 
+                        #cosDict, countDict, ionDict, ppmDict = spectra_peak_comparison(pooledLibSpectra, pooledQueSpectra, ppmTol, ppmYOffset)
+                        returns = initialize_return_values(tag)
+                        for peak1, peak2, i1, i2, ppm in spectra_peak_comparison(pooledLibSpectra, pooledQueSpectra, ppmTol, ppmYOffset, tag=tag):
+                            update_return_values(returns, peak1, peak2, i1, i2, ppm, tag)
 
-                        cosDict, countDict, ionDict, ppmDict = spectra_peak_comparison(pooledLibSpectra, pooledQueSpectra, ppmTol, ppmYOffset)
+                        cosDict, countDict, ionDict, ppmDict = returns
 
                         if check:
                             print(countDict)
