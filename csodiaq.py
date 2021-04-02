@@ -54,9 +54,9 @@ def main():
     if not restricted_file(args['outDirectory']): arg_parser.error('The -o or --outDirectory argument must be an existing directory')
 
     if args['command'] == 'id':
-        #lib = cbf.library_file_to_dict(args['library'])
+        lib = cbf.library_file_to_dict(args['library'])
         #pickle.dump(lib, open(args['outDirectory']+'mgf_lib.p', 'wb'))
-        lib = pickle.load(open(args['outDirectory']+'mgf_lib.p', 'rb'))
+        #lib = pickle.load(open(args['outDirectory']+'mgf_lib.p', 'rb'))
         for i in range(len(args['files'])):
             outFileHeader = 'CsoDIAq-file' +str(i+1)+'_'+ '.'.join(args['files'][i].split('/')[-1].split('.')[:-1])
             outFile = args['outDirectory'] + outFileHeader + '.csv'

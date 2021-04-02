@@ -490,10 +490,27 @@ for index, row in df.iterrows():
 print(len(diffs))
 print(sorted(diffs)[:20])
 #'''
-import numpy as np
-from numba import typeof
+#'''
+files = [
+    'C:/Users/ccranney/Desktop/Caleb_Files/data/output/CsoDIAq-file1_20210222_DISPA_hela_03_corrected_mostIntenseTargs_-30.0.csv',
+    'C:/Users/ccranney/Desktop/Caleb_Files/data/output/CsoDIAq-file1_20210222_DISPA_hela_03_corrected_mostIntenseTargs_-40.0.csv',
+    'C:/Users/ccranney/Desktop/Caleb_Files/data/output/CsoDIAq-file1_20210222_DISPA_hela_03_corrected_mostIntenseTargs_-50.0.csv',
+    'C:/Users/ccranney/Desktop/Caleb_Files/data/output/CsoDIAq-file1_20210222_DISPA_hela_03_corrected_mostIntenseTargs_-60.0.csv',
+    'C:/Users/ccranney/Desktop/Caleb_Files/data/output/CsoDIAq-file1_20210222_DISPA_hela_03_corrected_mostIntenseTargs_-70.0.csv',
+    'C:/Users/ccranney/Desktop/Caleb_Files/data/output/CsoDIAq-file1_20210222_DISPA_hela_03_corrected_mostIntenseTargs_-80.0.csv',
+]
+count = 0
+for file in files:
+    print(file)
+    df = pd.read_csv(file)
+    peptides = df['Compound']
+    for pep in peptides:
+        peps = pep.split('/')
+        count += len(peps)
+print(count)
+#'''
 
-print(typeof((np.array([ 415.2373528 ,   13.62350909, 7643.        ]), np.array([ 415.23052979,   31.33996717, 6001.        ]), 116, 1577, 16.43159700794946)))
+
 #java -Xmx2500M -cp C:/Users/ccranney/Desktop/Caleb_Files/MSPLIT-DIAv1.0/MSPLIT-DIAv02102015.jar org.Spectrums.SWATHMSPLITSearch 02 10 0 C:/Users/ccranney/Desktop/Caleb_Files/data/HeLa_160min_DIA_106win_1.mzXML C:/Users/ccranney/Desktop/Caleb_Files/data/human.faims.fixed.decoy.mgf C:/Users/ccranney/Desktop/Caleb_Files/data/output/msplit_HeLa_02-10-0.tsv
 #docker run -it -v C:/Users/ccranney/Desktop/Caleb_Files/data/docker-shared:/data openswath/openswath
 #TargetedFileConverter -in phl004_consensus_openms24.TraML -out consensus.tsv

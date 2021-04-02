@@ -446,42 +446,92 @@ Returns:
                 key - int representing intensity rank of the heavy library peak that matched a query peak.
                 value - float representing the intensity of the matched query peak.
 '''
-#@njit()
-def spectra_peak_comparison(libSpectrum, expSpectrum, ppmTol, ppmYOffset, tag='identify'):
-    # final dictionary returned is initialized. See function description for details on contents.
-    #returns = initialize_return_values(tag)
+@njit()
+def spectra_peak_comparison(libMzs, queMzs, ppmTol, ppmOffset):
 
+
+    matchCount = 0
+    lenLib = len(libMzs)
+    lenQue = len(queMzs)
 
     # By tracking the indices of the current library/query peaks we reduce the time complexity of the algorithm
     i, j = 0, 0
-    expPeakMz = expSpectrum[j][0] - ppm_offset(expSpectrum[j][0], ppmYOffset)
-    while i < len(libSpectrum) and j < len(expSpectrum):
+    expPeakMz = queMzs[j] - ppm_offset(queMzs[j], ppmOffset)
+    while i < lenLib and j < lenQue:
 
         # If the m/z of the peaks are not within the given ppm tolerance, the indices of the smaller of the two is incremented
         #   and we are returned to the top of the while loop.
-        if not approx(libSpectrum[i][0],expPeakMz, ppmTol):
-            if libSpectrum[i][0] > expPeakMz:
+        if not approx(libMzs[i],expPeakMz, ppmTol):
+            if libMzs[i] > expPeakMz:
                 j += 1
-                if j < len(expSpectrum): expPeakMz = expSpectrum[j][0] - ppm_offset(expSpectrum[j][0], ppmYOffset)
+                if j < lenQue: expPeakMz = queMzs[j] - ppm_offset(queMzs[j], ppmOffset)
                 continue
-            if libSpectrum[i][0] < expPeakMz: i += 1; continue
+            if libMzs[i] < expPeakMz: i += 1; continue
 
         # To account for the matching of one query peak to multiple library peaks, library peaks are looped over
         #   after the initial match. Every matching peak contributes to the various variables in the final returned dictionary.
         p = i + 0
-        while (p < len(libSpectrum)):
-            ppm = approx(libSpectrum[p][0], expPeakMz, ppmTol)
-            if p==len(libSpectrum) or not ppm: break
-            yield libSpectrum[p], expSpectrum[j], p, j, ppm
-            #update_return_values(returns, libSpectrum[p], expSpectrum[j], p, j, ppm, tag)
+        while (p < lenLib):
+            ppm = approx(libMzs[p], expPeakMz, ppmTol)
+            if p==lenLib or not ppm: break
+            #yield p, j, ppm
+            matchCount += 1
+            '''
+            matches[k] = np.array([p, j, ppm])
+            k += 1
+            if k == maxi:
+                k = 0
+                yield matches
+            '''
+            p += 1
+
+        # Note that the possibility of one library peak matching to multiple query peaks is automatically accounted for
+        #   by the fact that the query peak is the next default increment after all match calculations have been made.
+        j += 1
+        if j < lenQue: expPeakMz = queMzs[j] - ppm_offset(queMzs[j], ppmOffset)
+    #return returns
+
+    pMatch = np.arange(matchCount)
+    jMatch = np.arange(matchCount)
+    ppmMatch = np.arange(float(matchCount))
+
+    # By tracking the indices of the current library/query peaks we reduce the time complexity of the algorithm
+    i, j, k = 0, 0, 0
+    expPeakMz = queMzs[j] - ppm_offset(queMzs[j], ppmOffset)
+    while i < lenLib and j < lenQue:
+
+        # If the m/z of the peaks are not within the given ppm tolerance, the indices of the smaller of the two is incremented
+        #   and we are returned to the top of the while loop.
+        if not approx(libMzs[i],expPeakMz, ppmTol):
+            if libMzs[i] > expPeakMz:
+                j += 1
+                if j < lenQue: expPeakMz = queMzs[j] - ppm_offset(queMzs[j], ppmOffset)
+                continue
+            if libMzs[i] < expPeakMz: i += 1; continue
+
+        # To account for the matching of one query peak to multiple library peaks, library peaks are looped over
+        #   after the initial match. Every matching peak contributes to the various variables in the final returned dictionary.
+        p = i + 0
+        while (p < lenLib):
+            ppm = approx(libMzs[p], expPeakMz, ppmTol)
+            if p==lenLib or not ppm: break
+            #yield p, j, ppm
+            pMatch[k] = p
+            jMatch[k] = j
+            ppmMatch[k] = ppm
+            #matches[k] = np.array([p, j, ppm])
+            k += 1
 
             p += 1
 
         # Note that the possibility of one library peak matching to multiple query peaks is automatically accounted for
         #   by the fact that the query peak is the next default increment after all match calculations have been made.
         j += 1
-        if j < len(expSpectrum): expPeakMz = expSpectrum[j][0] - ppm_offset(expSpectrum[j][0], ppmYOffset)
-    #return returns
+        if j < lenQue: expPeakMz = queMzs[j] - ppm_offset(queMzs[j], ppmOffset)
+
+
+    return pMatch, jMatch, ppmMatch
+    #yield matches[:k]
 
 '''
 Function: initialize_return_values()
@@ -773,17 +823,44 @@ def pooled_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
                         #pooledLibSpectra = [list(x) for x in pooledLibSpectra]
                         #pooledQueSpectra = [list(x) for x in pooledQueSpectra]
 
+                        libMzs = np.array([x[0] for x in pooledLibSpectra])
+                        queMzs = np.array([x[0] for x in pooledQueSpectra])
+                        #l1, l2, l3 = map(np.array,zip(*pooledLibSpectra))
+                        #q1, q2, q3 = map(np.array,zip(*pooledQueSpectra))
                         #print(pooledLibSpectra[0])
                         #np.array(pooledLibSpectra), np.array(pooledQueSpectra)
                         returns = initialize_return_values(tag)
-                        for peak1, peak2, i1, i2, ppm in spectra_peak_comparison(pooledLibSpectra, pooledQueSpectra, ppmTol, ppmYOffset, tag=tag):
-                            update_return_values(returns, peak1, peak2, i1, i2, ppm, tag)
+                        #for i1, i2, ppm in spectra_peak_comparison(pooledLibSpectra, pooledQueSpectra, ppmTol, ppmYOffset, tag=tag):
+                        #    update_return_values(returns, pooledLibSpectra[i1], pooledQueSpectra[i2], i1, i2, ppm, tag)
+                        pMatch, jMatch, ppmMatch = spectra_peak_comparison(libMzs, queMzs, ppmTol, ppmYOffset)
+                        for i in range(len(pMatch)):
+                            update_return_values(returns, pooledLibSpectra[pMatch[i]], pooledQueSpectra[jMatch[i]], pMatch[i], jMatch[i], ppmMatch[i], tag)
+                        '''
+                        matches = np.array([[0.0 for y in range(3)] for x in range(1)])
+                        matches, matchCount = spectra_peak_comparison(libMzs, queMzs, ppmTol, ppmYOffset, matches)
+                        #print(matchCount)
+                        matches = np.array([[0.0 for y in range(3)] for x in range(matchCount)])
+                        matches, matchCount = spectra_peak_comparison(libMzs, queMzs, ppmTol, ppmYOffset, matches, second=True)
+                        #print(matches[0])
+                        #print(len(matches), flush=True)
+                        for m in matches:
+                            update_return_values(returns, pooledLibSpectra[int(m[0])], pooledQueSpectra[int(m[1])], int(m[0]), int(m[1]), m[2], tag)
+                        #'''
+                        '''
+                        matches = np.array([[0.0 for y in range(3)] for x in range(100)])
+                        matchCount = 0
+                        for matches in spectra_peak_comparison(pooledLibSpectra, pooledQueSpectra, ppmTol, ppmYOffset, matches):
+                            for m in matches:
+                                if matchCount == 0: print(m)
+                                matchCount += 1
+                                update_return_values(returns, pooledLibSpectra[int(m[0])], pooledQueSpectra[int(m[1])], int(m[0]), int(m[1]), m[2], tag)
+                        print(matchCount, flush=True)
+                        #'''
 
                         if tag=='iPPM':
                             cosDict, countDict = returns
                             for key,value in cosDict.items():
                                 # Library spectra that had too few matching peaks are excluded. numPeakMatch variable determines the threshold.
-
                                 if countDict[key] > 2:
                                     cosine = cosine_similarity(cosDict[key])
                                     libKey = idToKeyDict[key[0]]
@@ -800,7 +877,6 @@ def pooled_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
                                     writer.writerow(temp)
                         if tag=='identify':
                             cosDict, countDict, ionDict, ppmDict = returns
-
                             for key,value in cosDict.items():
                                 libKey = idToKeyDict[key[0]]
 
@@ -836,7 +912,7 @@ def pooled_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
                         pooledQueSpectra.clear()
                         del returns
                 count += 1
-                if count % 10 == 0:
+                if count % 1 == 0:
                     time = timer()
                     print('\nNumber of Pooled Experimental Spectra Analyzed: ' + str(count))
                     print('Number of Spectra: ' + str(len(scans)))
@@ -942,7 +1018,11 @@ def find_offset_tol(data, histFile, stdev=2, mean=True):
     if mean: offset = sum(data)/len(data)
     else: offset = data[len(data)//2]
     # tolerance is calculated as the second standard deviation of the provided data
-    tolerance = statistics.pstdev(data)*stdev
+    #tolerance = statistics.pstdev(data)*stdev
+    #print(tolerance)
+    tolerance = np.std(data)*stdev
+    print(tolerance)
+    print(stdev, flush=True)
     if not stdev:
         index_max = max(range(len(hist)), key=hist.__getitem__)
         histList = list(hist)
@@ -1303,6 +1383,7 @@ def return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin, heav
     # Necessary?
     if trypsin: df = df[df['peptide'].str.endswith('R') | df['peptide'].str.endswith('K')].reset_index(drop=True)
     if 'uniquePeptide' in df.columns: df = df[df['uniquePeptide']==1].sort_values('ionCount', ascending=False).reset_index(drop=True)
+    if proteins: df = df.groupby(['leadingProtein']).head(proteins).reset_index()
 
     CVs = set(df['CompensationVoltage'])
     def notNan(x): return ~np.isnan(x)
@@ -1310,10 +1391,11 @@ def return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin, heav
 
     allDfs = []
     if len(CVs)==0: CVs.add('')
+
     for CV in CVs:
         if CV: tempDf = df[df['CompensationVoltage']==CV].reset_index(drop=True)
         else: tempDf = df
-        if proteins: tempDf = tempDf.groupby(['leadingProtein']).head(proteins).reset_index()
+        #if proteins: tempDf = tempDf.groupby(['leadingProtein']).head(proteins).reset_index()
         lightMzs = []
         heavyMzs = []
         peptides = []

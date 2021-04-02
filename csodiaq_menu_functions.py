@@ -42,7 +42,7 @@ def write_csodiaq_output(lib, expFile, outFile, initialTol=10, corrected=False, 
     pickle.dump(spectraKeys, open('C:/Users/ccranney/Desktop/Caleb_Files/data/output/spectraKeys.p','wb'))
 
     ppmList = cbf.pooled_spectra_analysis(  expFile,
-                                        initialOutFile,
+                                        outFile,
                                         lib,
                                         ppmTol,
                                         ppmOffset,
