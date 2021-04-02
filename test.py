@@ -461,7 +461,7 @@ with mzxml.read('C:/Users/ccranney/Desktop/wiffFiles/K562_10ug_DDA_Top100_r02-K5
         #print(key)
         #print(value)
 #'''
-#'''
+'''
 # simple script for seeing the first few lines of a csv data file
 df = pd.read_csv('C:/Users/ccranney/Desktop/Caleb_Files/data/docker-shared/consensus.tsv', sep='\t')
 #df.sort_values('MaCC_Score', ascending=False, inplace=True)
@@ -490,7 +490,10 @@ for index, row in df.iterrows():
 print(len(diffs))
 print(sorted(diffs)[:20])
 #'''
+import numpy as np
+from numba import typeof
 
+print(typeof((np.array([ 415.2373528 ,   13.62350909, 7643.        ]), np.array([ 415.23052979,   31.33996717, 6001.        ]), 116, 1577, 16.43159700794946)))
 #java -Xmx2500M -cp C:/Users/ccranney/Desktop/Caleb_Files/MSPLIT-DIAv1.0/MSPLIT-DIAv02102015.jar org.Spectrums.SWATHMSPLITSearch 02 10 0 C:/Users/ccranney/Desktop/Caleb_Files/data/HeLa_160min_DIA_106win_1.mzXML C:/Users/ccranney/Desktop/Caleb_Files/data/human.faims.fixed.decoy.mgf C:/Users/ccranney/Desktop/Caleb_Files/data/output/msplit_HeLa_02-10-0.tsv
 #docker run -it -v C:/Users/ccranney/Desktop/Caleb_Files/data/docker-shared:/data openswath/openswath
 #TargetedFileConverter -in phl004_consensus_openms24.TraML -out consensus.tsv

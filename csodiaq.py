@@ -62,6 +62,7 @@ def main():
             outFile = args['outDirectory'] + outFileHeader + '.csv'
 
             ppmList = menu.write_csodiaq_output(lib, args['files'][i], outFile, initialTol=args['fragmentMassTolerance'], queryPooling=args['query'])
+            print('ppmList: ' + str(len(ppmList)),flush=True)
             #pickle.dump(ppmList, open(args['outDirectory']+'ppmList_pickle_ID1_mgf.p', 'wb'))
             #ppmList = pickle.load(open(args['outDirectory']+'ppmList_pickle_ID1_mgf.p', 'rb'))
             cor = False

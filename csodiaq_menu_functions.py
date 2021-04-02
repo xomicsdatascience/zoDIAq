@@ -30,25 +30,26 @@ def write_csodiaq_output(lib, expFile, outFile, initialTol=10, corrected=False, 
     ppmFile = re.sub('(.*).csv', r'\1_unfilteredPpmPerRow.csv', outFile)
     if not queryPooling: queryPooling = np.inf
     initialOutFile = re.sub('(.*).csv', r'\1_delete.csv', outFile)
-    #'''
-    cbf.preFDR_spectra_analysis( expFile,
-                                initialOutFile,
-                                lib,
-                                ppmTol,
-                                ppmOffset,
-                                queryPooling)
-    #'''
+    cbf.pooled_spectra_analysis(  expFile,
+                                        initialOutFile,
+                                        lib,
+                                        ppmTol,
+                                        ppmOffset,
+                                        queryPooling)
+
     spectraKeys = cbf.generate_valid_FDR_spectra_keys(initialOutFile)
+    print('spectraKeys: ' + str(len(spectraKeys)))
     pickle.dump(spectraKeys, open('C:/Users/ccranney/Desktop/Caleb_Files/data/output/spectraKeys.p','wb'))
-    #'''
-    ppmList = cbf.postFDR_spectra_analysis2( expFile,
-                                outFile,
-                                lib,
-                                ppmTol,
-                                ppmOffset,
-                                spectraKeys)
+
+    ppmList = cbf.pooled_spectra_analysis(  expFile,
+                                        initialOutFile,
+                                        lib,
+                                        ppmTol,
+                                        ppmOffset,
+                                        queryPooling,
+                                        spectraKeys=spectraKeys)
+
     return ppmList
-    #'''
 
 '''
 Function:

@@ -362,7 +362,7 @@ Returns:
             If the difference is outside the provided tolerance, 0 is returned instead for conditional purposes. If the
             values are exactly equal, a value close to 0 is returned instead (1x10e-7).
 '''
-@njit
+@njit()
 def approx(x, y, ppmTol):
     if x==y: return 1e-7
     ppmDiff = ((x-y)*1000000)/x
@@ -381,7 +381,7 @@ Parameters:
 Returns:
     float - Mz offset value.
 '''
-@njit
+@njit()
 def ppm_offset(mz, ppm):
     return (mz*-ppm)/1000000
 
@@ -446,10 +446,11 @@ Returns:
                 key - int representing intensity rank of the heavy library peak that matched a query peak.
                 value - float representing the intensity of the matched query peak.
 '''
-#@njit
+#@njit()
 def spectra_peak_comparison(libSpectrum, expSpectrum, ppmTol, ppmYOffset, tag='identify'):
     # final dictionary returned is initialized. See function description for details on contents.
     #returns = initialize_return_values(tag)
+
 
     # By tracking the indices of the current library/query peaks we reduce the time complexity of the algorithm
     i, j = 0, 0
@@ -582,6 +583,80 @@ def cosine_similarity(row):
     magnitude = (row[1]**0.5) * (row[2]**0.5) # (sqrt(sum(A^2))*sqrt(sum(B^2)))
     return (row[0] / magnitude if magnitude else 0)
 
+def output_columns(tag):
+    if tag=='iPPM':
+        return [
+            'scan', # Scan number, corresponding to scans in the query spectra file.
+            'peptide', # Peptide sequence for the library spectrum corresponding to this row.
+            'mzLIB', # precursor charge for the library spectrum corresponding to this row.
+            'decoy', # Protein name the peptide corresponds to, also derived from the library spectrum corresponding to this row.
+            'MaCC_Score' # score unique to CsoDIAq, the fifith root of the number of matches ('shared') multiplied by the cosine score ('cosine')
+        ]
+    elif tag=='identify':
+        return [
+            'fileName', # Name of the query spectra file.
+            'scan', # Scan number, corresponding to scans in the query spectra file.
+            'MzEXP', # precursor m/z for query spectrum. Column 'windowWideness' corresponds to this value.
+            'peptide', # Peptide sequence for the library spectrum corresponding to this row.
+            'protein', # Protein name the peptide corresponds to, also derived from the library spectrum corresponding to this row.
+            'MzLIB', # precursor m/z for the library spectrum corresponding to this row.
+            'zLIB', # precursor charge for the library spectrum corresponding to this row.
+            'cosine', # Cosine score comparing the library spectrum corresponding to this row with the query spectrum.
+            'name', # Title - corresponds to the column "transition_group_id," a library spectrum identifier.
+            'Peak(Query)', # The number of peaks in the query spectrum.
+            'Peaks(Library)', # The number of peaks in the library spectrum.
+            'shared', # The number of peaks that matched between query spectrum/library spectrum.
+            'ionCount', # Sum of query spectrum intensities, excluding possible duplicates - currently uncalculated, set to 0.
+            'CompensationVoltage', # The compensation voltage of the query spectrum.
+            'totalWindowWidth', # width of m/z that was captured in the query spectrum. Corresponds to MzEXP.
+            'MaCC_Score',# score unique to CsoDIAq, the fifith root of the number of matches ('shared') multiplied by the cosine score ('cosine')
+        ]
+
+def initial_que_spectra(spectra, queScanDict, queValDict, allLibKeys, spectraKeys, tag):
+    spectralCount = 0
+    if tag=='iPPM':
+        for spec in spectra:
+            if 'precursorMz' not in spec: continue
+            queScanDict[spec['precursorMz'][0]['precursorMz'],spec['precursorMz'][0]['windowWideness']].append(spec['num'])
+            spectralCount += 1
+    elif tag=='identify':
+        for scan in spectraKeys.keys():
+            allLibKeys.update(spectraKeys[scan])
+            spec = spectra.get_by_id(scan)
+            queScanDict[spec['precursorMz'][0]['precursorMz'],spec['precursorMz'][0]['windowWideness']].append(spec['num'])
+            #if scan=='1199' or scan=='1200': print((spec['precursorMz'][0]['precursorMz'],spec['precursorMz'][0]['windowWideness']))
+            peaksCount = spec['peaksCount']
+            if 'compensationVoltage' in spec: CV = spec['compensationVoltage']
+            else: CV = ''
+            queValDict[scan]['peaksCount'] = peaksCount
+            queValDict[scan]['CV'] = CV
+            spectralCount += 1
+    return spectralCount
+
+
+def update_output_values(returns, idToKeyDict, lib, pooledLibSpectra, pooledQueSpectra, precMz_win, queValDict, spectraKeys, writer, ppmList, tag):
+    if tag == 'iPPM':
+        cosDict, countDict = returns
+        for key,value in cosDict.items():
+            # Library spectra that had too few matching peaks are excluded. numPeakMatch variable determines the threshold.
+
+            if countDict[key] > 2:
+                cosine = cosine_similarity(cosDict[key])
+                libKey = idToKeyDict[key[0]]
+                if 'DECOY' in lib[libKey]['ProteinName']: decoy=1
+                else: decoy=0
+                temp = [
+                    str(int(key[1])), #scan
+                    libKey[1], #peptide
+                    libKey[0], #MzLIB
+                    decoy,
+                    (countDict[key]**(1/5))*cosine
+                ]
+                writer.writerow(temp)
+    if tag=='identify': pass
+
+
+
 '''
 Function: pooled_library_query_spectra_analysis()
 Purpose: This function loops through all query spectra and calculates the cosine similarity score and other
@@ -606,286 +681,41 @@ Returns:
     No Return Value. Results are written directly to the output file and ppm file (outFile and ppmFile,
         respectively). The description of specific columns of output file are provided in the function comments.
 '''
-def pooled_all_query_spectra_analysis(expSpectraFile, outFile, ppmFile, lib, ppmTol, ppmYOffset, queryPooling):
+def pooled_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, queryPooling, spectraKeys=None):
+
+    if spectraKeys: tag='identify'
+    else: tag='iPPM'
+
     # Column headers for the output file are initialized.
-    columns = [
-        'fileName', # Name of the query spectra file.
-        'scan', # Scan number, corresponding to scans in the query spectra file.
-        'MzEXP', # precursor m/z for query spectrum. Column 'windowWideness' corresponds to this value.
-        'peptide', # Peptide sequence for the library spectrum corresponding to this row.
-        'protein', # Protein name the peptide corresponds to, also derived from the library spectrum corresponding to this row.
-        'MzLIB', # precursor m/z for the library spectrum corresponding to this row.
-        'zLIB', # precursor charge for the library spectrum corresponding to this row.
-        'cosine', # Cosine score comparing the library spectrum corresponding to this row with the query spectrum.
-        'name', # Title - corresponds to the column "transition_group_id," a library spectrum identifier.
-        'Peak(Query)', # The number of peaks in the query spectrum.
-        'Peaks(Library)', # The number of peaks in the library spectrum.
-        'shared', # The number of peaks that matched between query spectrum/library spectrum.
-        'ionCount', # Sum of query spectrum intensities, excluding possible duplicates - currently uncalculated, set to 0.
-        'CompensationVoltage', # The compensation voltage of the query spectrum.
-        'totalWindowWidth', # width of m/z that was captured in the query spectrum. Corresponds to MzEXP.
-        'MaCC_Score'# score unique to CsoDIAq, the fifith root of the number of matches ('shared') multiplied by the cosine score ('cosine')
-    ]
+    columns = output_columns(tag)
 
     # Output file is opened and column headers are written as the first row.
 
     with mzxml.read(expSpectraFile, use_index=True) as spectra:
 
-        spectralCount = 0
         queScanDict = defaultdict(list)
-        for spec in spectra:
-            if 'precursorMz' not in spec: continue
-            queScanDict[spec['precursorMz'][0]['precursorMz'],spec['precursorMz'][0]['windowWideness']].append(spec['num'])
-            spectralCount += 1
-        print('Number of Unpooled MS/MS Query Spectra: ' + str(spectralCount))
-        print('Number of Pooled MS/MS Query Spectra: ' + str(len(queScanDict)),flush=True)
-
-        with open(outFile, 'w', newline='') as csvFile, open(ppmFile, 'w', newline='') as ppmFile:
-
-            writer = csv.writer(csvFile)
-            writer.writerow(columns)
-
-            ppmWriter = csv.writer(ppmFile)
-
-            # Count variable keeps track of the number of query spectra that have been analyzed for time tracking purposes.
-            count = 0
-
-            # 'lib' dictionary keys are kept as a separate list in this analysis. Note that they are sorted by precursor m/z.
-            allLibKeys = sorted(lib)
-
-            time = timer()
-            prevtime = time
-
-            print('Enter Pooled Spectra Analysis:')
-            print(str(timedelta(seconds=time)), flush=True)
-
-            for precMz_win, scans in queScanDict.items():
-                if count % 10 == 0:
-                    time = timer()
-                    print('\nNumber of Pooled Experimental Spectra Analyzed: ' + str(count))
-                    print('Number of Spectra: ' + str(len(scans)))
-                    print('Time Since Last Checkpoint: ' + str(round(time-prevtime,2)) + ' Seconds', flush=True)
-                    prevtime = time
-                count += 1
-
-
-                top_mz = precMz_win[0] + precMz_win[1] / 2
-                bottom_mz = precMz_win[0] - precMz_win[1] / 2
-
-                libKeys = lib_mz_match_query_window( top_mz, bottom_mz, allLibKeys )
-
-                if len(libKeys) == 0: continue
-
-                pooledQueSpectra = []
-                queValDict = {}
-                scanCount = 0
-                pooledLibSpectra = pool_lib_spectra(lib, libKeys)
-                t = 0
-                t0 = timer()
-                for i in range(len(scans)):
-
-                    scan = scans[i]
-                    scanCount += 1
-                    spec = spectra.get_by_id(scan)
-
-                    queValDict[scan] = {'peaksCount':spec['peaksCount']}
-                    if 'compensationVoltage' in spec: queValDict[scan]['CV'] = spec['compensationVoltage']
-                    else: queValDict[scan]['CV'] = ''
-                    intensity = [x**0.5 for x in spec['intensity array']]
-                    peakIDs = [scan for x in range(spec['peaksCount'])]
-                    pooledQueSpectra += list(zip(spec['m/z array'],intensity,peakIDs))
-
-                    if (i % queryPooling == 0 or i == len(scans)-1) and i != 0:
-
-                        pooledQueSpectra.sort()
-
-                        cosDict, countDict, ionDict, ppmDict = spectra_peak_comparison(pooledLibSpectra, pooledQueSpectra, ppmTol, ppmYOffset)
-
-                        for key,value in cosDict.items():
-                            # Library spectra that had too few matching peaks are excluded. numPeakMatch variable determines the threshold.
-
-                            if countDict[key] > 2:
-                                cosine = cosine_similarity(cosDict[key])
-                                ionCount = sum([ pooledQueSpectra[j][1]+ppm_offset(pooledQueSpectra[j][1],ppmYOffset) for j in ionDict[key] ])
-                                temp = [
-                                    expSpectraFile, #fileName
-                                    key[1], #scan
-                                    precMz_win[0], #MzEXP
-                                    key[0][1], #peptide
-                                    lib[key[0]]['ProteinName'], #protein
-                                    key[0][0], #MzLIB
-                                    lib[key[0]]['PrecursorCharge'], #zLIB
-                                    cosine, #cosine
-                                    lib[key[0]]['transition_group_id'], #name
-                                    queValDict[key[1]]['peaksCount'], #Peaks(Query)
-                                    len(lib[key[0]]['Peaks']), #Peaks(Library)
-                                    countDict[key], #shared
-                                    ionCount, #ionCount
-                                    queValDict[key[1]]['CV'], #compensationVoltage
-                                    precMz_win[1], #totalWindowWidth
-                                    (countDict[key]**(1/5))*cosine
-                                ]
-                                writer.writerow(temp)
-                                ppmWriter.writerow([key[1], key[0][1], lib[key[0]]['PrecursorCharge']] + sorted(ppmDict[key]))
-                        pooledQueSpectra.clear()
-                        queValDict.clear()
-                        del cosDict, countDict, ionDict, ppmDict
-    prevtime = time
-    # Prints the final number of experimental spectra analyzed.
-    print('Total Time (seconds): ' + str(timer()))
-    print('Count: '+str(count),flush=True)
-
-
-def preFDR_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, queryPooling):
-    # Column headers for the output file are initialized.
-    columns = [
-        'scan', # Scan number, corresponding to scans in the query spectra file.
-        'peptide', # Peptide sequence for the library spectrum corresponding to this row.
-        'mzLIB', # precursor charge for the library spectrum corresponding to this row.
-        'decoy', # Protein name the peptide corresponds to, also derived from the library spectrum corresponding to this row.
-        'MaCC_Score' # score unique to CsoDIAq, the fifith root of the number of matches ('shared') multiplied by the cosine score ('cosine')
-    ]
-
-    # Output file is opened and column headers are written as the first row.
-
-    with mzxml.read(expSpectraFile, use_index=True) as spectra:
-
-        spectralCount = 0
-        queScanDict = defaultdict(list)
-        for spec in spectra:
-            if 'precursorMz' not in spec: continue
-            queScanDict[spec['precursorMz'][0]['precursorMz'],spec['precursorMz'][0]['windowWideness']].append(spec['num'])
-            spectralCount += 1
-            #if spectralCount % 10000 == 0: break
-        print('Number of Unpooled MS/MS Query Spectra: ' + str(spectralCount))
-        print('Number of Pooled MS/MS Query Spectra: ' + str(len(queScanDict)),flush=True)
-
-        with open(outFile, 'w', newline='') as csvFile:
-
-            writer = csv.writer(csvFile)
-            writer.writerow(columns)
-
-            # Count variable keeps track of the number of query spectra that have been analyzed for time tracking purposes.
-            count = 0
-
-            # 'lib' dictionary keys are kept as a separate list in this analysis. Note that they are sorted by precursor m/z.
-            allLibKeys = sorted(lib)
-            idToKeyDict = {}
-            for key in allLibKeys: idToKeyDict[lib[key]['ID']] = key
-
-            time = timer()
-            prevtime = time
-
-            print('Enter Pooled Spectra Analysis:')
-            print(time, flush=True)
-
-            for precMz_win, scans in queScanDict.items():
-
-                top_mz = precMz_win[0] + precMz_win[1] / 2
-                bottom_mz = precMz_win[0] - precMz_win[1] / 2
-
-                libKeys = lib_mz_match_query_window( top_mz, bottom_mz, allLibKeys )
-
-                if len(libKeys) == 0: continue
-
-                pooledQueSpectra = []
-                pooledLibSpectra = pool_lib_spectra(lib, libKeys)
-                t = 0
-                t0 = timer()
-                for i in range(len(scans)):
-
-                    scan = scans[i]
-                    spec = spectra.get_by_id(scan)
-
-                    intensity = [x**0.5 for x in spec['intensity array']]
-                    peakIDs = [scan for x in range(spec['peaksCount'])]
-                    pooledQueSpectra += list(zip(spec['m/z array'],intensity,peakIDs))
-
-                    if (i % queryPooling == 0 and i!=0) or i == len(scans)-1:
-
-                        pooledQueSpectra.sort()
-
-                        tag='iPPM'
-
-                        #cosDict, countDict = spectra_peak_comparison(pooledLibSpectra, pooledQueSpectra, ppmTol, ppmYOffset, tag='iPPM')
-                        returns = initialize_return_values(tag)
-                        for peak1, peak2, i1, i2, ppm in spectra_peak_comparison(pooledLibSpectra, pooledQueSpectra, ppmTol, ppmYOffset, tag=tag):
-                            update_return_values(returns, peak1, peak2, i1, i2, ppm, tag)
-
-                        cosDict, countDict = returns
-
-                        for key,value in cosDict.items():
-                            # Library spectra that had too few matching peaks are excluded. numPeakMatch variable determines the threshold.
-
-                            if countDict[key] > 2:
-                                cosine = cosine_similarity(cosDict[key])
-                                libKey = idToKeyDict[key[0]]
-                                if 'DECOY' in lib[libKey]['ProteinName']: decoy=1
-                                else: decoy=0
-                                temp = [
-                                    key[1], #scan
-                                    libKey[1], #peptide
-                                    libKey[0], #MzLIB
-                                    decoy,
-                                    (countDict[key]**(1/5))*cosine
-                                ]
-                                writer.writerow(temp)
-                        pooledQueSpectra.clear()
-                        del cosDict, countDict
-                count += 1
-                if count % 10 == 0:
-                    time = timer()
-                    print('\nNumber of Pooled Experimental Spectra Analyzed: ' + str(count))
-                    print('Number of Spectra: ' + str(len(scans)))
-                    print('Time Since Last Checkpoint: ' + str(round(time-prevtime,2)) + ' Seconds', flush=True)
-                    prevtime = time
-
-    # Prints the final number of experimental spectra analyzed.
-    print('Total Time (seconds): ' + str(timer()))
-    print('Count: '+str(count),flush=True)
-
-def postFDR_spectra_analysis2(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, spectraKeys, queryPooling=np.inf):
-
-    # Column headers for the output file are initialized.
-    columns = [
-        'fileName', # Name of the query spectra file.
-        'scan', # Scan number, corresponding to scans in the query spectra file.
-        'MzEXP', # precursor m/z for query spectrum. Column 'windowWideness' corresponds to this value.
-        'peptide', # Peptide sequence for the library spectrum corresponding to this row.
-        'protein', # Protein name the peptide corresponds to, also derived from the library spectrum corresponding to this row.
-        'MzLIB', # precursor m/z for the library spectrum corresponding to this row.
-        'zLIB', # precursor charge for the library spectrum corresponding to this row.
-        'cosine', # Cosine score comparing the library spectrum corresponding to this row with the query spectrum.
-        'name', # Title - corresponds to the column "transition_group_id," a library spectrum identifier.
-        'Peak(Query)', # The number of peaks in the query spectrum.
-        'Peaks(Library)', # The number of peaks in the library spectrum.
-        'shared', # The number of peaks that matched between query spectrum/library spectrum.
-        'ionCount', # Sum of query spectrum intensities, excluding possible duplicates - currently uncalculated, set to 0.
-        'CompensationVoltage', # The compensation voltage of the query spectrum.
-        'totalWindowWidth', # width of m/z that was captured in the query spectrum. Corresponds to MzEXP.
-        'MaCC_Score',# score unique to CsoDIAq, the fifith root of the number of matches ('shared') multiplied by the cosine score ('cosine')
-    ]
-
-    # Output file is opened and column headers are written as the first row.
-
-    with mzxml.read(expSpectraFile, use_index=True) as spectra:
-
-        spectralCount = 0
-        queScanDict = defaultdict(list)
-        allLibKeys = set()
         queValDict = defaultdict(dict)
-        dumbScans = []
-        for scan in spectraKeys.keys():
-            allLibKeys.update(spectraKeys[scan])
-            spec = spectra.get_by_id(scan)
-            queScanDict[spec['precursorMz'][0]['precursorMz'],spec['precursorMz'][0]['windowWideness']].append(spec['num'])
-            #if scan=='1199' or scan=='1200': print((spec['precursorMz'][0]['precursorMz'],spec['precursorMz'][0]['windowWideness']))
-            peaksCount = spec['peaksCount']
-            if 'compensationVoltage' in spec: CV = spec['compensationVoltage']
-            else: CV = ''
-            queValDict[scan]['peaksCount'] = peaksCount
-            queValDict[scan]['CV'] = CV
-            spectralCount += 1
+        allLibKeys = set()
+
+
+        spectralCount = 0
+        if tag=='iPPM':
+            for spec in spectra:
+                if 'precursorMz' not in spec: continue
+                queScanDict[spec['precursorMz'][0]['precursorMz'],spec['precursorMz'][0]['windowWideness']].append(spec['num'])
+                spectralCount += 1
+        elif tag=='identify':
+            for scan in spectraKeys.keys():
+                allLibKeys.update(spectraKeys[scan])
+                spec = spectra.get_by_id(scan)
+                queScanDict[spec['precursorMz'][0]['precursorMz'],spec['precursorMz'][0]['windowWideness']].append(spec['num'])
+                #if scan=='1199' or scan=='1200': print((spec['precursorMz'][0]['precursorMz'],spec['precursorMz'][0]['windowWideness']))
+                peaksCount = spec['peaksCount']
+                if 'compensationVoltage' in spec: CV = spec['compensationVoltage']
+                else: CV = ''
+                queValDict[scan]['peaksCount'] = peaksCount
+                queValDict[scan]['CV'] = CV
+                spectralCount += 1
 
         print('Number of Unpooled MS/MS Query Spectra: ' + str(spectralCount))
         print('Number of Pooled MS/MS Query Spectra: ' + str(len(queScanDict)),flush=True)
@@ -894,24 +724,29 @@ def postFDR_spectra_analysis2(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, 
 
             writer = csv.writer(csvFile)
             writer.writerow(columns)
+
             ppmList = []
+
             # Count variable keeps track of the number of query spectra that have been analyzed for time tracking purposes.
             count = 0
 
             # 'lib' dictionary keys are kept as a separate list in this analysis. Note that they are sorted by precursor m/z.
+            if tag=='iPPM': allLibKeys = lib.keys()
             allLibKeys = sorted(allLibKeys)
+
             idToKeyDict = {}
             for key in allLibKeys: idToKeyDict[lib[key]['ID']] = key
 
             prevtime = timer()
 
             print('Enter Pooled Spectra Analysis:')
-            print(prevtime, flush=True)
+            print(str(timedelta(seconds=prevtime)), flush=True)
 
             for precMz_win, scans in queScanDict.items():
 
                 top_mz = precMz_win[0] + precMz_win[1] / 2
                 bottom_mz = precMz_win[0] - precMz_win[1] / 2
+
                 libKeys = lib_mz_match_query_window( top_mz, bottom_mz, allLibKeys )
                 if len(libKeys) == 0: continue
 
@@ -919,62 +754,87 @@ def postFDR_spectra_analysis2(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, 
                 pooledLibSpectra = pool_lib_spectra(lib, libKeys)
                 t = 0
                 t0 = timer()
-                check=False
                 for i in range(len(scans)):
 
                     scan = scans[i]
                     spec = spectra.get_by_id(scan)
+
                     intensity = [x**0.5 for x in spec['intensity array']]
                     peakIDs = [scan for x in range(spec['peaksCount'])]
                     pooledQueSpectra += list(zip(spec['m/z array'],intensity,peakIDs))
+
                     if (i % queryPooling == 0 and i!=0) or i == len(scans)-1:
 
                         pooledQueSpectra.sort()
 
-                        tag = 'identify'
+                        #[float(x[0]),float(x[1]),float(x[2])]
+                        #pooledLibSpectra = [[float(x[0]),float(x[1]),float(x[2])] for x in pooledLibSpectra]
+                        #pooledQueSpectra = [[float(x[0]),float(x[1]),float(x[2])] for x in pooledQueSpectra]
+                        #pooledLibSpectra = [list(x) for x in pooledLibSpectra]
+                        #pooledQueSpectra = [list(x) for x in pooledQueSpectra]
 
-                        #cosDict, countDict, ionDict, ppmDict = spectra_peak_comparison(pooledLibSpectra, pooledQueSpectra, ppmTol, ppmYOffset)
+                        #print(pooledLibSpectra[0])
+                        #np.array(pooledLibSpectra), np.array(pooledQueSpectra)
                         returns = initialize_return_values(tag)
                         for peak1, peak2, i1, i2, ppm in spectra_peak_comparison(pooledLibSpectra, pooledQueSpectra, ppmTol, ppmYOffset, tag=tag):
                             update_return_values(returns, peak1, peak2, i1, i2, ppm, tag)
 
-                        cosDict, countDict, ionDict, ppmDict = returns
+                        if tag=='iPPM':
+                            cosDict, countDict = returns
+                            for key,value in cosDict.items():
+                                # Library spectra that had too few matching peaks are excluded. numPeakMatch variable determines the threshold.
 
-                        if check:
-                            print(countDict)
-                            print('\n')
-                            check=False
+                                if countDict[key] > 2:
+                                    cosine = cosine_similarity(cosDict[key])
+                                    libKey = idToKeyDict[key[0]]
+                                    scan = str(int(key[1]))
+                                    if 'DECOY' in lib[libKey]['ProteinName']: decoy=1
+                                    else: decoy=0
+                                    temp = [
+                                        scan, #scan
+                                        libKey[1], #peptide
+                                        libKey[0], #MzLIB
+                                        decoy,
+                                        (countDict[key]**(1/5))*cosine
+                                    ]
+                                    writer.writerow(temp)
+                        if tag=='identify':
+                            cosDict, countDict, ionDict, ppmDict = returns
 
-                        for key,value in cosDict.items():
-                            libKey = idToKeyDict[key[0]]
+                            for key,value in cosDict.items():
+                                libKey = idToKeyDict[key[0]]
 
-                            # Library spectra that had too few matching peaks are excluded. numPeakMatch variable determines the threshold.
-                            if (libKey[0],libKey[1]) in spectraKeys[key[1]]:
+                                # Library spectra that had too few matching peaks are excluded. numPeakMatch variable determines the threshold.
+                                if (libKey[0],libKey[1]) in spectraKeys[key[1]]:
+                                    scan = str(int(key[1]))
+                                    #print(scan)
+                                    #print(sorted(queValDict)[:10])
+                                    cosine = cosine_similarity(value)
+                                    ionCount = sum([ pooledQueSpectra[j][1]+ppm_offset(pooledQueSpectra[j][1],ppmYOffset) for j in ionDict[key] ])
+                                    temp = [
+                                        expSpectraFile, #fileName
+                                        scan, #scan
+                                        precMz_win[0], #MzEXP
+                                        libKey[1], #peptide
+                                        lib[libKey]['ProteinName'], #protein
+                                        libKey[0], #MzLIB
+                                        lib[libKey]['PrecursorCharge'], #zLIB
+                                        cosine, #cosine
+                                        lib[libKey]['transition_group_id'], #name
+                                        queValDict[scan]['peaksCount'], #Peaks(Query)
+                                        len(lib[libKey]['Peaks']), #Peaks(Library)
+                                        countDict[key], #shared
+                                        ionCount, #ionCount
+                                        queValDict[scan]['CV'], #compensationVoltage
+                                        precMz_win[1], #totalWindowWidth
+                                        (countDict[key]**(1/5))*cosine
+                                    ]
+                                    writer.writerow(temp)
+                                    ppmList += ppmDict[key]
 
-                                cosine = cosine_similarity(value)
-                                ionCount = sum([ pooledQueSpectra[j][1]+ppm_offset(pooledQueSpectra[j][1],ppmYOffset) for j in ionDict[key] ])
-                                temp = [
-                                    expSpectraFile, #fileName
-                                    key[1], #scan
-                                    precMz_win[0], #MzEXP
-                                    libKey[1], #peptide
-                                    lib[libKey]['ProteinName'], #protein
-                                    libKey[0], #MzLIB
-                                    lib[libKey]['PrecursorCharge'], #zLIB
-                                    cosine, #cosine
-                                    lib[libKey]['transition_group_id'], #name
-                                    queValDict[key[1]]['peaksCount'], #Peaks(Query)
-                                    len(lib[libKey]['Peaks']), #Peaks(Library)
-                                    countDict[key], #shared
-                                    ionCount, #ionCount
-                                    queValDict[key[1]]['CV'], #compensationVoltage
-                                    precMz_win[1], #totalWindowWidth
-                                    (countDict[key]**(1/5))*cosine
-                                ]
-                                writer.writerow(temp)
-                                ppmList += ppmDict[key]
+
                         pooledQueSpectra.clear()
-                        del cosDict, countDict
+                        del returns
                 count += 1
                 if count % 10 == 0:
                     time = timer()
@@ -986,95 +846,9 @@ def postFDR_spectra_analysis2(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, 
     # Prints the final number of experimental spectra analyzed.
     print('Total Time (seconds): ' + str(timer()))
     print('Count: '+str(count),flush=True)
-    return ppmList
+    if tag=='identify': return ppmList
 
-def postFDR_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, spectraKeys):
-    # Column headers for the output file are initialized.
-    columns = [
-        'fileName', # Name of the query spectra file.
-        'scan', # Scan number, corresponding to scans in the query spectra file.
-        'MzEXP', # precursor m/z for query spectrum. Column 'windowWideness' corresponds to this value.
-        'peptide', # Peptide sequence for the library spectrum corresponding to this row.
-        'protein', # Protein name the peptide corresponds to, also derived from the library spectrum corresponding to this row.
-        'MzLIB', # precursor m/z for the library spectrum corresponding to this row.
-        'zLIB', # precursor charge for the library spectrum corresponding to this row.
-        'cosine', # Cosine score comparing the library spectrum corresponding to this row with the query spectrum.
-        'name', # Title - corresponds to the column "transition_group_id," a library spectrum identifier.
-        'Peak(Query)', # The number of peaks in the query spectrum.
-        'Peaks(Library)', # The number of peaks in the library spectrum.
-        'shared', # The number of peaks that matched between query spectrum/library spectrum.
-        'ionCount', # Sum of query spectrum intensities, excluding possible duplicates - currently uncalculated, set to 0.
-        'CompensationVoltage', # The compensation voltage of the query spectrum.
-        'totalWindowWidth', # width of m/z that was captured in the query spectrum. Corresponds to MzEXP.
-        'MaCC_Score',# score unique to CsoDIAq, the fifith root of the number of matches ('shared') multiplied by the cosine score ('cosine')
-    ]
 
-    # Output file is opened and column headers are written as the first row.
-    with open(outFile, 'w', newline='') as csvFile:
-
-        writer = csv.writer(csvFile)
-        writer.writerow(columns)
-
-        ppmList = []
-
-        # Count variable keeps track of the number of query spectra that have been analyzed for time tracking purposes.
-        count = 0
-
-        with mzxml.read(expSpectraFile) as spectra:
-            time = timer()
-            prevtime = time
-
-            for scan in spectraKeys:
-                spec = spectra.get_by_id(scan)
-                num = spec['num']
-                precursorMz = spec['precursorMz'][0]['precursorMz']
-                peakCount = len(spec['intensity array'])
-                if 'compensationVoltage' in spec: CV = spec['compensationVoltage']
-                else: CV = ''
-                window = spec['precursorMz'][0]['windowWideness']
-
-                spec['intensity array'] = [x**0.5 for x in spec['intensity array']]
-                peakIDs = [num for x in range(len(spec['m/z array']))]
-                queSpectra = sorted(zip(spec['m/z array'],spec['intensity array'],peakIDs))
-        #for w in quePeakDict:
-                # Printing time taken to analyze every 50 spectra.
-                count += 1
-                if count % 50 == 0:
-                    time = timer()
-                    print('\nNumber of Unpooled Experimental Spectra Analyzed: ' + str(count))
-                    print('Time Since Last Checkpoint: ' + str(round(time-prevtime,2)) + ' Seconds', flush=True)
-                    prevtime = time
-
-                cosDict, countDict, ionDict, ppmDict = spectra_peak_comparison(pool_lib_spectra(lib, spectraKeys[scan]), queSpectra, ppmTol, ppmYOffset)
-                for key in cosDict:
-                # Library spectra that had too few matching peaks are excluded. numPeakMatch variable determines the threshold.
-                    cosine = cosine_similarity(cosDict[key])
-                    ionCount = sum([ queSpectra[j][1]+ppm_offset(queSpectra[j][1],ppmYOffset) for j in ionDict[key] ])
-                    temp = [
-                        expSpectraFile, #fileName
-                        key[1], #scan
-                        precursorMz, #MzEXP
-                        key[0][1], #peptide
-                        lib[key[0]]['ProteinName'], #protein
-                        key[0][0], #MzLIB
-                        lib[key[0]]['PrecursorCharge'], #zLIB
-                        cosine, #cosine
-                        lib[key[0]]['transition_group_id'], #name
-                        peakCount, #Peaks(Query)
-                        len(lib[key[0]]['Peaks']), #Peaks(Library)
-                        countDict[key], #shared
-                        ionCount, #ionCount
-                        CV, #compensationVoltage
-                        window, #totalWindowWidth
-                        (countDict[key]**(1/5))*cosine
-                    ]
-                    writer.writerow(temp)
-                    ppmList += ppmDict[key]
-
-    # Prints the final number of experimental spectra analyzed.
-    print('Total Time (seconds): ' + str(timer()))
-    print('Count: '+str(count),flush=True)
-    return(ppmList)
 #############################################################################################################################
 #############################################################################################################################
 #############################################################################################################################
