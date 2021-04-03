@@ -490,7 +490,8 @@ for index, row in df.iterrows():
 print(len(diffs))
 print(sorted(diffs)[:20])
 #'''
-#'''
+'''
+# Counting peptides in targetted re-analysis files
 files = [
     'C:/Users/ccranney/Desktop/Caleb_Files/data/output/CsoDIAq-file1_20210222_DISPA_hela_03_corrected_mostIntenseTargs_-30.0.csv',
     'C:/Users/ccranney/Desktop/Caleb_Files/data/output/CsoDIAq-file1_20210222_DISPA_hela_03_corrected_mostIntenseTargs_-40.0.csv',
@@ -509,6 +510,9 @@ for file in files:
         count += len(peps)
 print(count)
 #'''
+# convert tsv to csv
+df = pd.read_csv('C:/Users/ccranney/Desktop/Caleb_Files/data/docker-shared/qehfx.tsv', sep='\t')
+df.to_csv('C:/Users/ccranney/Desktop/Caleb_Files/data/docker-shared/qehfx.csv')
 
 
 #java -Xmx2500M -cp C:/Users/ccranney/Desktop/Caleb_Files/MSPLIT-DIAv1.0/MSPLIT-DIAv02102015.jar org.Spectrums.SWATHMSPLITSearch 02 10 0 C:/Users/ccranney/Desktop/Caleb_Files/data/HeLa_160min_DIA_106win_1.mzXML C:/Users/ccranney/Desktop/Caleb_Files/data/human.faims.fixed.decoy.mgf C:/Users/ccranney/Desktop/Caleb_Files/data/output/msplit_HeLa_02-10-0.tsv
