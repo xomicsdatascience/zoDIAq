@@ -76,7 +76,7 @@ def main():
     if args['command'] == 'quant':
         if args['histogram']: hist = args['outDirectory'] + 'SILAC_Quantification_histogram.png'
         else: hist = ''
-        menu.heavy_light_quantification(args['idFile'], args['library'], args['files'], args['outDirectory'], args['libraryPeaks'], args['fragmentMassTolerance'], args['minimumMatches'], args['ratioType'], args['correction'])
+        menu.heavy_light_quantification(args['idFile'], args['library'], args['files'], args['outDirectory'], args['libraryPeaks'], args['fragmentMassTolerance'], args['minimumMatches'], args['ratioType'], args['correction'], hist)
 
 
 def restricted_float(x):

@@ -8,7 +8,7 @@ from Bio import SeqIO
 import bisect
 from matplotlib import pyplot
 from matplotlib_venn import venn2
-
+import numpy as np
 
 pd.set_option('display.max_columns', None)
 
@@ -334,6 +334,7 @@ cbf.write_csodiaq_fdr_outputs(inFile, specFile, pepFile, protFile)
 '''
 # for comparing msplit with csodiaq
 msplit = pd.read_csv('C:/Users/ccranney/Desktop/Caleb_Files/data/output/msplit_qehfx_09_30_0_proteinsAdded_peptideFDR.csv')
+#msplit = pd.read_csv('C:/Users/ccranney/Desktop/Caleb_Files/data/output/msplit_ID1_02-10-0_temp.csv')
 msplit['ID'] = list(zip(msplit['Scan#'].tolist(),msplit['peptide'].tolist(),msplit['z.1'].tolist()))
 #msplit = msplit[msplit['uniquePeptide']==1]
 #msplit = msplit.drop_duplicates(subset='leadingProtein', keep='first').reset_index(drop=True)
@@ -342,6 +343,7 @@ msplit['ID'] = list(zip(msplit['Scan#'].tolist(),msplit['peptide'].tolist(),mspl
 
 
 csodiaq = pd.read_csv('C:/Users/ccranney/Desktop/Caleb_Files/data/output/WIFF files/CsoDIAq-file1_01_qehfx_lab_SA_R1_corrected_peptideFDR.csv')
+#csodiaq = pd.read_csv('C:/Users/ccranney/Desktop/Caleb_Files/data/output/WIFF files/CsoDIAq-file1_01_qehfx_lab_SA_R1_corrected_peptideFDR.csv')
 csodiaq['ID'] = list(zip(csodiaq['scan'].tolist(),csodiaq['peptide'].tolist(),csodiaq['zLIB'].tolist()))
 #csodiaq = csodiaq[csodiaq['uniquePeptide']==1]
 #csodiaq = csodiaq.drop_duplicates(subset='leadingProtein', keep='first').reset_index(drop=True)
@@ -510,10 +512,16 @@ for file in files:
         count += len(peps)
 print(count)
 #'''
+'''
 # convert tsv to csv
 df = pd.read_csv('C:/Users/ccranney/Desktop/Caleb_Files/data/docker-shared/qehfx.tsv', sep='\t')
 df.to_csv('C:/Users/ccranney/Desktop/Caleb_Files/data/docker-shared/qehfx.csv')
+#'''
 
+spectra = mgf.read('C:/Users/ccranney/Desktop/Caleb_Files/data/human.faims.fixed.decoy.mgf')
+count = 0
+for spec in spectra: count += 1
+print(count)
 
 #java -Xmx2500M -cp C:/Users/ccranney/Desktop/Caleb_Files/MSPLIT-DIAv1.0/MSPLIT-DIAv02102015.jar org.Spectrums.SWATHMSPLITSearch 02 10 0 C:/Users/ccranney/Desktop/Caleb_Files/data/HeLa_160min_DIA_106win_1.mzXML C:/Users/ccranney/Desktop/Caleb_Files/data/human.faims.fixed.decoy.mgf C:/Users/ccranney/Desktop/Caleb_Files/data/output/msplit_HeLa_02-10-0.tsv
 #docker run -it -v C:/Users/ccranney/Desktop/Caleb_Files/data/docker-shared:/data openswath/openswath

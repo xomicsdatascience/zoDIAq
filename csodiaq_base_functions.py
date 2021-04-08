@@ -102,13 +102,14 @@ def traml_library_upload(fileName):
     print('\nEnter library dictionary upload: ',flush=True)
     print(str(timedelta(seconds=timer())),flush=True)
 
+    # Pan human and spectraST libraries have different column names. This normalizes the columns.
     headings = traml_column_headings(lib_df.columns)
 
     # Unneeded columns are removed from the dataframe
     lib_df = lib_df.loc[:, lib_df.columns.intersection([headings['PrecursorMz'],headings['FullUniModPeptideName'],headings['PrecursorCharge'],headings['ProductMz'],headings['LibraryIntensity'],headings['transition_group_id'],headings['ProteinName']])]
 
+    # necessary columns are identified and sorted
     lib_df = lib_df[[headings['PrecursorMz'],headings['FullUniModPeptideName'],headings['PrecursorCharge'],headings['ProductMz'],headings['LibraryIntensity'],headings['transition_group_id'],headings['ProteinName']]]
-
     lib_df.columns = ['PrecursorMz','FullUniModPeptideName','PrecursorCharge','ProductMz','LibraryIntensity','transition_group_id','ProteinName']
 
     # Normalize intensities by finding their square root
@@ -127,6 +128,7 @@ def traml_library_upload(fileName):
     lib_df.set_index("ID", drop=True, inplace=True)
     lib = lib_df.to_dict(orient="index")
 
+    # pan human library formats are different, including how the peptides are matched to proteins (esp. decoys). This section of code adjusts for this discrepancy.
     if headings['type']=='PanHuman':
         for key, value in lib.items():
             proteins = lib[key]['ProteinName'].split('/')
@@ -155,6 +157,15 @@ def traml_library_upload(fileName):
         lib[key]['ID'] = id
     return lib
 
+'''
+Function: traml_column_headings()
+Purpose: This function normalizes column headings so the program can accept spectraST and pan human libraries, as they have
+            differerent column headings.
+Parameters:
+    'columns' - a list of strings corresponding to the column names of the inputed library file.
+Returns:
+    dict - strings with key/value pairings mapping expected values to values found in given library.
+'''
 def traml_column_headings(columns):
     if 'FullUniModPeptideName' in columns:
         return {
@@ -179,6 +190,7 @@ def traml_column_headings(columns):
         'type':'PanHuman'
         }
 
+
 '''
 Function: mgf_library_upload()
 Purpose: Same purpose as traml_library_upload_csv() function, but for mgf files.
@@ -198,11 +210,9 @@ def mgf_library_upload(fileName):
     lib = {}
 
     # each spectrum in the mgf file
-    #lengths = []
-    #prematch = []
-    #matches = []
-    #print(np.mean([1,2,3]),flush=True)
+    id = 0
     for spec in libMGF:
+        id += 1
 
         # key for the final dictionary is initialized
         key = (spec['params']['pepmass'][0], spec['params']['seq'])
@@ -219,29 +229,8 @@ def mgf_library_upload(fileName):
         mz = spec['m/z array']
         intensity = spec['intensity array']
         intensity = [x**0.5 for x in intensity]
-        keyList = [key for x in mz]
+        keyList = [id for x in mz]
         peaks = list(tuple(zip(mz,intensity,keyList)))
-        '''
-        num = 1000
-        check = False
-        if randint(0,num) % num == 0 and '+' in spec['params']['seq']: check = True
-
-        mzValues = return_frag_mzs(spec['params']['seq'],1,check)
-        prematch.append(len(peaks))
-
-
-
-
-
-        for i in range(len(peaks)-1,-1,-1):
-            if approx_list(peaks[i][0],mzValues)==-1: peaks.pop(i)
-        lengths.append(len(spec['params']['seq']))
-        matches.append(len(peaks))
-        if check:
-            print(len(mzValues))
-            print(len(peaks))
-            print('\n', flush=True)
-        #'''
         peaks.sort(key=lambda x:x[1],reverse=True)
         if len(peaks) > 10: peaks = peaks[:10]
 
@@ -252,42 +241,16 @@ def mgf_library_upload(fileName):
             'PrecursorCharge':charge,
             'transition_group_id':name,
             'ProteinName':protein,
-            'Peaks':peaks
+            'Peaks':peaks,
+            'ID':id,
         }
 
         # entry placed in final dictionary
         lib[key] = tempDict
 
-    #print(np.mean(lengths))
-    #print(np.mean(prematch))
-    #print(np.mean(matches),flush=True)
+
+
     return lib
-
-def return_frag_mzs(peptide, z):
-    mzValues = []
-    digPat = r'\+\d+\.\d+'
-    digs = re.findall(digPat, peptide)
-    pepFrags = re.split(digPat, peptide)
-    modValues = {}
-    seq = ''
-    while len(digs) != 0:
-        dig = digs.pop(0)
-        frag = pepFrags.pop(0)
-        seq += frag
-        modValues[len(seq)] = float(dig[1:])/z
-    seq += pepFrags[0]
-    for i in range(1, len(seq)-1):
-        mz = mass.fast_mass(sequence=seq[i:], ion_type='y', charge=z)
-        mz += sum([modValues[x] for x in modValues if x > i])
-        mzValues.append(mz)
-
-    for i in range(len(seq)-1, 1, -1):
-        mz = mass.fast_mass(sequence=seq[:i], ion_type='b', charge=z)
-        mz += sum([modValues[x] for x in modValues if x <= i])
-        mzValues.append(mz)
-    return mzValues
-
-
 
 
 '''
@@ -317,7 +280,6 @@ def lib_mz_match_query_window( top_mz, bottom_mz, sortedLibKeys ):
     # The fake keys created above are inserted in an O(log(n)) fashion to the sorted library keys.
     i1 = bisect(temp, bottom_key)
 
-    #if i1 == len(temp)-1 and len(temp)!= 1: return []
     temp.insert(i1, bottom_key)
     i2 = bisect(temp, top_key)
     if i2-i1==1: return []
@@ -362,7 +324,7 @@ Returns:
             If the difference is outside the provided tolerance, 0 is returned instead for conditional purposes. If the
             values are exactly equal, a value close to 0 is returned instead (1x10e-7).
 '''
-@njit()
+@njit
 def approx(x, y, ppmTol):
     if x==y: return 1e-7
     ppmDiff = ((x-y)*1000000)/x
@@ -381,7 +343,7 @@ Parameters:
 Returns:
     float - Mz offset value.
 '''
-@njit()
+@njit
 def ppm_offset(mz, ppm):
     return (mz*-ppm)/1000000
 
@@ -392,10 +354,10 @@ Purpose: This function determines peaks that are within a sufficiently close tol
             requiring peak comparison then take place inside this function, including compiling data for a cosine
             similarity score. The specifics of the various functions can be found in the return values below.
 Parameters:
-    'libSpectrum' - list of (float, float, tuple) tuples. Represents spectrum peaks - see 'Peaks' key explanation in function
+    'libMzs' - numpy float array. Represents library spectrum peaks - see 'Peaks' key explanation in function
         library_file_to_dict().
-    'expSpectrum' - list of (float, float, int) tuples. Represents spectrum peaks - see 'Peaks' key explanation in function
-        library_file_to_dict(). The only variation is that the int represents the scan number.
+    'queMzs' - numpy float array. Represents query spectrum peaks - see 'Peaks' key explanation in function
+        library_file_to_dict().
     'ppmTol' - see 'ppmTol' parameter description for function approx().
     'ppmYOffset' - The value in ppm that should be subtracted from the query peak m/z. This is the average ppm difference
         of an uncorrected csodiaq output, being applied to the experimental spectra to generate a corrected
@@ -449,10 +411,12 @@ Returns:
 @njit()
 def spectra_peak_comparison(libMzs, queMzs, ppmTol, ppmOffset):
 
-
-    matchCount = 0
+    # initializing various values to be used in the function, including the return values.
     lenLib = len(libMzs)
     lenQue = len(queMzs)
+    pMatches = []
+    jMatches = []
+    ppmMatches = []
 
     # By tracking the indices of the current library/query peaks we reduce the time complexity of the algorithm
     i, j = 0, 0
@@ -474,64 +438,17 @@ def spectra_peak_comparison(libMzs, queMzs, ppmTol, ppmOffset):
         while (p < lenLib):
             ppm = approx(libMzs[p], expPeakMz, ppmTol)
             if p==lenLib or not ppm: break
-            #yield p, j, ppm
-            matchCount += 1
-            '''
-            matches[k] = np.array([p, j, ppm])
-            k += 1
-            if k == maxi:
-                k = 0
-                yield matches
-            '''
+            pMatches.append(p)
+            jMatches.append(j)
+            ppmMatches.append(ppm)
             p += 1
 
         # Note that the possibility of one library peak matching to multiple query peaks is automatically accounted for
         #   by the fact that the query peak is the next default increment after all match calculations have been made.
         j += 1
         if j < lenQue: expPeakMz = queMzs[j] - ppm_offset(queMzs[j], ppmOffset)
-    #return returns
+    return pMatches, jMatches, ppmMatches
 
-    pMatch = np.arange(matchCount)
-    jMatch = np.arange(matchCount)
-    ppmMatch = np.arange(float(matchCount))
-
-    # By tracking the indices of the current library/query peaks we reduce the time complexity of the algorithm
-    i, j, k = 0, 0, 0
-    expPeakMz = queMzs[j] - ppm_offset(queMzs[j], ppmOffset)
-    while i < lenLib and j < lenQue:
-
-        # If the m/z of the peaks are not within the given ppm tolerance, the indices of the smaller of the two is incremented
-        #   and we are returned to the top of the while loop.
-        if not approx(libMzs[i],expPeakMz, ppmTol):
-            if libMzs[i] > expPeakMz:
-                j += 1
-                if j < lenQue: expPeakMz = queMzs[j] - ppm_offset(queMzs[j], ppmOffset)
-                continue
-            if libMzs[i] < expPeakMz: i += 1; continue
-
-        # To account for the matching of one query peak to multiple library peaks, library peaks are looped over
-        #   after the initial match. Every matching peak contributes to the various variables in the final returned dictionary.
-        p = i + 0
-        while (p < lenLib):
-            ppm = approx(libMzs[p], expPeakMz, ppmTol)
-            if p==lenLib or not ppm: break
-            #yield p, j, ppm
-            pMatch[k] = p
-            jMatch[k] = j
-            ppmMatch[k] = ppm
-            #matches[k] = np.array([p, j, ppm])
-            k += 1
-
-            p += 1
-
-        # Note that the possibility of one library peak matching to multiple query peaks is automatically accounted for
-        #   by the fact that the query peak is the next default increment after all match calculations have been made.
-        j += 1
-        if j < lenQue: expPeakMz = queMzs[j] - ppm_offset(queMzs[j], ppmOffset)
-
-
-    return pMatch, jMatch, ppmMatch
-    #yield matches[:k]
 
 '''
 Function: initialize_return_values()
@@ -633,9 +550,51 @@ def cosine_similarity(row):
     magnitude = (row[1]**0.5) * (row[2]**0.5) # (sqrt(sum(A^2))*sqrt(sum(B^2)))
     return (row[0] / magnitude if magnitude else 0)
 
-def output_columns(tag):
+
+def generate_valid_FDR_spectra_keys(inFile):
+    print('enter valid FDR spectra calculation:', flush=True)
+    print(str(timedelta(seconds=timer())), flush=True)
+    #if corrected: inFile = re.sub('(.*).csv', r'\1_corrected.csv', inFile)
+    fields = ['decoy','MaCC_Score']
+    df = pd.read_csv(inFile, sep=',', usecols=fields).sort_values('MaCC_Score', ascending=False)#.reset_index(drop=True)
+    hits, decoys = fdr_calculation(df, returnType=2)
+    spectraKeys = defaultdict(list)
+    for h in hits:
+        line = linecache.getline(inFile,int(h)+2).strip().split(',')
+        spectraKeys[line[0]].append((float(line[2]),line[1]))
+    return spectraKeys
+
+
+'''
+Function: pooled_library_query_spectra_analysis()
+Purpose: This function loops through all query spectra and calculates the cosine similarity score and other
+            values between it and every library spectra with a precursor m/z value within its designated window.
+            For an explanation of each column in the output (references as the csodiaq output file in other
+            comments), see the comments alongside the 'column' value in the function.
+            NOTE: This function is used in two conditions to reduce the memory use. Conditions are determined
+            by the presence of the spectralKeys parameter. The first condition (no spectralKeys parameter)
+            determines the PSM values above an FDR cutoff of 0.01%, while the second calculates the various
+            values for those PSMs that will be in the final output.
+Parameters:
+    'expSpectraFile' - string representing the path to the query spectra file (required .mzXML format).
+    'lib' - dictionary as returned by the library_file_to_dict() function.
+    'ppmTol' - see 'ppmTol' parameter description for function approx().
+    'ppmYOffset' - see 'ppmYOffset' parameter description for function spectra_peak_comparison().
+    'queryPooling' - int determining the maximum number of query spectra that can be pooled at any given time.
+    'spectraKeys' - a dictionary that indicates the library/query spectra of interest as created by the
+Returns:
+    No Return Value. Results are written directly to the output file and ppm file (outFile and ppmFile,
+        respectively). The description of specific columns of output file are provided in the function comments.
+'''
+def pooled_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, queryPooling, spectraKeys=None):
+
+    #
+    if spectraKeys: tag='identify'
+    else: tag='iPPM'
+
+    # Column headers for the output file are initialized.
     if tag=='iPPM':
-        return [
+        columns = [
             'scan', # Scan number, corresponding to scans in the query spectra file.
             'peptide', # Peptide sequence for the library spectrum corresponding to this row.
             'mzLIB', # precursor charge for the library spectrum corresponding to this row.
@@ -643,7 +602,7 @@ def output_columns(tag):
             'MaCC_Score' # score unique to CsoDIAq, the fifith root of the number of matches ('shared') multiplied by the cosine score ('cosine')
         ]
     elif tag=='identify':
-        return [
+        columns = [
             'fileName', # Name of the query spectra file.
             'scan', # Scan number, corresponding to scans in the query spectra file.
             'MzEXP', # precursor m/z for query spectrum. Column 'windowWideness' corresponds to this value.
@@ -662,92 +621,15 @@ def output_columns(tag):
             'MaCC_Score',# score unique to CsoDIAq, the fifith root of the number of matches ('shared') multiplied by the cosine score ('cosine')
         ]
 
-def initial_que_spectra(spectra, queScanDict, queValDict, allLibKeys, spectraKeys, tag):
-    spectralCount = 0
-    if tag=='iPPM':
-        for spec in spectra:
-            if 'precursorMz' not in spec: continue
-            queScanDict[spec['precursorMz'][0]['precursorMz'],spec['precursorMz'][0]['windowWideness']].append(spec['num'])
-            spectralCount += 1
-    elif tag=='identify':
-        for scan in spectraKeys.keys():
-            allLibKeys.update(spectraKeys[scan])
-            spec = spectra.get_by_id(scan)
-            queScanDict[spec['precursorMz'][0]['precursorMz'],spec['precursorMz'][0]['windowWideness']].append(spec['num'])
-            #if scan=='1199' or scan=='1200': print((spec['precursorMz'][0]['precursorMz'],spec['precursorMz'][0]['windowWideness']))
-            peaksCount = spec['peaksCount']
-            if 'compensationVoltage' in spec: CV = spec['compensationVoltage']
-            else: CV = ''
-            queValDict[scan]['peaksCount'] = peaksCount
-            queValDict[scan]['CV'] = CV
-            spectralCount += 1
-    return spectralCount
-
-
-def update_output_values(returns, idToKeyDict, lib, pooledLibSpectra, pooledQueSpectra, precMz_win, queValDict, spectraKeys, writer, ppmList, tag):
-    if tag == 'iPPM':
-        cosDict, countDict = returns
-        for key,value in cosDict.items():
-            # Library spectra that had too few matching peaks are excluded. numPeakMatch variable determines the threshold.
-
-            if countDict[key] > 2:
-                cosine = cosine_similarity(cosDict[key])
-                libKey = idToKeyDict[key[0]]
-                if 'DECOY' in lib[libKey]['ProteinName']: decoy=1
-                else: decoy=0
-                temp = [
-                    str(int(key[1])), #scan
-                    libKey[1], #peptide
-                    libKey[0], #MzLIB
-                    decoy,
-                    (countDict[key]**(1/5))*cosine
-                ]
-                writer.writerow(temp)
-    if tag=='identify': pass
-
-
-
-'''
-Function: pooled_library_query_spectra_analysis()
-Purpose: This function loops through all query spectra and calculates the cosine similarity score and other
-            values between it and every library spectra with a precursor m/z value within its designated window.
-            For an explanation of each column in the output (references as the csodiaq output file in other
-            comments), see the comments alongside the 'column' value in the function.
-Parameters:
-    'expSpectraFile' - string representing the path to the query spectra file (required .mzXML format).
-    'outFile' - string representing the path to the output/results file.
-    'ppmFile' - a string representing the path to the ppm difference results file. The first three columns
-        are used for creating a key that corresponds to rows in the outFile output. This ppm file is used
-        to compile a comprehensive list of ppm differences used in calculating the ppm offset and ppm
-        standard deviation of an uncorrected csodiaq output. Such calculations are done after the optimal
-        minimum peak matching number is determined and applied as a filter to the data.
-    'lib' - dictionary as returned by the library_file_to_dict() function.
-    'numPeakMatch' - int representing the minimum number of allowed peak matches. This number is generally 3
-        to catch a wide number of matches that can later be filtered for the optimal number of minimum
-        allowed peak matches.
-    'ppmTol' - see 'ppmTol' parameter description for function approx().
-    'ppmYOffset' - see 'ppmYOffset' parameter description for function spectra_peak_comparison().
-Returns:
-    No Return Value. Results are written directly to the output file and ppm file (outFile and ppmFile,
-        respectively). The description of specific columns of output file are provided in the function comments.
-'''
-def pooled_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, queryPooling, spectraKeys=None):
-
-    if spectraKeys: tag='identify'
-    else: tag='iPPM'
-
-    # Column headers for the output file are initialized.
-    columns = output_columns(tag)
-
-    # Output file is opened and column headers are written as the first row.
-
+    # query data file is loaded
     with mzxml.read(expSpectraFile, use_index=True) as spectra:
 
+
+        # query data is looped over and scans are grouped by mz windows for future pooling.
+        #  Additionally, for the second condition, various variables are saved for future reference.
         queScanDict = defaultdict(list)
         queValDict = defaultdict(dict)
         allLibKeys = set()
-
-
         spectralCount = 0
         if tag=='iPPM':
             for spec in spectra:
@@ -768,13 +650,21 @@ def pooled_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
                 spectralCount += 1
 
         print('Number of Unpooled MS/MS Query Spectra: ' + str(spectralCount))
-        print('Number of Pooled MS/MS Query Spectra: ' + str(len(queScanDict)),flush=True)
+        print('Number of Pooled MS/MS Query Spectra/Mz Windows: ' + str(len(queScanDict)),flush=True)
 
+        # To enhance the print experience, status prints will be given at intervals tailored to the number of identified windows.
+        #  example: if there are 1-99 pooled query spectra, print statements are made after every pooled query spectra analysis is complete.
+        #           if there are 100-999, print after every 10 pooled spectra. And so on.
+        printCutoff = 100
+        while printCutoff < len(queScanDict): printCutoff*=10
+        printCutoff /= 100
+
+        # outfile is opened in advance so results can be written directly to the file as they are produced (mitigating memory use)
         with open(outFile, 'w', newline='') as csvFile:
-
             writer = csv.writer(csvFile)
             writer.writerow(columns)
 
+            # The second condition of this function returns a list of PPM differences that can be used for correction. Initialized here
             ppmList = []
 
             # Count variable keeps track of the number of query spectra that have been analyzed for time tracking purposes.
@@ -784,79 +674,50 @@ def pooled_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
             if tag=='iPPM': allLibKeys = lib.keys()
             allLibKeys = sorted(allLibKeys)
 
+            # Library keys were saved as an integer to save on time and simplify other parts of the algorithm. I believe the purpose is now defunct, but it's harmless, so I'm keeping it.
             idToKeyDict = {}
             for key in allLibKeys: idToKeyDict[lib[key]['ID']] = key
 
+            # tracking time for print statements.
             prevtime = timer()
 
             print('Enter Pooled Spectra Analysis:')
             print(str(timedelta(seconds=prevtime)), flush=True)
 
+            # looping through all the windows that the query data corresponds to
             for precMz_win, scans in queScanDict.items():
 
+                # Determining all library spectra that should be pooled for this particular query data window
                 top_mz = precMz_win[0] + precMz_win[1] / 2
                 bottom_mz = precMz_win[0] - precMz_win[1] / 2
-
                 libKeys = lib_mz_match_query_window( top_mz, bottom_mz, allLibKeys )
                 if len(libKeys) == 0: continue
-
-                pooledQueSpectra = []
                 pooledLibSpectra = pool_lib_spectra(lib, libKeys)
-                t = 0
-                t0 = timer()
+
+                # begin pooling query spectra
+                pooledQueSpectra = []
                 for i in range(len(scans)):
 
+                    # adding each scan in the window to the pooled spectra
                     scan = scans[i]
                     spec = spectra.get_by_id(scan)
-
                     intensity = [x**0.5 for x in spec['intensity array']]
                     peakIDs = [scan for x in range(spec['peaksCount'])]
                     pooledQueSpectra += list(zip(spec['m/z array'],intensity,peakIDs))
 
+                    # to reduce memory use for particularly large files, the user can limit the number of query spectra that are pooled. That's what this conditional statement takes care of.
                     if (i % queryPooling == 0 and i!=0) or i == len(scans)-1:
-
                         pooledQueSpectra.sort()
 
-                        #[float(x[0]),float(x[1]),float(x[2])]
-                        #pooledLibSpectra = [[float(x[0]),float(x[1]),float(x[2])] for x in pooledLibSpectra]
-                        #pooledQueSpectra = [[float(x[0]),float(x[1]),float(x[2])] for x in pooledQueSpectra]
-                        #pooledLibSpectra = [list(x) for x in pooledLibSpectra]
-                        #pooledQueSpectra = [list(x) for x in pooledQueSpectra]
-
+                        # each peak in the pooled library and query spectra is compared, and the necessary data is extracted from matching peaks (as determined by the ppm tolerance)
                         libMzs = np.array([x[0] for x in pooledLibSpectra])
                         queMzs = np.array([x[0] for x in pooledQueSpectra])
-                        #l1, l2, l3 = map(np.array,zip(*pooledLibSpectra))
-                        #q1, q2, q3 = map(np.array,zip(*pooledQueSpectra))
-                        #print(pooledLibSpectra[0])
-                        #np.array(pooledLibSpectra), np.array(pooledQueSpectra)
                         returns = initialize_return_values(tag)
-                        #for i1, i2, ppm in spectra_peak_comparison(pooledLibSpectra, pooledQueSpectra, ppmTol, ppmYOffset, tag=tag):
-                        #    update_return_values(returns, pooledLibSpectra[i1], pooledQueSpectra[i2], i1, i2, ppm, tag)
                         pMatch, jMatch, ppmMatch = spectra_peak_comparison(libMzs, queMzs, ppmTol, ppmYOffset)
                         for i in range(len(pMatch)):
                             update_return_values(returns, pooledLibSpectra[pMatch[i]], pooledQueSpectra[jMatch[i]], pMatch[i], jMatch[i], ppmMatch[i], tag)
-                        '''
-                        matches = np.array([[0.0 for y in range(3)] for x in range(1)])
-                        matches, matchCount = spectra_peak_comparison(libMzs, queMzs, ppmTol, ppmYOffset, matches)
-                        #print(matchCount)
-                        matches = np.array([[0.0 for y in range(3)] for x in range(matchCount)])
-                        matches, matchCount = spectra_peak_comparison(libMzs, queMzs, ppmTol, ppmYOffset, matches, second=True)
-                        #print(matches[0])
-                        #print(len(matches), flush=True)
-                        for m in matches:
-                            update_return_values(returns, pooledLibSpectra[int(m[0])], pooledQueSpectra[int(m[1])], int(m[0]), int(m[1]), m[2], tag)
-                        #'''
-                        '''
-                        matches = np.array([[0.0 for y in range(3)] for x in range(100)])
-                        matchCount = 0
-                        for matches in spectra_peak_comparison(pooledLibSpectra, pooledQueSpectra, ppmTol, ppmYOffset, matches):
-                            for m in matches:
-                                if matchCount == 0: print(m)
-                                matchCount += 1
-                                update_return_values(returns, pooledLibSpectra[int(m[0])], pooledQueSpectra[int(m[1])], int(m[0]), int(m[1]), m[2], tag)
-                        print(matchCount, flush=True)
-                        #'''
 
+                        # output values are saved to the output file
                         if tag=='iPPM':
                             cosDict, countDict = returns
                             for key,value in cosDict.items():
@@ -908,14 +769,15 @@ def pooled_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
                                     writer.writerow(temp)
                                     ppmList += ppmDict[key]
 
-
                         pooledQueSpectra.clear()
                         del returns
+
+                # print statements for the user to track progress.
                 count += 1
-                if count % 1 == 0:
+                if count % printCutoff == 0:
                     time = timer()
                     print('\nNumber of Pooled Experimental Spectra Analyzed: ' + str(count))
-                    print('Number of Spectra: ' + str(len(scans)))
+                    print('Number of Spectra in Current Pooled Spectrum: ' + str(len(scans)))
                     print('Time Since Last Checkpoint: ' + str(round(time-prevtime,2)) + ' Seconds', flush=True)
                     prevtime = time
 
@@ -937,7 +799,7 @@ def pooled_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
 #############################################################################################################################
 #############################################################################################################################
 '''
-Function:read_ppm_file_to_dict()
+Function:read_ppm_file_to_dict() *****DEFUNCT*****
 Purpose: After filtering the csodiaq output for the optimal minimum allowed peak match number, the returned
             dictionary is then used to create a comprehensive list of ppm differences of the output, which is
             then in turn used to calculate the ppm difference mean (offset) and ppm standard deviation (ppm
@@ -946,6 +808,9 @@ Parameters:
     'ppmFile' - string corresponding to the 'ppmFile' parameter of the query_spectra_analysis() function.
 Returns:
     'ppmDict' - dictionary representing the ppm differences of a given row in the csodiaq output.
+
+    Defunct Reasons: I no longer write ppm to an outfile. This was eliminated when I broke
+    pooled_spectra_analysis() into two parts.
 '''
 def read_ppm_file_to_dict(ppmFile):
     ppmDict = {}
@@ -959,7 +824,7 @@ def read_ppm_file_to_dict(ppmFile):
 
 
 '''
-Function: write_ppm_spread()
+Function: write_ppm_spread() *****DEFUNCT*****
 Purpose: Given an csodiaq output file and a ppm output file (both products of the query_spectra_analysis()
             function), the comprehensive list of ppm differences or "ppm spread" list is created and written
             to a file. This accounts for filtering for the optimal number of allowed matched peaks.
@@ -970,6 +835,8 @@ Parameters:
     'outFile' - a string representing the path to the ppm spread file.
 Returns:
     No Return Value. Results are written directly to the output file ('outFile').
+
+    Defunct Reason: See read_ppm_file_to_dict() defunct reason
 '''
 def return_ppm_spread(df, ppmFile):
     # Data is read in.
@@ -1004,25 +871,30 @@ Parameters:
         ppm difference between the two (which was within the ppm tolerance of the analysis).
     'histFile' - string corresponding to the file path and file name of a desired histogram. If histFile == 0, no histogram
         will be written.
+    'stdev' - The number of standard deviations of data to use as a tolerance. If 0, a custom tolerance is made of the
+        histogram peak formed from the data is returned.
+    'mean' - determines if the offset is determined by mean or median. I think this is defunct, and is overruled as
+        custom value in the case of custom tolerance anyways.
 Returns:
     'offset' - float corresponding to the calculated ppm offset to be used in future corrected analyses.
     'tolerance' - float corresponding to the calculated ppm tolerance to be used in future corrected analyses.
 '''
-def find_offset_tol(data, histFile, stdev=2, mean=True):
+def find_offset_tol(data, histFile, stdev, mean=True):
     if len(data)==0: return 0, 10
     hist, bins = np.histogram(data, bins=200)
     width = 0.7 * (bins[1] - bins[0])
     center = (bins[:-1] + bins[1:]) / 2
 
-    # offset is calculated as the mean value of the provided data
+    # offset is calculated as the mean or median value of the provided data, though this is overwritten if no corrected standard deviation is provided
     if mean: offset = sum(data)/len(data)
     else: offset = data[len(data)//2]
-    # tolerance is calculated as the second standard deviation of the provided data
-    #tolerance = statistics.pstdev(data)*stdev
-    #print(tolerance)
+
+    # If a corrected standard deviation is provided, it is used to set the tolerance. If not, see below conditional statement
     tolerance = np.std(data)*stdev
-    print(tolerance)
-    print(stdev, flush=True)
+
+    # If no corrected standard deviation is provided, one is customized.
+    #  Offset is considered the highest point of the histogram,
+    #  tolerance the range necessary before the peaks are the same size as the noise on either end.
     if not stdev:
         index_max = max(range(len(hist)), key=hist.__getitem__)
         histList = list(hist)
@@ -1037,13 +909,10 @@ def find_offset_tol(data, histFile, stdev=2, mean=True):
         offset = center[index_max]
         if index_max - min_i >= max_i - index_max: tolerance = offset - center[min_i]
         else: tolerance = center[max_i] - offset
-        #tolerance = (center[max_i] - center[min_i])/2
 
     # if a histogram file is provided, it is created, with offset (black) and tolerance (red) lines drawn for reference
     if histFile:
         pyplot.clf()
-#        set_plot_settings('Difference between Matched Peaks (PPM)','Frequency')
-#        offset, tolerance = 0, 10
         pyplot.bar(center, hist, align='center', width=width)
         pyplot.axvline(x=offset, color='black', linestyle = 'dashed', linewidth=4)
         pyplot.axvline(x=offset-tolerance, color='red', linestyle = 'dashed', linewidth=4)
@@ -1114,19 +983,6 @@ def fdr_calculation(df, returnType=0): #***NOTE***make return type
     if returnType: return fdrValues, numDecoys-1
     else: return len(fdrValues), numDecoys-1
 
-def generate_valid_FDR_spectra_keys(inFile):
-
-    print('enter valid FDR spectra calculation:', flush=True)
-    print(str(timedelta(seconds=timer())), flush=True)
-    #if corrected: inFile = re.sub('(.*).csv', r'\1_corrected.csv', inFile)
-    fields = ['decoy','MaCC_Score']
-    df = pd.read_csv(inFile, sep=',', usecols=fields).sort_values('MaCC_Score', ascending=False)#.reset_index(drop=True)
-    hits, decoys = fdr_calculation(df, returnType=2)
-    spectraKeys = defaultdict(list)
-    for h in hits:
-        line = linecache.getline(inFile,int(h)+2).strip().split(',')
-        spectraKeys[line[0]].append((float(line[2]),line[1]))
-    return spectraKeys
 
 '''
 Function: write_csodiaq_fdr_outputs()
@@ -1531,8 +1387,18 @@ def heavy_light_quantification(fragDict, libDict, mzxmlFiles, outDir, massTol, m
                     expSpectrum = list(tuple(zip(spec['m/z array'],spec['intensity array'],peakIDs)))
                     expSpectrum.sort(key=lambda x:x[0])
 
+                    libSpectra = sorted(libDict[scan])
+                    libMzs = np.array([x[0] for x in libSpectra])
+                    queMzs = np.array([x[0] for x in expSpectrum])
+                    tag = 'qPPM'
+                    returns = initialize_return_values(tag)
+                    pMatch, jMatch, ppmMatch = spectra_peak_comparison(libMzs, queMzs, massTol, 0)
+                    for i in range(len(pMatch)):
+                        update_return_values(returns, libSpectra[pMatch[i]], expSpectrum[jMatch[i]], pMatch[i], jMatch[i], ppmMatch[i], tag)
+                    l, h = returns
+
                     # all PPM differences from matches of interest are included for consideration
-                    l, h = spectra_peak_comparison(sorted(libDict[scan]), expSpectrum, massTol, 0, tag='qPPM')
+                    #l, h = spectra_peak_comparison(sorted(libDict[scan]), expSpectrum, massTol, 0, tag='qPPM')
                     for pep in l:
                         if len(l[pep]) >= minMatch: ppmDiffs += l[pep]
                     for pep in h:
@@ -1554,7 +1420,18 @@ def heavy_light_quantification(fragDict, libDict, mzxmlFiles, outDir, massTol, m
                 peakIDs = [scan for x in range(len(spec['m/z array']))]
                 expSpectrum = list(tuple(zip(spec['m/z array'],spec['intensity array'],peakIDs)))
                 expSpectrum.sort(key=lambda x:x[0])
-                lightPeps, heavyPeps = spectra_peak_comparison(sorted(libDict[scan]), expSpectrum, tolerance, offset, tag='ratio')
+                libSpectra = sorted(libDict[scan])
+                libMzs = np.array([x[0] for x in libSpectra])
+                queMzs = np.array([x[0] for x in expSpectrum])
+                tag = 'ratio'
+                returns = initialize_return_values(tag)
+                pMatch, jMatch, ppmMatch = spectra_peak_comparison(libMzs, tolerance, offset, 0)
+                for i in range(len(pMatch)):
+                    update_return_values(returns, libSpectra[pMatch[i]], expSpectrum[jMatch[i]], pMatch[i], jMatch[i], ppmMatch[i], tag)
+
+                lightPeps, heavyPeps = returns
+
+                #lightPeps, heavyPeps = spectra_peak_comparison(sorted(libDict[scan]), expSpectrum, tolerance, offset, tag='ratio')
                 peps = [x['seq'] for x in fragDict[scan]]
                 for pep in peps:
                     l = lightPeps[pep]
@@ -1674,10 +1551,6 @@ def tuple_key_match(keyList, key):
     i = bisect(keyList, key)
     if i != 0 and approx_tuple(key, keyList[i-1]): return keyList[i-1]
     if i != len(keyList) and approx_tuple(key, keyList[i]): return keyList[i]
-    #print('neither')
-    #print(key)
-    #print(keyList[i-1])
-    #print(keyList[i])
     if i<3 and i < len(keyList)-4:
         print('i: '+str(i))
         for j in range(i-2,i+2):
@@ -1702,21 +1575,10 @@ Defunct Reasons: We've opted to just round float values to 2 decimal places rath
 '''
 def approx_tuple(t1, t2, ppmTol=10):
 
-    # @DEBUG: I kept deleting this (and the 'check' lines below) but needing it later, so I'm keeping it here for now.
-    #check = False
-    #if t1 == (-40, 814.4, 820.4074896666666):
-    #    check = True
-    #    print('\n')
-    #    print(t1)
-    #    print(t2)
-
     # if the tuples aren't the same length, return False. This shouldn't happen, I'm just being careful.
     if len(t1) != len(t2): return False
     l = []
     for i in range(len(t1)):
-        # @DEBUG: see above
-        #if check: print(str(t1[i])+';'+str(t2[i])+'---'+str(type(t1[i]))+';'+str(type(t2[i])))
-
         # if the tuple values aren't the same type, return False. This also shouldn't happen.
         if type(t1[i]) != type(t2[i]): return False
 
@@ -1725,9 +1587,6 @@ def approx_tuple(t1, t2, ppmTol=10):
 
         # If the values are numeric and not within the ppm tolerance, return False.
         if not approx(t1[i], t2[i], ppmTol): return False
-
-    # @DEBUG: see above
-    #if check: print('success')
 
     return True
 
@@ -2034,12 +1893,29 @@ def set_plot_settings(xlabel, ylabel, wide=True):
     pyplot.tick_params(axis="x", labelsize=36)
     pyplot.tick_params(axis="y", labelsize=36)
 
-def plot_spec(SPECTRA, COLOR):
-    pyplot.vlines(SPECTRA.columns, np.repeat(0, len(SPECTRA.columns)), SPECTRA, colors=COLOR)
-#    pyplot.ylim(-8000,8000)
-#    ax = pyplot.gca()
-#    ax.axes.xaxis.set_visible(False)
-#    ax.axes.yaxis.set_visible(False)
+def return_frag_mzs(peptide, z):
+    mzValues = []
+    digPat = r'\+\d+\.\d+'
+    digs = re.findall(digPat, peptide)
+    pepFrags = re.split(digPat, peptide)
+    modValues = {}
+    seq = ''
+    while len(digs) != 0:
+        dig = digs.pop(0)
+        frag = pepFrags.pop(0)
+        seq += frag
+        modValues[len(seq)] = float(dig[1:])/z
+    seq += pepFrags[0]
+    for i in range(1, len(seq)-1):
+        mz = mass.fast_mass(sequence=seq[i:], ion_type='y', charge=z)
+        mz += sum([modValues[x] for x in modValues if x > i])
+        mzValues.append(mz)
+
+    for i in range(len(seq)-1, 1, -1):
+        mz = mass.fast_mass(sequence=seq[:i], ion_type='b', charge=z)
+        mz += sum([modValues[x] for x in modValues if x <= i])
+        mzValues.append(mz)
+    return mzValues
 
 def clean_mgf_file(mgfFile, fasta, ions=False):
     spectra = mgf.read(mgfFile)
