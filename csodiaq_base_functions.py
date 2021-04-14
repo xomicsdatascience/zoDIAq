@@ -15,6 +15,11 @@ from Bio import SeqIO
 from numba import njit, jit, typeof
 from numba.core import types
 from numba.typed import List
+import pickle
+import zlib
+import sys
+import os
+import bz2
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
@@ -155,6 +160,8 @@ def traml_library_upload(fileName):
         peaks.sort(key=lambda x:x[0])
         lib[key]['Peaks'] = peaks
         lib[key]['ID'] = id
+        if 'DECOY' in lib[key]['ProteinName']: lib[key]['Decoy'] = 1
+        else: lib[key]['Decoy'] = 0
     return lib
 
 '''
@@ -225,6 +232,9 @@ def mgf_library_upload(fileName):
         if 'protein' in spec['params']: protein = spec['params']['protein']
         else: protein = ''
 
+        if 'DECOY' in name: decoy=1
+        else: decoy=0
+
         # peaks of the library file are intialized.
         mz = spec['m/z array']
         intensity = spec['intensity array']
@@ -243,6 +253,7 @@ def mgf_library_upload(fileName):
             'ProteinName':protein,
             'Peaks':peaks,
             'ID':id,
+            'Decoy':decoy,
         }
 
         # entry placed in final dictionary
@@ -409,13 +420,15 @@ Returns:
                 value - float representing the intensity of the matched query peak.
 '''
 @njit()
-def spectra_peak_comparison(libMzs, queMzs, ppmTol, ppmOffset):
+def spectra_peak_comparison(libMzs, libIntensities, libTags, queMzs, queIntensities, queTags, ppmTol, ppmOffset):
 
     # initializing various values to be used in the function, including the return values.
     lenLib = len(libMzs)
     lenQue = len(queMzs)
-    pMatches = []
-    jMatches = []
+    matchLibTags = []
+    matchLibIntensities = []
+    matchQueTags = []
+    matchQueIntensities = []
     ppmMatches = []
 
     # By tracking the indices of the current library/query peaks we reduce the time complexity of the algorithm
@@ -438,16 +451,22 @@ def spectra_peak_comparison(libMzs, queMzs, ppmTol, ppmOffset):
         while (p < lenLib):
             ppm = approx(libMzs[p], expPeakMz, ppmTol)
             if p==lenLib or not ppm: break
-            pMatches.append(p)
-            jMatches.append(j)
+            #pMatches.append(p)
+            #jMatches.append(j)
+            #ppmMatches.append(ppm)
+            matchLibTags.append(libTags[p])
+            matchLibIntensities.append(libIntensities[p])
+            matchQueTags.append(queTags[j])
+            matchQueIntensities.append(queIntensities[j])
             ppmMatches.append(ppm)
+
             p += 1
 
         # Note that the possibility of one library peak matching to multiple query peaks is automatically accounted for
         #   by the fact that the query peak is the next default increment after all match calculations have been made.
         j += 1
         if j < lenQue: expPeakMz = queMzs[j] - ppm_offset(queMzs[j], ppmOffset)
-    return pMatches, jMatches, ppmMatches
+    return matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches
 
 
 '''
@@ -465,9 +484,9 @@ def initialize_return_values(tag):
         def cosDictValues(): return [0.0, 0.0, 0.0]
         cosDict = defaultdict(cosDictValues)
         countDict = defaultdict(int)
-        ionDict = defaultdict(set)
+        #ionDict = defaultdict(set)
         ppmDict = defaultdict(list)
-        return [cosDict, countDict, ionDict, ppmDict]
+        return [cosDict, countDict, ppmDict]
     elif tag=='iPPM':
         def cosDictValues(): return [0.0, 0.0, 0.0]
         cosDict = defaultdict(cosDictValues)
@@ -514,10 +533,11 @@ def update_return_values(returns, peak1, peak2, i1, i2, ppm, tag):
         returns[1][key] += 1
 
         # Ion Count
-        returns[2][key].add(i2)
+        #returns[2][key].add(i2)
 
         # ppm differences in matched peaks
-        returns[3][key].append(ppm)
+        #returns[3][key].append(ppm)
+        returns[2][key].append([peak1[2],peak2[2],peak1[1],peak2[1],ppm])
     elif tag=='iPPM':
         key = (peak1[2],peak2[2])
 
@@ -546,9 +566,10 @@ Parameters:
 Returns:
     float - represents the cosine similarity score of a library and query spectrum comparison.
 '''
-def cosine_similarity(row):
-    magnitude = (row[1]**0.5) * (row[2]**0.5) # (sqrt(sum(A^2))*sqrt(sum(B^2)))
-    return (row[0] / magnitude if magnitude else 0)
+@njit
+def cosine_similarity(AB, A, B):
+    magnitude = (A**0.5) * (B**0.5) # (sqrt(sum(A^2))*sqrt(sum(B^2)))
+    return (AB / magnitude if magnitude else 0)
 
 
 def generate_valid_FDR_spectra_keys(inFile):
@@ -586,9 +607,9 @@ Returns:
     No Return Value. Results are written directly to the output file and ppm file (outFile and ppmFile,
         respectively). The description of specific columns of output file are provided in the function comments.
 '''
+'''
 def pooled_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, queryPooling, spectraKeys=None):
 
-    #
     if spectraKeys: tag='identify'
     else: tag='iPPM'
 
@@ -685,6 +706,7 @@ def pooled_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
             print(str(timedelta(seconds=prevtime)), flush=True)
 
             # looping through all the windows that the query data corresponds to
+            windowCount = 0
             for precMz_win, scans in queScanDict.items():
 
                 # Determining all library spectra that should be pooled for this particular query data window
@@ -702,7 +724,7 @@ def pooled_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
                     scan = scans[i]
                     spec = spectra.get_by_id(scan)
                     intensity = [x**0.5 for x in spec['intensity array']]
-                    peakIDs = [scan for x in range(spec['peaksCount'])]
+                    peakIDs = [int(scan) for x in range(spec['peaksCount'])]
                     pooledQueSpectra += list(zip(spec['m/z array'],intensity,peakIDs))
 
                     # to reduce memory use for particularly large files, the user can limit the number of query spectra that are pooled. That's what this conditional statement takes care of.
@@ -713,10 +735,13 @@ def pooled_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
                         libMzs = np.array([x[0] for x in pooledLibSpectra])
                         queMzs = np.array([x[0] for x in pooledQueSpectra])
                         returns = initialize_return_values(tag)
+
                         pMatch, jMatch, ppmMatch = spectra_peak_comparison(libMzs, queMzs, ppmTol, ppmYOffset)
                         for i in range(len(pMatch)):
-                            update_return_values(returns, pooledLibSpectra[pMatch[i]], pooledQueSpectra[jMatch[i]], pMatch[i], jMatch[i], ppmMatch[i], tag)
+                            libPeak = pooledLibSpectra[pMatch[i]]
+                            quePeak = pooledQueSpectra[jMatch[i]]
 
+                            update_return_values(returns, pooledLibSpectra[pMatch[i]], pooledQueSpectra[jMatch[i]], pMatch[i], jMatch[i], ppmMatch[i], tag)
                         # output values are saved to the output file
                         if tag=='iPPM':
                             cosDict, countDict = returns
@@ -772,21 +797,563 @@ def pooled_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
                         pooledQueSpectra.clear()
                         del returns
 
-                # print statements for the user to track progress.
+
                 count += 1
                 if count % printCutoff == 0:
                     time = timer()
-                    print('\nNumber of Pooled Experimental Spectra Analyzed: ' + str(count))
-                    print('Number of Spectra in Current Pooled Spectrum: ' + str(len(scans)))
-                    print('Time Since Last Checkpoint: ' + str(round(time-prevtime,2)) + ' Seconds', flush=True)
+                    #print('\nNumber of Pooled Experimental Spectra Analyzed: ' + str(count))
+                    #print('Number of Spectra in Current Pooled Spectra: ' + str(len(scans)))
+                    #print('Time Since Last Checkpoint: ' + str(round(time-prevtime,2)) + ' Seconds', flush=True)
+                    print(round(time-prevtime,2),flush=True)
                     prevtime = time
+
 
     # Prints the final number of experimental spectra analyzed.
     print('Total Time (seconds): ' + str(timer()))
     print('Count: '+str(count),flush=True)
     if tag=='identify': return ppmList
+#'''
+#'''
+def pooled_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, queryPooling, spectraKeys=None):
+
+    pickleDir = '/'.join(outFile.split('/')[:-1]) + '/compressed_processObj_canDeleteAfter/'
+    if not os.path.exists(pickleDir):
+        os.mkdir(pickleDir)
+    pickleHeader = 'window'
+
+    # query data file is loaded
+    with mzxml.read(expSpectraFile, use_index=True) as spectra:
 
 
+        # query data is looped over and scans are grouped by mz windows for future pooling.
+        #  Additionally, for the second condition, various variables are saved for future reference.
+        queScanDict = defaultdict(list)
+        queValDict = defaultdict(dict)
+        allLibKeys = set()
+        spectralCount = 0
+        for spec in spectra:
+            if 'precursorMz' not in spec: continue
+            scan = spec['num']
+            precMz = spec['precursorMz'][0]['precursorMz']
+            window = spec['precursorMz'][0]['windowWideness']
+            queScanDict[precMz,window].append(scan)
+            peaksCount = spec['peaksCount']
+            if 'compensationVoltage' in spec: CV = spec['compensationVoltage']
+            else: CV = ''
+            queValDict[scan]['peaksCount'] = peaksCount
+            queValDict[scan]['CV'] = CV
+            queValDict[scan]['precursorMz'] = precMz
+            queValDict[scan]['windowWideness'] = window
+            spectralCount += 1
+
+        print('Number of Unpooled MS/MS Query Spectra: ' + str(spectralCount))
+        print('Number of Pooled MS/MS Query Spectra/Mz Windows: ' + str(len(queScanDict)),flush=True)
+
+        # To enhance the print experience, status prints will be given at intervals tailored to the number of identified windows.
+        #  example: if there are 1-99 pooled query spectra, print statements are made after every pooled query spectra analysis is complete.
+        #           if there are 100-999, print after every 10 pooled spectra. And so on.
+        printCutoff = 100
+        while printCutoff < len(queScanDict): printCutoff*=10
+        printCutoff /= 100
+
+        # outfile is opened in advance so results can be written directly to the file as they are produced (mitigating memory use)
+        # The second condition of this function returns a list of PPM differences that can be used for correction. Initialized here
+        ppmList = []
+
+        # Count variable keeps track of the number of query spectra that have been analyzed for time tracking purposes.
+        count = 0
+
+        # 'lib' dictionary keys are kept as a separate list in this analysis. Note that they are sorted by precursor m/z.
+        allLibKeys = lib.keys()
+        allLibKeys = sorted(allLibKeys)
+
+        # Library keys were saved as an integer to save on time and simplify other parts of the algorithm. I believe the purpose is now defunct, but it's harmless, so I'm keeping it.
+        idToKeyDict = {}
+        idToDecoyDict = {}
+        for key in allLibKeys: idToKeyDict[lib[key]['ID']] = key; idToDecoyDict[lib[key]['ID']] = lib[key]['Decoy']
+
+        # tracking time for print statements.
+        prevtime = timer()
+
+        print('Enter Pooled Spectra Analysis:')
+        print(str(timedelta(seconds=prevtime)), flush=True)
+
+        #'''
+
+        # looping through all the windows that the query data corresponds to
+        windowCount = 0
+        maccDecoys = []
+        finalLibTags, finalQueTags = [np.array([],dtype=int) for i in range(2)]
+        finalLibIntensities, finalQueIntensities, finalPpmMatches, finalDecoys, finalMaccScores = [np.array([],dtype=float) for i in range(5)]
+        for precMz_win, scans in queScanDict.items():
+
+            # Determining all library spectra that should be pooled for this particular query data window
+            top_mz = precMz_win[0] + precMz_win[1] / 2
+            bottom_mz = precMz_win[0] - precMz_win[1] / 2
+            libKeys = lib_mz_match_query_window( top_mz, bottom_mz, allLibKeys )
+            if len(libKeys) == 0: continue
+            pooledLibSpectra = pool_lib_spectra(lib, libKeys)
+
+            # begin pooling query spectra
+            pooledQueSpectra = []
+            for i in range(len(scans)):
+
+                # adding each scan in the window to the pooled spectra
+                scan = scans[i]
+                spec = spectra.get_by_id(scan)
+                intensity = [x**0.5 for x in spec['intensity array']]
+                peakIDs = [int(scan) for x in range(spec['peaksCount'])]
+                pooledQueSpectra += list(zip(spec['m/z array'],intensity,peakIDs))
+
+                # to reduce memory use for particularly large files, the user can limit the number of query spectra that are pooled. That's what this conditional statement takes care of.
+                if (i % queryPooling == 0 and i!=0) or i == len(scans)-1:
+                    pooledQueSpectra.sort()
+
+                    # each peak in the pooled library and query spectra is compared, and the necessary data is extracted from matching peaks (as determined by the ppm tolerance)
+                    #libMzs, libIntensities, libTags = np.hsplit(np.array(pooledLibSpectra), 3)
+                    #queMzs, queIntensities, queTags = np.hsplit(np.array(pooledQueSpectra), 3)
+                    libMzs, libIntensities, libTags = list(map(list, zip(*pooledLibSpectra)))
+                    queMzs, queIntensities, queTags = list(map(list, zip(*pooledQueSpectra)))
+                    #libMzs = np.array([x[0] for x in pooledLibSpectra])
+                    queMzs = np.array([x[0] for x in pooledQueSpectra])
+                    tempTag = 'identify'
+                    returns = initialize_return_values(tempTag)
+
+                    matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches = spectra_peak_comparison(libMzs, libIntensities, libTags, queMzs, queIntensities, queTags, ppmTol, ppmYOffset)
+                    #data = pd.DataFrame({'libID':matchLibTags, 'queID':matchQueTags, 'libIntensity':matchLibIntensities, 'queIntensity':matchQueIntensities, 'ppmDiff':ppmMatches})
+                    #data = data.groupby(['libID','queID']).filter(lambda x: len(x.index) > 2.)
+                    #print(len(data))
+                    matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches = [np.array(x) for x in [matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches]]
+                    i1 = matchQueTags.argsort(kind='mergesort')
+                    matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches = [x[i1] for x in [matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches]]
+                    i2 = matchLibTags.argsort(kind='mergesort')
+                    matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches = [x[i2] for x in [matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches]]
+                    #reduce_final_df(matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches)
+                    matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches, maccScores = reduce_final_df(matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches)
+                    decoys = [idToDecoyDict[x] for x in matchLibTags]
+                    #print(len(decoys))
+                    finalLibTags = np.append(finalLibTags, matchLibTags)
+                    finalLibIntensities = np.append(finalLibIntensities, matchLibIntensities)
+                    finalQueTags = np.append(finalQueTags, matchQueTags)
+                    finalQueIntensities = np.append(finalQueIntensities, matchQueIntensities)
+                    finalPpmMatches = np.append(finalPpmMatches, ppmMatches)
+                    finalMaccScores = np.append(finalMaccScores, maccScores)
+                    finalDecoys = np.append(finalDecoys, decoys)
+                    #print(len(finalDecoys))
+                    #maccDecoys.extend(set(tuple(zip(maccScores))))
+                    #for x in enumerate(matchLibTags[:11]): print(x)
+                    #for x in enumerate(matchQueTags[:11]): print(x)
+                    #for x in enumerate(maccScores[:11]): print(x)
+                    #print(len(matchLibTags))
+                    #print(len(maccScores))
+                    #data = pd.DataFrame([matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches, maccScores])
+                    #print(len(set(maccScores)))
+                    #data = pd.DataFrame({'libID':matchLibTags, 'queID':matchQueTags, 'libIntensity':matchLibIntensities, 'queIntensity':matchQueIntensities, 'ppmDiff':ppmMatches})
+                    #data = pd.concat(dfs)
+                    #data = data.groupby(['libID','queID']).filter(lambda x: len(x.index) > 2.)
+                    #print(len(data))
+                    #data = data.groupby(['libID','queID']).apply(add_macc_column, maccDict)
+
+                    #data, NAlist = reduce_mem_usage(data)
+                    #allDfs.append(data)
+                    #with bz2.BZ2File(pickleDir+pickleHeader+str(windowCount), 'w') as pickleFile: pickle.dump([matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches, maccScores], pickleFile)
+
+                    pooledQueSpectra.clear()
+                    del returns
+                    windowCount += 1
+
+            count += 1
+            if count % printCutoff == 0:
+                time = timer()
+                print('\nNumber of Pooled Experimental Spectra Analyzed: ' + str(count))
+                print('Number of Spectra in Current Pooled Spectra: ' + str(len(scans)))
+                print('Time Since Last Checkpoint: ' + str(round(time-prevtime,2)) + ' Seconds', flush=True)
+                #print(round(time-prevtime,2),flush=True)
+                prevtime = time
+        #print(pickleDir+pickleHeader+'allFinals', flush=True)
+        #with bz2.BZ2File(pickleDir+pickleHeader+'allFinals', 'rb') as pickleFile: data = pickle.load(pickleFile)
+        #finalLibTags, finalLibIntensities, finalQueTags, finalQueIntensities, finalMaccScores, finalDecoys = data
+    #with bz2.BZ2File('C:/Users/ccranney/Desktop/Caleb_Files/data/output/CompressTest/compressed_processObj_canDeleteAfter/windowallFinals', 'rb') as pickleFile: data = pickle.load(pickleFile)
+    #finalLibTags, finalLibIntensities, finalQueTags, finalQueIntensities, finalPpmMatches, finalMaccScores, finalDecoys = data
+
+    #with bz2.BZ2File(pickleDir+pickleHeader+'allFinals', 'w') as pickleFile: pickle.dump([finalLibTags, finalLibIntensities, finalQueTags, finalQueIntensities, finalPpmMatches, finalMaccScores, finalDecoys], pickleFile)
+    maccs, decoys = match_score_decoys(finalLibTags, finalQueTags, finalMaccScores, finalDecoys)
+    #print(timer())
+    #print(len(maccs))
+    #print(len(set(finalMaccScores)))
+    #print(len(set(maccs)))
+    maccs = np.array(maccs)
+    decoys = np.array(decoys)
+    i1 = (-maccs).argsort()
+    maccs = maccs[i1]
+    decoys = decoys[i1]
+    maccCutoff = fdr_calculation2(maccs, decoys)
+    #print(maccCutoff)
+    ppms = collect_ppm_values(finalPpmMatches, finalMaccScores, maccCutoff)
+    offset, tolerance = find_offset_tol(ppms, 'C:/Users/ccranney/Desktop/Caleb_Files/data/output/CompressTest/CsoDIAq-file1_01_qehfx_lab_SA_R1_histogram.png', stdev=0)
+    #print(offset,tolerance)
+    lowend = offset-tolerance
+    highend = offset+tolerance
+    ppmIndices = np.where((finalPpmMatches>lowend)*(finalPpmMatches<highend))[0]
+    #print(len(ppmIndices))
+    tempTags = finalLibTags[ppmIndices]
+    #print(len(tempTags))
+    #print(ppmIndices[:10])
+    #print(tempTags[:10])
+    corLibTags, corLibIntensities, corQueTags, corQueIntensities, corDecoys = [x[ppmIndices] for x in [finalLibTags, finalLibIntensities, finalQueTags, finalQueIntensities, finalDecoys]]
+    corLibTags, corLibIntensities, corQueTags, corQueIntensities, corDecoys, corMaccScores = reduce_final_df(corLibTags, corLibIntensities, corQueTags, corQueIntensities, corDecoys)
+    print('begin pickle upload', flush=True)
+    print(str(timedelta(seconds=timer())),flush=True)
+
+    with bz2.BZ2File(pickleDir+pickleHeader+'corrected', 'w') as pickleFile: pickle.dump([corLibTags, corLibIntensities, corQueTags, corQueIntensities, corDecoys, corMaccScores], pickleFile)
+    #print('X'*20, flush=True)
+    #'''
+    #print('begin pickle upload', flush=True)
+    #print(str(timedelta(seconds=timer())),flush=True)
+
+    #with bz2.BZ2File('C:/Users/ccranney/Desktop/Caleb_Files/data/output/CompressTest/compressed_processObj_canDeleteAfter/windowcorrected', 'rb') as pickleFile: data = pickle.load(pickleFile)
+    #corLibTags, corLibIntensities, corQueTags, corQueIntensities, corDecoys, corMaccScores = data
+    print('end pickle upload', flush=True)
+    print(str(timedelta(seconds=timer())),flush=True)
+
+    maccs, decoys = match_score_decoys(corLibTags, corQueTags, corMaccScores, corDecoys)
+    maccs = np.array(maccs)
+    decoys = np.array(decoys)
+    i1 = (-maccs).argsort()
+    maccs = maccs[i1]
+    decoys = decoys[i1]
+    maccCutoff = fdr_calculation2(maccs, decoys)
+    print('\nBegin Writing to File: ',flush=True)
+    print(str(timedelta(seconds=timer())),flush=True)
+
+    columns = [
+        'fileName', # Name of the query spectra file.
+        'scan', # Scan number, corresponding to scans in the query spectra file.
+        'MzEXP', # precursor m/z for query spectrum. Column 'windowWideness' corresponds to this value.
+        'peptide', # Peptide sequence for the library spectrum corresponding to this row.
+        'protein', # Protein name the peptide corresponds to, also derived from the library spectrum corresponding to this row.
+        'MzLIB', # precursor m/z for the library spectrum corresponding to this row.
+        'zLIB', # precursor charge for the library spectrum corresponding to this row.
+        'cosine', # Cosine score comparing the library spectrum corresponding to this row with the query spectrum.
+        'name', # Title - corresponds to the column "transition_group_id," a library spectrum identifier.
+        'Peak(Query)', # The number of peaks in the query spectrum.
+        'Peaks(Library)', # The number of peaks in the library spectrum.
+        'shared', # The number of peaks that matched between query spectrum/library spectrum.
+        'ionCount', # Sum of query spectrum intensities, excluding possible duplicates - currently uncalculated, set to 0.
+        'CompensationVoltage', # The compensation voltage of the query spectrum.
+        'totalWindowWidth', # width of m/z that was captured in the query spectrum. Corresponds to MzEXP.
+        'MaCC_Score',# score unique to CsoDIAq, the fifith root of the number of matches ('shared') multiplied by the cosine score ('cosine')
+    ]
+
+    with open(outFile, 'w', newline='') as csvFile:
+        writer = csv.writer(csvFile)
+        writer.writerow(columns)
+        #corLibTags, corLibIntensities, corQueTags, corQueIntensities, corDecoys, corMaccScores
+        curLibTag = corLibTags[0]
+        curQueTag = corQueTags[0]
+        curIonCount = corQueIntensities[0]
+        count = 1
+        length = len(corLibTags)
+        for i in range(1,length):
+            if corLibTags[i] != curLibTag or corQueTags[i] != curQueTag:
+                curMaccScore = corMaccScores[i-1]
+                if curMaccScore >= maccCutoff:
+                    libKey = idToKeyDict[curLibTag]
+                    scan = str(curQueTag)
+                    temp = [
+                        expSpectraFile, #fileName
+                        scan, #scan
+                        queValDict[scan]['precursorMz'], #MzEXP
+                        libKey[1], #peptide
+                        lib[libKey]['ProteinName'], #protein
+                        libKey[0], #MzLIB
+                        lib[libKey]['PrecursorCharge'], #zLIB
+                        curMaccScore/(count**(1/5)), #cosine
+                        lib[libKey]['transition_group_id'], #name
+                        queValDict[scan]['peaksCount'], #Peaks(Query)
+                        len(lib[libKey]['Peaks']), #Peaks(Library)
+                        count, #shared
+                        curIonCount, #ionCount
+                        queValDict[scan]['CV'], #compensationVoltage
+                        queValDict[scan]['windowWideness'], #totalWindowWidth
+                        curMaccScore
+                    ]
+                    writer.writerow(temp)
+                curLibTag = corLibTags[i]
+                curQueTag = corQueTags[i]
+                curIonCount = corQueIntensities[i]
+                count = 1
+            else:
+                curIonCount += corQueIntensities[i]
+                count += 1
+        curMaccScore = corMaccScores[-1]
+        if curMaccScore >= maccCutoff:
+            libKey = idToKeyDict[corLibTags[-1]]
+            scan = str(corQueTags[-1])
+            temp = [
+                expSpectraFile, #fileName
+                scan, #scan
+                queValDict[scan]['precursorMz'], #MzEXP
+                libKey[1], #peptide
+                lib[libKey]['ProteinName'], #protein
+                libKey[0], #MzLIB
+                lib[libKey]['PrecursorCharge'], #zLIB
+                curMaccScore/(count**(1/5)), #cosine
+                lib[libKey]['transition_group_id'], #name
+                queValDict[scan]['peaksCount'], #Peaks(Query)
+                len(lib[libKey]['Peaks']), #Peaks(Library)
+                count, #shared
+                curIonCount, #ionCount
+                queValDict[scan]['CV'], #compensationVoltage
+                queValDict[scan]['windowWideness'], #totalWindowWidth
+                curMaccScore
+            ]
+            writer.writerow(temp)
+
+    # Prints the final number of experimental spectra analyzed.
+    print('Total Time (seconds): ' + str(timer()))
+    print('Count: '+str(count),flush=True)
+#'''
+@njit
+def reduce_final_df(matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches):
+    curLibTag = matchLibTags[0]
+    curQueTag = matchQueTags[0]
+    count = 1
+    AB = matchLibIntensities[0]*matchQueIntensities[0]
+    A = matchLibIntensities[0]**2
+    B = matchQueIntensities[0]**2
+    returnLibTags = []
+    returnLibIntensities = []
+    returnQueTags = []
+    returnQueIntensities = []
+    returnPpmMatches = []
+    returnMaccScores = []
+    length = len(matchLibTags)
+    for i in range(1,length):
+        if matchLibTags[i] != curLibTag or matchQueTags[i] != curQueTag:
+            if count > 2:
+                test = 0
+                cosine = cosine_similarity(AB, A, B)
+                macc = (count**(1/5))*cosine
+                magnitude = (A**0.5) * (B**0.5) # (sqrt(sum(A^2))*sqrt(sum(B^2)))
+                returnLibTags.extend(matchLibTags[i-count:i])
+                returnLibIntensities.extend(matchLibIntensities[i-count:i])
+                returnQueTags.extend(matchQueTags[i-count:i])
+                returnQueIntensities.extend(matchQueIntensities[i-count:i])
+                returnPpmMatches.extend(ppmMatches[i-count:i])
+                returnMaccScores.extend([macc]*count)
+            count = 1
+            curLibTag = matchLibTags[i]
+            curQueTag = matchQueTags[i]
+            AB = matchLibIntensities[i]*matchQueIntensities[i]
+            A = matchLibIntensities[i]**2
+            B = matchQueIntensities[i]**2
+        else:
+            AB += matchLibIntensities[i]*matchQueIntensities[i]
+            A += matchLibIntensities[i]**2
+            B += matchQueIntensities[i]**2
+            count += 1
+    if count > 2:
+        test = 0
+        cosine = cosine_similarity(AB, A, B)
+        macc = (count**(1/5))*cosine
+        returnLibTags.extend(matchLibTags[length-count:])
+        returnLibIntensities.extend(matchLibIntensities[length-count:])
+        returnQueTags.extend(matchQueTags[length-count:])
+        returnQueIntensities.extend(matchQueIntensities[length-count:])
+        returnPpmMatches.extend(ppmMatches[length-count:])
+        returnMaccScores.extend([macc]*count)
+
+    #return returnLibTags, returnLibIntensities, returnQueTags, returnQueIntensities, returnPpmMatchs, returnMaccScores
+    return returnLibTags, returnLibIntensities, returnQueTags, returnQueIntensities, returnPpmMatches, returnMaccScores
+
+
+def match_macc_decoys(matchLibTags, matchQueTags, maccScores, decoys):
+    curLibTag = matchLibTags[0]
+    curQueTag = matchQueTags[0]
+    returnMaccs = [maccScores[0]]
+    returnDecoys = [decoys[0]]
+    length = len(matchLibTags)
+    for i in range(1,length):
+        if matchLibTags[i] != curLibTag or matchQueTags[i] != curQueTag:
+            returnMaccs.append(maccScores[i])
+            returnDecoys.append(decoys[i])
+
+    #return returnLibTags, returnLibIntensities, returnQueTags, returnQueIntensities, returnPpmMatchs, returnMaccScores
+    return returnLibTags, returnLibIntensities, returnQueTags, returnQueIntensities, returnPpmMatches, returnMaccScores
+
+@njit
+def match_score_decoys(matchLibTags, matchQueTags, maccScores, decoys):
+    curLibTag = matchLibTags[0]
+    curQueTag = matchQueTags[0]
+    returnMaccs = [maccScores[0]]
+    returnDecoys = [decoys[0]]
+    length = len(matchLibTags)
+    for i in range(1,length):
+        if matchLibTags[i] != curLibTag or matchQueTags[i] != curQueTag:
+            returnMaccs.append(maccScores[i])
+            returnDecoys.append(decoys[i])
+            curLibTag = matchLibTags[i]
+            curQueTag = matchQueTags[i]
+    #return returnLibTags, returnLibIntensities, returnQueTags, returnQueIntensities, returnPpmMatchs, returnMaccScores
+    return returnMaccs, returnDecoys
+
+@njit
+def fdr_calculation2(maccs, decoys): #***NOTE***make return type
+    # initializing the two return values at 0
+    numDecoys = 0
+
+    # for every row in the dataframe
+    count = 0
+    for i in range(len(maccs)):
+        #print(str(maccs[i])+':'+str(decoys[i]))
+        if decoys[i]: numDecoys += 1
+        # calculates the FDR up to this point in the data frame.
+        curFDR = numDecoys/(count+1)
+
+        # conditional statement comparing the current FDR to the FDR Cutoff. If larger, function values are returned.
+        if curFDR > 0.01:
+
+            # if the number of rows has not yet reached the minimum number that allows for the FDR cutoff, 0 is returned instead.
+            if count < 1/0.01: return -1
+            return maccs[i-1]
+        count += 1
+
+    return maccs[-1]
+
+@njit
+def collect_ppm_values(ppmMatches, maccScores, maccCutoff):
+    ppms = []
+    length = len(ppmMatches)
+    for i in range(1,length):
+        if maccScores[i] >= maccCutoff: ppms.append(ppmMatches[i])
+    #return returnLibTags, returnLibIntensities, returnQueTags, returnQueIntensities, returnPpmMatchs, returnMaccScores
+    return ppms
+
+def reduce_final_df2(matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches):
+    curLibTag = matchLibTags[-1]
+    curQueTag = matchQueTags[-1]
+    count = 1
+    #maccScores = []
+    AB = matchLibIntensities[-1]*matchQueIntensities[-1]
+    A = matchLibIntensities[-1]**2
+    B = matchQueIntensities[-1]**2
+    for i in range(len(matchLibTags)-1,-1,-1):
+        if matchLibTags[i] != curLibTag and matchQueTags[i] != curQueTag:
+            if count < 3:
+                for j in range(count,0,-1):
+                    #matchLibTags = np.delete(matchLibTags, np.arange(i+1,i+1+count))
+                    #matchLibIntensities = np.delete(matchLibIntensities, np.arange(i+1,i+1+count))
+                    #matchQueTags = np.delete(matchQueTags, np.arange(i+1,i+1+count))
+                    #matchQueIntensities = np.delete(matchQueIntensities, np.arange(i+1,i+1+count))
+                    #ppmMatches = np.delete(ppmMatches, np.arange(i+1,i+1+count))
+
+                    matchLibTags.pop(i+j)
+                    matchLibIntensities.pop(i+j)
+                    matchQueTags.pop(i+j)
+                    matchQueIntensities.pop(i+j)
+                    ppmMatches.pop(i+j)
+            else:
+                cosine = cosine_similarity(AB, A, B)
+                macc = (count**(1/5))*cosine
+                #maccScores.extend([macc]*count)
+                count = 1
+            curLibTag = matchLibTags[i]
+            curQueTag = matchQueTags[i]
+            AB = matchLibIntensities[i]*matchQueIntensities[i]
+            A = matchLibIntensities[i]**2
+            B = matchQueIntensities[i]**2
+        else:
+            AB += matchLibIntensities[-1]*matchQueIntensities[-1]
+            A += matchLibIntensities[-1]**2
+            B += matchQueIntensities[-1]**2
+            count += 1
+    if count < 3:
+        for j in range(count-1,-1,-1):
+            matchLibTags.pop(j)
+            matchLibIntensities.pop(j)
+            matchQueTags.pop(j)
+            matchQueIntensities.pop(j)
+            ppmMatches.pop(j)
+    else:
+        cosine = cosine_similarity(AB, A, B)
+        macc = (count**(1/5))*cosine
+        #maccScores.extend([macc]*count)
+        count = 1
+
+    return matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches#, maccScores[::-1]
+
+
+
+def add_macc_column(group, maccDict):
+    group['MaCC'] = pd.Series(maccDict[group.name], index=group.index)
+    return group
+
+def reduce_mem_usage(props):
+    start_mem_usg = props.memory_usage().sum() / 1024**2
+    #print("Memory usage of properties dataframe is :",start_mem_usg," MB")
+    NAlist = [] # Keeps track of columns that have missing values filled in.
+    for col in props.columns:
+        if props[col].dtype != object:  # Exclude strings
+
+            # Print current column type
+            #print("******************************")
+            #print("Column: ",col)
+            #print("dtype before: ",props[col].dtype)
+
+            # make variables for Int, max and min
+            IsInt = False
+            mx = props[col].max()
+            mn = props[col].min()
+
+            # Integer does not support NA, therefore, NA needs to be filled
+            if not np.isfinite(props[col]).all():
+                NAlist.append(col)
+                props[col].fillna(mn-1,inplace=True)
+
+            # test if column can be converted to an integer
+            asint = props[col].fillna(0).astype(np.int64)
+            result = (props[col] - asint)
+            result = result.sum()
+            if result > -0.01 and result < 0.01:
+                IsInt = True
+
+
+            # Make Integer/unsigned Integer datatypes
+            if IsInt:
+                if mn >= 0:
+                    if mx < 255:
+                        props[col] = props[col].astype(np.uint8)
+                    elif mx < 65535:
+                        props[col] = props[col].astype(np.uint16)
+                    elif mx < 4294967295:
+                        props[col] = props[col].astype(np.uint32)
+                    else:
+                        props[col] = props[col].astype(np.uint64)
+                else:
+                    if mn > np.iinfo(np.int8).min and mx < np.iinfo(np.int8).max:
+                        props[col] = props[col].astype(np.int8)
+                    elif mn > np.iinfo(np.int16).min and mx < np.iinfo(np.int16).max:
+                        props[col] = props[col].astype(np.int16)
+                    elif mn > np.iinfo(np.int32).min and mx < np.iinfo(np.int32).max:
+                        props[col] = props[col].astype(np.int32)
+                    elif mn > np.iinfo(np.int64).min and mx < np.iinfo(np.int64).max:
+                        props[col] = props[col].astype(np.int64)
+
+            # Make float datatypes 32 bit
+            else:
+                props[col] = props[col].astype(np.float32)
+
+            # Print new column type
+            #print("dtype after: ",props[col].dtype)
+            #print("******************************")
+
+    # Print final result
+    #print("___MEMORY USAGE AFTER COMPLETION:___")
+    mem_usg = props.memory_usage().sum() / 1024**2
+    #print("Memory usage is: ",mem_usg," MB")
+    #print("This is ",100*mem_usg/start_mem_usg,"% of the initial size")
+    return props, NAlist
 #############################################################################################################################
 #############################################################################################################################
 #############################################################################################################################

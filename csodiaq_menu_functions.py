@@ -27,29 +27,28 @@ def write_csodiaq_output(lib, expFile, outFile, initialTol=10, corrected=False, 
     else:
         ppmTol=initialTol
         ppmOffset=0
-    ppmFile = re.sub('(.*).csv', r'\1_unfilteredPpmPerRow.csv', outFile)
     if not queryPooling: queryPooling = np.inf
-    initialOutFile = re.sub('(.*).csv', r'\1_delete.csv', outFile)
+    #initialOutFile = re.sub('(.*).csv', r'\1_delete.csv', outFile)
     cbf.pooled_spectra_analysis(  expFile,
-                                        initialOutFile,
+                                        outFile,
                                         lib,
                                         ppmTol,
                                         ppmOffset,
                                         queryPooling)
 
-    spectraKeys = cbf.generate_valid_FDR_spectra_keys(initialOutFile)
-    print('spectraKeys: ' + str(len(spectraKeys)))
-    pickle.dump(spectraKeys, open('C:/Users/ccranney/Desktop/Caleb_Files/data/output/spectraKeys.p','wb'))
+    #spectraKeys = cbf.generate_valid_FDR_spectra_keys(initialOutFile)
+    #print('spectraKeys: ' + str(len(spectraKeys)))
+    #pickle.dump(spectraKeys, open('C:/Users/ccranney/Desktop/Caleb_Files/data/output/spectraKeys.p','wb'))
 
-    ppmList = cbf.pooled_spectra_analysis(  expFile,
-                                        outFile,
-                                        lib,
-                                        ppmTol,
-                                        ppmOffset,
-                                        queryPooling,
-                                        spectraKeys=spectraKeys)
+    #ppmList = cbf.pooled_spectra_analysis(  expFile,
+    #                                    outFile,
+    #                                    lib,
+    #                                    ppmTol,
+    #                                    ppmOffset,
+    #                                    queryPooling,
+    #                                    spectraKeys=spectraKeys)
 
-    return ppmList
+    #return ppmList
 
 '''
 Function:
