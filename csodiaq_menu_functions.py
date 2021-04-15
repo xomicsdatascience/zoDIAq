@@ -18,15 +18,14 @@ Returns:
 def write_csodiaq_output(lib, expFile, outFile, initialTol=10, corrected=False, queryPooling=0 ):
     print('enter spectra comparison:', flush=True)
     print(str(timedelta(seconds=timer())), flush=True)
-    if corrected:
-        offsetFile = re.sub('(.*).csv', r'\1_offset_tolerance.csv', outFile)
-        df = pd.read_csv(offsetFile)
-        ppmTol = df['tolerance'].loc[0]
-        ppmOffset=(df['offset'].loc[0])
+    if corrected != -1:
+        #offsetFile = re.sub('(.*).csv', r'\1_offset_tolerance.csv', outFile)
+        #df = pd.read_csv(offsetFile)
+        #ppmTol = df['tolerance'].loc[0]
+        #ppmOffset=(df['offset'].loc[0])
         outFile = re.sub('(.*).csv', r'\1_corrected.csv', outFile)
-    else:
-        ppmTol=initialTol
-        ppmOffset=0
+    ppmTol=initialTol
+    ppmOffset=0
     if not queryPooling: queryPooling = np.inf
     #initialOutFile = re.sub('(.*).csv', r'\1_delete.csv', outFile)
     cbf.pooled_spectra_analysis(  expFile,
@@ -34,7 +33,8 @@ def write_csodiaq_output(lib, expFile, outFile, initialTol=10, corrected=False, 
                                         lib,
                                         ppmTol,
                                         ppmOffset,
-                                        queryPooling)
+                                        queryPooling,
+                                        corrected)
 
     #spectraKeys = cbf.generate_valid_FDR_spectra_keys(initialOutFile)
     #print('spectraKeys: ' + str(len(spectraKeys)))
