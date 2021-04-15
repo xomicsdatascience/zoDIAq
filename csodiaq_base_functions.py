@@ -885,6 +885,7 @@ def pooled_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
         maccDecoys = []
         finalLibTags, finalQueTags = [np.array([],dtype=int) for i in range(2)]
         finalLibIntensities, finalQueIntensities, finalPpmMatches, finalDecoys, finalMaccScores = [np.array([],dtype=float) for i in range(5)]
+        '''
         for precMz_win, scans in queScanDict.items():
 
             # Determining all library spectra that should be pooled for this particular query data window
@@ -929,7 +930,9 @@ def pooled_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
                     i2 = matchLibTags.argsort(kind='mergesort')
                     matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches = [x[i2] for x in [matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches]]
                     #reduce_final_df(matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches)
-                    matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches, maccScores = reduce_final_df(matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches)
+                    #matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches, maccScores = reduce_final_df(matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches)
+                    remove, maccScores = reduce_final_df(matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches)
+                    matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches = [np.delete(x,remove) for x in [matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches]]
                     decoys = [idToDecoyDict[x] for x in matchLibTags]
                     #print(len(decoys))
                     finalLibTags = np.append(finalLibTags, matchLibTags)
@@ -976,7 +979,15 @@ def pooled_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
     #with bz2.BZ2File('C:/Users/ccranney/Desktop/Caleb_Files/data/output/CompressTest/compressed_processObj_canDeleteAfter/windowallFinals', 'rb') as pickleFile: data = pickle.load(pickleFile)
     #finalLibTags, finalLibIntensities, finalQueTags, finalQueIntensities, finalPpmMatches, finalMaccScores, finalDecoys = data
 
-    #with bz2.BZ2File(pickleDir+pickleHeader+'allFinals', 'w') as pickleFile: pickle.dump([finalLibTags, finalLibIntensities, finalQueTags, finalQueIntensities, finalPpmMatches, finalMaccScores, finalDecoys], pickleFile)
+    print('Begin FDR Analysis', flush=True)
+    print(str(timedelta(seconds=timer())),flush=True)
+
+    with bz2.BZ2File(pickleDir+pickleHeader+'allFinals', 'w') as pickleFile: pickle.dump([finalLibTags, finalLibIntensities, finalQueTags, finalQueIntensities, finalPpmMatches, finalMaccScores, finalDecoys], pickleFile)
+    #'''
+    print('start' + str(timer()))
+    with bz2.BZ2File('C:/Users/ccranney/Desktop/Caleb_Files/data/output/CompressTest/compressed_processObj_canDeleteAfter/windowcorrected', 'rb') as pickleFile: data = pickle.load(pickleFile)
+    finalLibTags, finalLibIntensities, finalQueTags, finalQueIntensities, finalPpmMatches, finalMaccScores, finalDecoys = data
+    print('end' + str(timer()))
     maccs, decoys = match_score_decoys(finalLibTags, finalQueTags, finalMaccScores, finalDecoys)
     #print(timer())
     #print(len(maccs))
@@ -994,15 +1005,19 @@ def pooled_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
     #print(offset,tolerance)
     lowend = offset-tolerance
     highend = offset+tolerance
+    print('Filter Out Uncorrected PPM Values', flush=True)
+    print(str(timedelta(seconds=timer())),flush=True)
     ppmIndices = np.where((finalPpmMatches>lowend)*(finalPpmMatches<highend))[0]
     #print(len(ppmIndices))
-    tempTags = finalLibTags[ppmIndices]
     #print(len(tempTags))
     #print(ppmIndices[:10])
     #print(tempTags[:10])
+
     corLibTags, corLibIntensities, corQueTags, corQueIntensities, corDecoys = [x[ppmIndices] for x in [finalLibTags, finalLibIntensities, finalQueTags, finalQueIntensities, finalDecoys]]
-    corLibTags, corLibIntensities, corQueTags, corQueIntensities, corDecoys, corMaccScores = reduce_final_df(corLibTags, corLibIntensities, corQueTags, corQueIntensities, corDecoys)
-    print('begin pickle upload', flush=True)
+    del finalLibTags, finalLibIntensities, finalQueTags, finalQueIntensities, finalDecoys, finalMaccScores, finalPpmMatches
+    remove, corMaccScores = reduce_final_df(corLibTags, corLibIntensities, corQueTags, corQueIntensities, corDecoys)
+    corLibTags, corLibIntensities, corQueTags, corQueIntensities, corDecoys = [np.delete(x,remove) for x in [corLibTags, corLibIntensities, corQueTags, corQueIntensities, corDecoys]]
+    print('begin pickle upload')
     print(str(timedelta(seconds=timer())),flush=True)
 
     with bz2.BZ2File(pickleDir+pickleHeader+'corrected', 'w') as pickleFile: pickle.dump([corLibTags, corLibIntensities, corQueTags, corQueIntensities, corDecoys, corMaccScores], pickleFile)
@@ -1013,7 +1028,7 @@ def pooled_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
 
     #with bz2.BZ2File('C:/Users/ccranney/Desktop/Caleb_Files/data/output/CompressTest/compressed_processObj_canDeleteAfter/windowcorrected', 'rb') as pickleFile: data = pickle.load(pickleFile)
     #corLibTags, corLibIntensities, corQueTags, corQueIntensities, corDecoys, corMaccScores = data
-    print('end pickle upload', flush=True)
+    print('end pickle upload')
     print(str(timedelta(seconds=timer())),flush=True)
 
     maccs, decoys = match_score_decoys(corLibTags, corQueTags, corMaccScores, corDecoys)
@@ -1023,7 +1038,7 @@ def pooled_spectra_analysis(expSpectraFile, outFile, lib, ppmTol, ppmYOffset, qu
     maccs = maccs[i1]
     decoys = decoys[i1]
     maccCutoff = fdr_calculation2(maccs, decoys)
-    print('\nBegin Writing to File: ',flush=True)
+    print('\nBegin Writing to File: ')
     print(str(timedelta(seconds=timer())),flush=True)
 
     columns = [
@@ -1122,6 +1137,7 @@ def reduce_final_df(matchLibTags, matchLibIntensities, matchQueTags, matchQueInt
     AB = matchLibIntensities[0]*matchQueIntensities[0]
     A = matchLibIntensities[0]**2
     B = matchQueIntensities[0]**2
+    remove = []
     returnLibTags = []
     returnLibIntensities = []
     returnQueTags = []
@@ -1136,12 +1152,13 @@ def reduce_final_df(matchLibTags, matchLibIntensities, matchQueTags, matchQueInt
                 cosine = cosine_similarity(AB, A, B)
                 macc = (count**(1/5))*cosine
                 magnitude = (A**0.5) * (B**0.5) # (sqrt(sum(A^2))*sqrt(sum(B^2)))
-                returnLibTags.extend(matchLibTags[i-count:i])
-                returnLibIntensities.extend(matchLibIntensities[i-count:i])
-                returnQueTags.extend(matchQueTags[i-count:i])
-                returnQueIntensities.extend(matchQueIntensities[i-count:i])
-                returnPpmMatches.extend(ppmMatches[i-count:i])
+                #returnLibTags.extend(matchLibTags[i-count:i])
+                #returnLibIntensities.extend(matchLibIntensities[i-count:i])
+                #returnQueTags.extend(matchQueTags[i-count:i])
+                #returnQueIntensities.extend(matchQueIntensities[i-count:i])
+                #returnPpmMatches.extend(ppmMatches[i-count:i])
                 returnMaccScores.extend([macc]*count)
+            else: remove.extend([i-j for j in range(1,count+1)])
             count = 1
             curLibTag = matchLibTags[i]
             curQueTag = matchQueTags[i]
@@ -1157,15 +1174,16 @@ def reduce_final_df(matchLibTags, matchLibIntensities, matchQueTags, matchQueInt
         test = 0
         cosine = cosine_similarity(AB, A, B)
         macc = (count**(1/5))*cosine
-        returnLibTags.extend(matchLibTags[length-count:])
-        returnLibIntensities.extend(matchLibIntensities[length-count:])
-        returnQueTags.extend(matchQueTags[length-count:])
-        returnQueIntensities.extend(matchQueIntensities[length-count:])
-        returnPpmMatches.extend(ppmMatches[length-count:])
-        returnMaccScores.extend([macc]*count)
+        #returnLibTags.extend(matchLibTags[length-count:])
+        #returnLibIntensities.extend(matchLibIntensities[length-count:])
+        #returnQueTags.extend(matchQueTags[length-count:])
+        #returnQueIntensities.extend(matchQueIntensities[length-count:])
+        #returnPpmMatches.extend(ppmMatches[length-count:])
+        #returnMaccScores.extend([macc]*count)
+    else: remove.extend([length-j for j in range(1,count+1)])
 
-    #return returnLibTags, returnLibIntensities, returnQueTags, returnQueIntensities, returnPpmMatchs, returnMaccScores
-    return returnLibTags, returnLibIntensities, returnQueTags, returnQueIntensities, returnPpmMatches, returnMaccScores
+    return remove, returnMaccScores
+    #return returnLibTags, returnLibIntensities, returnQueTags, returnQueIntensities, returnPpmMatches, returnMaccScores
 
 
 def match_macc_decoys(matchLibTags, matchQueTags, maccScores, decoys):
