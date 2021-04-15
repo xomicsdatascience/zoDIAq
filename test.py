@@ -13,6 +13,7 @@ import pickle
 import bz2
 from numba import njit
 from timeit import default_timer as timer
+import io
 
 pd.set_option('display.max_columns', None)
 
@@ -825,8 +826,27 @@ maccs = maccs[i1]
 decoys = decoys[i1]
 maccCutoff = fdr_calculation2(maccs, decoys)
 '''
-test = pd.read_csv('C:/Users/ccranney/Desktop/Caleb_Files/data/output/CompressTest/CsoDIAq-file1_01_qehfx_lab_SA_R1_delete.csv')
-print(test.head(10))
+
+t1 = np.arange(10)
+t2 = np.arange(10,20)
+t3 = np.arange(20,30)
+compressed_array = io.BytesIO()
+compressed_array2 = io.BytesIO()
+
+#np.savez_compressed(compressed_array, t1=t1, t2=t2, t3=t3)
+np.savez_compressed(compressed_array, t1=t1)
+np.savez_compressed(compressed_array2, t1=t2)
+#np.savez_compressed(compressed_array, t3=t3)
+
+compList = [compressed_array, compressed_array2]
+for x in compList:
+    x.seek(0)
+    decompressed_array = np.load(x)
+    print(decompressed_array['t1'])
+    #print(decompressed_array['t2'])
+#print(decompressed_array['t3'])
+
+
 
 
 #java -Xmx2500M -cp C:/Users/ccranney/Desktop/Caleb_Files/MSPLIT-DIAv1.0/MSPLIT-DIAv02102015.jar org.Spectrums.SWATHMSPLITSearch 02 10 0 C:/Users/ccranney/Desktop/Caleb_Files/data/HeLa_160min_DIA_106win_1.mzXML C:/Users/ccranney/Desktop/Caleb_Files/data/human.faims.fixed.decoy.mgf C:/Users/ccranney/Desktop/Caleb_Files/data/output/msplit_HeLa_02-10-0.tsv
