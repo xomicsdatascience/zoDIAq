@@ -68,11 +68,15 @@ class csodiaqWindow(QWidget):
         dlgLayout.addLayout(settingLayout)
 
         self.runBtn = QPushButton('Execute')
+        self.killBtn = QPushButton('Kill Process')
         self.text = QPlainTextEdit()
         self.text.setReadOnly(True)
         dlgLayout.addWidget(self.runBtn)
+        dlgLayout.addWidget(self.killBtn)
         dlgLayout.addWidget(self.text)
         self.runBtn.setDefault(True)
+        self.killBtn.setEnabled(False)
+        self.killBtn.clicked.connect(self.kill_process)
 #        self.runBtn.clicked.connect(self.debug)
         self.runBtn.clicked.connect(self.start_process)
 
@@ -87,12 +91,15 @@ class csodiaqWindow(QWidget):
         self.diaFileText = QLabel('DIA Data File:')
         self.diaBtn = QPushButton('Browse')
         self.diaBtn.clicked.connect(lambda:self.getfile(self.diaFiles))
+        self.diaFileText.setToolTip('Data File Requirements:\n-Required, must be populated\n-Must be of type MzXML')
         self.libFileText = QLabel('Library File:')
         self.libBtn = QPushButton('Browse')
         self.libBtn.clicked.connect(lambda:self.getfile(self.libFile))
+        self.libFileText.setToolTip('Library Spectra File Requirements:\n-Required, must be populated\n-Must be in MGF (.mgf) or TraML (.csv or .tsv) format')
         self.libFile = QLineEdit()
         self.outDirText = QLabel('Outfile Directory:')
         self.dirBtn = QPushButton('Browse')
+        self.outDirText.setToolTip('Data File Requirements:\n-Required, must be populated')
         self.outDir = QLineEdit()
         self.dirBtn.clicked.connect(lambda:self.getfile(self.outDir, isFile=False))
         fileLayout.addRow(self.diaFileText, self.diaBtn)
@@ -108,10 +115,12 @@ class csodiaqWindow(QWidget):
 
     def set_settings_parent(self, settingLayout):
         self.fragMassTolText = QLabel('Initial Fragment Mass Tolerance (in ppm):')
+        self.fragMassTolText.setToolTip('Fragment Mass Tolerance Requirements:\n-Must be blank or an integer greater than 0')
         self.fragMassTol = QLineEdit()
         self.corr = QLineEdit()
         self.corrCheckBox = QCheckBox()
         self.corrText = QLabel('Corrective Standard Deviations:')
+        self.corrText.setToolTip('Corrective Standard Deviations Requirements:\n-Must be blank or a float (decimal value) between or equal to 0.5 and 2.0')
         self.histCheckBox = QCheckBox()
 
         self.corrCheckBox.stateChanged.connect(lambda:self.check_grey(self.corrCheckBox, self.corr))
@@ -231,7 +240,7 @@ class csodiaqWindow(QWidget):
         #print(self.dict)
         #self.dict = {'diaFiles': ['/Users/calebcranney/Desktop/0_DataFiles/ID1.mzXML'], 'libFile': '/Users/calebcranney/Desktop/0_DataFiles/lib_tsv.tsv', 'outDir': '/Users/calebcranney/Desktop/0_DataFiles/GUIOutput', 'fragMassTol': 'default', 'corr': 'default', 'hist': True, 'protTarg': '1'}
         #self.dict = {'diaFiles': ['/Users/calebcranney/Desktop/0_DataFiles/quant1.mzXML', '/Users/calebcranney/Desktop/0_DataFiles/quant2.mzXML'], 'libFile': '/Users/calebcranney/Desktop/0_DataFiles/lib_tsv.tsv', 'outDir': '/Users/calebcranney/Desktop/0_DataFiles/GUIOutput', 'fragMassTol': 'default', 'corr': 'default', 'hist': True, 'idFile': '/Users/calebcranney/Desktop/0_DataFiles/CsoDIAq-allCVs.csv', 'libPeaks': '3', 'minMatch': '1', 'ratioType': 'median'}
-
+        self.killBtn.setEnabled(True)
 
         if self.p is None:  # No process running.
             args = []
@@ -244,6 +253,7 @@ class csodiaqWindow(QWidget):
             self.p.readyReadStandardError.connect(self.handle_stderr)
             self.p.finished.connect(self.process_finished)  # Clean up once complete.
 
+            #print(args)
             self.p.start('csodiaq', args)
 
     def set_args_parent(self, args):
@@ -268,8 +278,12 @@ class csodiaqWindow(QWidget):
         stdout = bytes(data).decode("utf8")
         self.message(stdout)
 
+    def kill_process(self):
+        self.p.kill()
+
     def process_finished(self):
         self.message("Process finished.")
+        self.killBtn.setEnabled(False)
         self.p = None
 
     def set_variables_debug(self, tempDict):
@@ -743,20 +757,34 @@ class IdWindow(csodiaqWindow):
     def set_settings_child(self, settingLayout):
         self.protTarg = QLineEdit()
         self.protTargText = QLabel('Number of Target Peptides per Protein: ')
+        self.protTargText.setToolTip('Target Peptide Requirements:\n-Must be blank or an integer greater than 0')
         self.protCheckBox = QCheckBox()
+        self.query = QLineEdit()
+        self.queryText = QLabel('Maximum Number of Query Spectra to Pool: ')
+        self.queryText.setToolTip('Query Spectra Pooling Requirements:\n-Must be blank or an integer greater than 0')
+        self.heavyCheckBox = QCheckBox()
+
         settingLayout.addRow(self.protTargText, self.protTarg)
         settingLayout.addRow('Protein Inference:', self.protCheckBox)
+        settingLayout.addRow(self.queryText, self.query)
+        settingLayout.addRow('Permit Heavy Targets in Re-Analysis File:', self.heavyCheckBox)
+
         self.protCheckBox.stateChanged.connect(lambda:self.check_grey(self.protCheckBox, self.protTarg,filledText='1'))
         self.protTarg.setPlaceholderText('untargeted peptide analysis')
         self.protTarg.setEnabled(False)
+        self.query.setPlaceholderText('pool all matching query spectra')
 
     def set_dict_child(self, tempDict):
         if self.protCheckBox.isChecked(): tempDict['protTarg'] = self.return_integer_above_0(self.protTarg.text(), self.protTargText)
         else: tempDict['protTarg'] = self.return_valid(self.protTargText, False)
+        tempDict['query'] = self.return_integer_above_0(self.query.text(), self.queryText)
+        tempDict['heavy'] = self.heavyCheckBox.isChecked()
 
     def set_args_child(self, args):
         args.insert(0,'id')
         if self.dict['protTarg']: args += ['-p', self.dict['protTarg']]
+        if self.dict['query']!= 'default': args += ['-q', self.dict['query']]
+        if self.dict['heavy']: args += ['-heavy']
 
     def set_variables_debug(self, tempDict):
         super().set_variables_debug(tempDict)
@@ -1068,6 +1096,7 @@ class quantWindow(csodiaqWindow):
 
     def set_files_child(self, fileLayout):
         self.idFileText = QLabel('CsoDIAq ID Output File:')
+        self.idFileText.setToolTip('CsoDIAq ID File Requirements:\n-Required, must be populated')
         self.idFile = QLineEdit()
         self.idBtn = QPushButton('Browse')
         self.idBtn.clicked.connect(lambda:self.getfile(self.idFile))
@@ -1079,9 +1108,11 @@ class quantWindow(csodiaqWindow):
         self.libPeaks = QLineEdit()
         self.libPeaks.setPlaceholderText('all spectra peaks')
         self.libPeaksText = QLabel('Number of Max Peaks per Library Spectra: ')
+        self.libPeaksText.setToolTip('Library Peaks Requirements:\n-Must be blank or an integer greater than 0')
         self.minMatch = QLineEdit()
         self.minMatch.setPlaceholderText('default: 1 of 3 most intense peaks')
         self.minMatchText = QLabel('Number of Min Peak Matches Required: ')
+        self.minMatchText.setToolTip('Minimum Peak Match Requirements:\n-Must be blank or an integer greater than 0')
         self.ratioType = QComboBox()
         self.ratioType.addItem('median')
         self.ratioType.addItem('mean')
