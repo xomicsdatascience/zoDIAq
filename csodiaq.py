@@ -55,19 +55,14 @@ def main():
 
     if args['command'] == 'id':
         lib = cbf.library_file_to_dict(args['library'])
-        pickle.dump(lib, open(args['outDirectory']+'mgf_lib.p', 'wb'))
+        #pickle.dump(lib, open(args['outDirectory']+'mgf_lib.p', 'wb'))
         #lib = pickle.load(open(args['outDirectory']+'mgf_lib.p', 'rb'))
         for i in range(len(args['files'])):
             outFileHeader = 'CsoDIAq-file' +str(i+1)+'_'+ '.'.join(args['files'][i].split('/')[-1].split('.')[:-1])
             outFile = args['outDirectory'] + outFileHeader + '.csv'
-            menu.write_csodiaq_output(lib, args['files'][i], outFile, corrected=args['correction'], initialTol=args['fragmentMassTolerance'], queryPooling=args['query'])
-            #pickle.dump(ppmList, open(args['outDirectory']+'ppmList_pickle_ID1_mgf.p', 'wb'))
-            #ppmList = pickle.load(open(args['outDirectory']+'ppmList_pickle_ID1_mgf.p', 'rb'))
+            menu.write_csodiaq_output(lib, args['files'][i], outFile, args['histogram'], corrected=args['correction'], initialTol=args['fragmentMassTolerance'], queryPooling=args['query'])
             cor = False
-            if args['correction']!=-1:
-            #    menu.write_ppm_offset_tolerance(outFile, ppmList, corrected=args['correction'], hist=args['histogram'])
-            #    menu.write_csodiaq_output(lib, args['files'][i], outFile, corrected=True,queryPooling=args['query'])
-                cor=True
+            if args['correction']!=-1: cor=True
             menu.write_csodiaq_fdr_outputs(outFile, args['proteinTargets'], corrected=cor)
             menu.write_DISPA_targeted_reanalysis_files(outFile, proteins = args['proteinTargets'], corrected=cor, heavy=args['heavyMz'])
 

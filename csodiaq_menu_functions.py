@@ -15,7 +15,7 @@ Purpose:
 Parameters:
 Returns:
 '''
-def write_csodiaq_output(lib, expFile, outFile, initialTol=10, corrected=False, queryPooling=0 ):
+def write_csodiaq_output(lib, expFile, outFile, hist, initialTol=10, corrected=False, queryPooling=0 ):
     print('enter spectra comparison:', flush=True)
     print(str(timedelta(seconds=timer())), flush=True)
     if corrected != -1:
@@ -27,6 +27,9 @@ def write_csodiaq_output(lib, expFile, outFile, initialTol=10, corrected=False, 
     ppmTol=initialTol
     ppmOffset=0
     if not queryPooling: queryPooling = np.inf
+    if hist: histFile = re.sub('(.*).csv', r'\1_histogram.png', outFile)
+    else: histFile = 0
+
     #initialOutFile = re.sub('(.*).csv', r'\1_delete.csv', outFile)
     cbf.pooled_spectra_analysis(  expFile,
                                         outFile,
@@ -34,7 +37,8 @@ def write_csodiaq_output(lib, expFile, outFile, initialTol=10, corrected=False, 
                                         ppmTol,
                                         ppmOffset,
                                         queryPooling,
-                                        corrected)
+                                        corrected,
+                                        histFile)
 
     #spectraKeys = cbf.generate_valid_FDR_spectra_keys(initialOutFile)
     #print('spectraKeys: ' + str(len(spectraKeys)))
