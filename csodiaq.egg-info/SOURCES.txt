@@ -1,0 +1,12 @@
+csodiaq.py
+csodiaq_base_functions.py
+csodiaq_gui.py
+csodiaq_menu_functions.py
+idpicker.py
+setup.py
+csodiaq.egg-info/PKG-INFO
+csodiaq.egg-info/SOURCES.txt
+csodiaq.egg-info/dependency_links.txt
+csodiaq.egg-info/entry_points.txt
+csodiaq.egg-info/requires.txt
+csodiaq.egg-info/top_level.txt
