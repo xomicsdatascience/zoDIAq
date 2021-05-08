@@ -61,6 +61,8 @@ Files:
 It should go without saying, but CsoDIAq treats .tsv files as tab-deliminated and .csv as comma-deliminated. 
 Some pan-human .csv files are tab-deliminated and therefore need to be adapted accordingly.
 3. Outfile Directory: This is a required field. Choose a folder that the output files should go into.
+4. CsoDIAq ID Output File: This is a required field. 
+Choose the required output from the Peptide/Protein Identification portion. The file should end with "allCVs."
 
 Settings:
 1. Initial Fragment Mass Tolerance (in PPM): Default value is 20. 
