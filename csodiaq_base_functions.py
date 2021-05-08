@@ -7,6 +7,7 @@ import csv
 import statistics
 import matplotlib.pyplot as pyplot
 import numpy as np
+from Bio import SeqIO
 import idpicker as idp
 import re
 from collections import defaultdict
@@ -92,7 +93,7 @@ def traml_library_upload(fileName):
     if fileName.endswith('.tsv'):
         lib_df = pd.read_csv(fileName, sep='\t')
     else:
-        lib_df = pd.read_csv(fileName)
+        lib_df = pd.read_csv(fileName, sep='\t')
 
     # Print statement for timing the program
     print('\nEnter library dictionary upload: ',flush=True)
@@ -1231,8 +1232,8 @@ def write_csodiaq_fdr_outputs(inFile, specFile, pepFile, protFile):
         #   Note that this means the peptide can appear multiple times if found in more than one protein group provided by the IDPicker algorithm.
         proteinDf = add_leading_protein_column(peptideDf, verifiedProteinDict)
 
-        tempProtFile = re.sub('(.*).csv', r'\1_delete.csv', protFile)
-        proteinDf.to_csv(tempProtFile)
+        #tempProtFile = re.sub('(.*).csv', r'\1_delete.csv', protFile)
+        #proteinDf.to_csv(tempProtFile)
 
         # Protein FDR is calculated using the highest-scoring peptide for each protein group.
         tempProtDf = add_fdr_to_csodiaq_output(proteinDf, filterType='leadingProtein')
