@@ -129,13 +129,12 @@ class csodiaqWindow(QWidget):
         settingLayout.addRow('Correction:', self.corrCheckBox)
         settingLayout.addRow(self.corrText, self.corr)
         settingLayout.addRow('Create Histogram:', self.histCheckBox)
-        self.fragMassTol.setPlaceholderText('20')
+        self.fragMassTol.setPlaceholderText('30')
         self.corr.setPlaceholderText('customized')
-        self.corr.setEnabled(False)
+        self.corrCheckBox.setCheckState(2)
         self.libFile.setEnabled(False)
         self.outDir.setEnabled(False)
-        self.histCheckBox.setEnabled(False)
-
+        self.histCheckBox.setCheckState(2)
 
     def set_settings_child(self, settingLayout):
         pass
@@ -773,6 +772,8 @@ class IdWindow(csodiaqWindow):
         self.protTarg.setPlaceholderText('untargeted peptide analysis')
         self.protTarg.setEnabled(False)
         self.query.setPlaceholderText('pool all matching query spectra')
+        self.heavyCheckBox.setCheckState(2)
+
 
     def set_dict_child(self, tempDict):
         if self.protCheckBox.isChecked(): tempDict['protTarg'] = self.return_integer_above_0(self.protTarg.text(), self.protTargText)
