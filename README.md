@@ -33,13 +33,13 @@ Settings:
 
 Note that it is recommended that the default value is used for each of these settings.
 
-1. Initial Fragment Mass Tolerance (in PPM): Default value is 20. 
+1. Initial Fragment Mass Tolerance (in PPM): Default value is 30. 
 If you're not sure what would make an ideal setting, go ahead and leave this blank, but check the histogram box below. 
 If the resulting histogram doesn't have a normal distribution (a peak), consider using a wider tolerance.
-2. Correction: Default is unchecked. This value resets the PPM tolerance range based on an initial scan. It reduces the liklihood of identifying false positives.
+2. Correction: Default is checked. This value resets the PPM tolerance range based on an initial scan. It reduces the liklihood of identifying false positives.
 3. Corrective Standard Deviation: Only available if the correction box is checked. Default is to customize the corrected tolerance to the distribution of the histogram, excluding noise around the peak. 
 Entering a value here instead sets the tolerance to a standard deviation of the distribution.
-4. Create Histogram: Only available if the correction box is checked. Default is unchecked. 
+4. Create Histogram: Only available if the correction box is checked. Default is checked. 
 Generates a histogram to visualize the corrective PPM tolerance used in the corrected analysis.
 5. Number of Target Peptides per Protein: Only available if the protein inference box is checked. 
 Default is to use one target peptide to represent the protein in the output.
@@ -65,13 +65,13 @@ Some pan-human .csv files are tab-deliminated and therefore need to be adapted a
 Choose the required output from the Peptide/Protein Identification portion. The file should end with "allCVs."
 
 Settings:
-1. Initial Fragment Mass Tolerance (in PPM): Default value is 20. 
+1. Initial Fragment Mass Tolerance (in PPM): Default value is 30. 
 If you're not sure what would make an ideal setting, go ahead and leave this blank, but check the histogram box below. 
 If the resulting histogram doesn't have a normal distribution (a peak), consider using a wider tolerance.
-2. Correction: Default is unchecked. This value resets the PPM tolerance range based on an initial scan. It reduces the liklihood of identifying false positives.
+2. Correction: Default is checked. This value resets the PPM tolerance range based on an initial scan. It reduces the liklihood of identifying false positives.
 3. Corrective Standard Deviation: Only available if the correction box is checked. Default is to customize the corrected tolerance to the distribution of the histogram, excluding noise around the peak. 
 Entering a value here instead sets the tolerance to a standard deviation of the distribution.
-4. Create Histogram: Only available if the correction box is checked. Default is unchecked. 
+4. Create Histogram: Only available if the correction box is checked. Default is checked. 
 Generates a histogram to visualize the corrective PPM tolerance used in the corrected analysis.
 5. Number of Max Peaks per Library Spectra: Default is to use all library peaks. 
 Changing this setting will sort the library peaks by intensity and only include the top __ values, as provided in this setting.
