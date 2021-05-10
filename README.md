@@ -20,7 +20,7 @@ Instructions for use from the command line can be accessed by entering `csodiaq 
 
 ### Peptide/Protein Identification
 
-![Peptide/Protein Identification GUI Picture]()
+![Peptide/Protein Identification GUI Picture](https://github.com/CCranney/CsoDIAq/blob/master/Python%20Extras/ID_pic.png)
 
 Files: 
 1. DIA Data File: This is a required field. Choose at least one data file from a DISPA or DIA data run.
@@ -52,7 +52,7 @@ If checked, files generated for targetted re-analysis will include targets for h
 
 ### SILAC Quantification
 
-![SILAC Quantification GUI Picture]()
+![SILAC Quantification GUI Picture](https://github.com/CCranney/CsoDIAq/blob/master/Python%20Extras/quant_pic.png)
 
 
 Files:
