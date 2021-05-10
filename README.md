@@ -48,7 +48,7 @@ If you DISPA or DIA data file is particularly large and has a high number of sca
 this setting restricts the number of scans that are pooled together for analysis to avoid exceeding your computer's memory capacity. 
 Setting this value can slow down the program.
 7. Permit Heavy Targets in Re-Analysis File: Default is checked. 
-If checked, files generated for targetted re-analysis will include targets for heavy peptides (includes heavy lysine and arginine).
+If checked, files generated for targeted re-analysis will include targets for heavy peptides (includes heavy lysine and arginine).
 
 ### SILAC Quantification
 
