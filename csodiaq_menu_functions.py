@@ -15,44 +15,17 @@ Purpose:
 Parameters:
 Returns:
 '''
-def write_csodiaq_output(lib, expFile, outFile, hist, initialTol=10, corrected=False, queryPooling=0 ):
-    print('enter spectra comparison:', flush=True)
-    print(str(timedelta(seconds=timer())), flush=True)
-    if corrected != -1:
-        #offsetFile = re.sub('(.*).csv', r'\1_offset_tolerance.csv', outFile)
-        #df = pd.read_csv(offsetFile)
-        #ppmTol = df['tolerance'].loc[0]
-        #ppmOffset=(df['offset'].loc[0])
-        outFile = re.sub('(.*).csv', r'\1_corrected.csv', outFile)
-    ppmTol=initialTol
-    ppmOffset=0
+def write_csodiaq_output(lib, expFile, outFile, hist, initialTol, corrected, queryPooling ):
     if not queryPooling: queryPooling = np.inf
     if hist: histFile = re.sub('(.*).csv', r'\1_histogram.png', outFile)
     else: histFile = 0
-
-    #initialOutFile = re.sub('(.*).csv', r'\1_delete.csv', outFile)
-    cbf.pooled_spectra_analysis(  expFile,
-                                        outFile,
-                                        lib,
-                                        ppmTol,
-                                        ppmOffset,
-                                        queryPooling,
-                                        corrected,
-                                        histFile)
-
-    #spectraKeys = cbf.generate_valid_FDR_spectra_keys(initialOutFile)
-    #print('spectraKeys: ' + str(len(spectraKeys)))
-    #pickle.dump(spectraKeys, open('C:/Users/ccranney/Desktop/Caleb_Files/data/output/spectraKeys.p','wb'))
-
-    #ppmList = cbf.pooled_spectra_analysis(  expFile,
-    #                                    outFile,
-    #                                    lib,
-    #                                    ppmTol,
-    #                                    ppmOffset,
-    #                                    queryPooling,
-    #                                    spectraKeys=spectraKeys)
-
-    #return ppmList
+    cbf.perform_spectra_pooling_and_analysis(  expFile,
+                                                outFile,
+                                                lib,
+                                                initialTol,
+                                                queryPooling,
+                                                corrected,
+                                                histFile)
 
 '''
 Function:
