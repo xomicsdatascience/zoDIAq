@@ -320,8 +320,6 @@ def perform_spectra_pooling_and_analysis(querySpectraFile, outFile, lib, toleran
     print_milestone('\nBegin Writing to File: ')
     allSpectraMatches.write_output(outFile, querySpectraFile, maccCutoff, queScanValuesDict, libIdToKeyDict, lib)
 
-    print_milestone('Total Spectra Comparison Time:')
-
 def identify_lib_spectra_in_window( top_mz, bottom_mz, sortedLibKeys ):
     temp = sortedLibKeys[:]
     top_key = (top_mz, "z")
@@ -401,12 +399,11 @@ Parameters:
 Returns:
     No return value. Data is written directly to files provided as string parameters.
 '''
-def write_csodiaq_fdr_outputs(inFile, specFile, pepFile, protFile):
+def write_fdr_outputs(inFile, specFile, pepFile, protFile):
 
+    print_milestone('Generating FDR Analysis Files:')
     overallDf = pd.read_csv(inFile).sort_values('MaCC_Score', ascending=False).reset_index(drop=True)
-    print(len(overallDf))
     spectralDf = add_fdr_to_csodiaq_output(overallDf)
-    print(len(spectralDf))
 
     # peptide FDR is calculated and written to dataframe 'peptideDf'
     peptideDf = add_fdr_to_csodiaq_output(overallDf, filterType='peptide')
@@ -667,14 +664,12 @@ Parameters:
 Returns:
     'finalDf' - Pandas dataframe. 'finalDf' can be written to a file for direct input to an MS machine.
 '''
-def return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, trypsin, heavy):
+def return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, heavy):
+    print_milestone('Generate DISPA Targeted Reanalysis Files:')
     df = pd.read_csv(inFile)
     df = df[~df['protein'].str.contains('DECOY',na=False)].reset_index(drop=True)
-    # Necessary?
-    if trypsin: df = df[df['peptide'].str.endswith('R') | df['peptide'].str.endswith('K')].reset_index(drop=True)
     if 'uniquePeptide' in df.columns: df = df[df['uniquePeptide']==1].sort_values('ionCount', ascending=False).reset_index(drop=True)
     if proteins: df = df.groupby(['leadingProtein']).head(proteins).reset_index()
-
     CVs = set(df['CompensationVoltage'])
     def notNan(x): return ~np.isnan(x)
     CVs = set(filter(notNan, CVs))
@@ -947,18 +942,12 @@ def traml_library_upload_quant(fileName, scanDict, maxPeaks):
     lib_df.set_index("ID", drop=True, inplace=True)
     lib = lib_df.to_dict(orient="index")
 
-    # @DEBUG: for printing out results specific to a scan. To be removed by the end.
-    scanEx = ''
-
     # Peaks list is created and attached to the dictionary
     finalDict = defaultdict(list)
     for key in lib:
 
         # y-ion peaks are sorted by intensity, and lower-intensity peaks are filtered out.
         fragList = sorted(list(tuple(zip(intensity_dict[key], mz_dict[key]))), reverse=True)
-        # @DEBUG: see above
-        if scanDict[key]==scanEx:
-            for x in fragList: print(x)
         if maxPeaks !=0 and len(fragList) >= maxPeaks: fragList = fragList[:maxPeaks]
 
         # heavy counterpart mz is calculated. Light and heavy pairs are additionally tagged by their intensity rank and included in the final output.
@@ -970,9 +959,6 @@ def traml_library_upload_quant(fileName, scanDict, maxPeaks):
             fragSeq = lib[key]['PeptideSequence'][-lib[key]['FragmentSeriesNumber']:]
             heavyMz = calc_heavy_mz(fragSeq, fragMz, lib[key]['FragmentCharge'])
             peaks.append((heavyMz, fragInt, ('heavy',i,key[1])))
-        # @DEBUG: see above
-        if scanDict[key]==scanEx:
-            for x in peaks: print(x)
 
         # entry placed in final dictionary
         finalDict[scanDict[key]] += peaks
@@ -1231,65 +1217,6 @@ def match_score(keys):
     if len(keys) == 0: return False
     if min(keys) < 3: return True
     return False
-
-
-'''
-Function: tuple_key_match() *****DEFUNCT*****
-Purpose: Given a list of tuple keys and a key that may be in the list, this function determines if an approximately equal key
-            exists. String values must be exact, but float values must be withit 10 ppm to be considered a match.
-Parameters:
-    'keyList' - a list of tuples. Composition of the tuples in the list should be consistent with each other.
-    'key' - a tuple of the same composition as the tuples in keyList.
-Returns:
-    boolean - if 'key' is found in 'keyList', this function returns true, else false.
-
-Defunct Reasons: We've opted to just round float values to 2 decimal places rather than finding values within a ppm
-                    tolerance. At the time we chose not to use this function, I was debugging instances where 1) a different
-                    CV match was being chosen first and 2) the wrong heavy-mz values were being identified, possibly because
-                    the light-mz value (ordered before heavy) was different.
-'''
-def tuple_key_match(keyList, key):
-    i = bisect(keyList, key)
-    if i != 0 and approx_tuple(key, keyList[i-1]): return keyList[i-1]
-    if i != len(keyList) and approx_tuple(key, keyList[i]): return keyList[i]
-    if i<3 and i < len(keyList)-4:
-        print('i: '+str(i))
-        for j in range(i-2,i+2):
-            print(str(j) + str(keyList[i-1]))
-        print(key)
-    return False
-
-
-'''
-Function: approx_tuple() *****DEFUNCT*****
-Purpose: This function compares each value of two tuples to determine if they are approximately (in the case of float values)
-            or exactly (in the case of string or int values) the same.
-Parameters:
-    't1' - a tuple.
-    't2' - a tuple.
-    'ppmTol' - the ppm tolerance for float values to be considered a match. Default is 10ppm.
-Returns:
-    boolean - if each value of tuples match this function returns true, else false.
-
-Defunct Reasons: We've opted to just round float values to 2 decimal places rather than finding values within a ppm
-                    tolerance.
-'''
-def approx_tuple(t1, t2, ppmTol=10):
-
-    # if the tuples aren't the same length, return False. This shouldn't happen, I'm just being careful.
-    if len(t1) != len(t2): return False
-    l = []
-    for i in range(len(t1)):
-        # if the tuple values aren't the same type, return False. This also shouldn't happen.
-        if type(t1[i]) != type(t2[i]): return False
-
-        # if the values are strings and don't match, return False.
-        if type(t1[i]) is str and t1[i] != t2[i]: return False
-
-        # If the values are numeric and not within the ppm tolerance, return False.
-        if not approx(t1[i], t2[i], ppmTol): return False
-
-    return True
 
 
 '''

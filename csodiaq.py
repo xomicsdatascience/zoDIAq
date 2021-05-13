@@ -10,6 +10,67 @@ import numpy as np
 
 def main():
     fragMassTol, corrStDev, hist, protTarg = 20, 0, 0, 1
+    arg_parser = set_command_line_settings()
+    args = vars(arg_parser.parse_args())
+    check_for_invalid_input(arg_parser, args)
+
+    if args['command'] == 'gui':
+        gui.main()
+        return
+
+    if args['command'] == 'mgf':
+        cbf.clean_mgf_file(args['mgf'], args['fasta'], ions=args['ions'])
+        return
+
+    if (args['histogram'] and args['correction']==-1): arg_parser.error('The -hist or --histogram argument requires the -c or -correction argument')
+    for file in args['files']:
+        if not restricted_file(file, permittedTypes=['mzxml']): arg_parser.error('The -f or --files argument must be an existing file of type mzxml')
+    if not restricted_file(args['library'], permittedTypes=['mgf','csv','tsv']): arg_parser.error('The -l or --library argument must be an existing file of type MGF (.mgf) or TraML (.tsv or .csv) format')
+    if not restricted_file(args['outDirectory']): arg_parser.error('The -o or --outDirectory argument must be an existing directory')
+
+    if args['command'] == 'id':
+        #lib = cbf.library_file_to_dict(args['library'])
+        #pickle.dump(lib, open(args['outDirectory']+'mgf_lib.p', 'wb'))
+        lib = pickle.load(open(args['outDirectory']+'mgf_lib.p', 'rb'))
+        maxQuerySpectraToPool = queryPooling=args['query']
+        if not maxQuerySpectraToPool: maxQuerySpectraToPool = np.inf
+        for i in range(len(args['files'])):
+
+            outFileHeader = args['outDirectory'] + 'CsoDIAq-file' +str(i+1)+'_'+ '.'.join(args['files'][i].split('/')[-1].split('.')[:-1])
+            if args['correction'] != -1: outFileHeader += '_corrected'
+            outFile = outFileHeader + '.csv'
+            if args['histogram']: histFile = outFileHeader + '_histogram.png'
+            else: histFile = ''
+            cbf.perform_spectra_pooling_and_analysis(   args['files'][i],
+                                                        outFile,
+                                                        lib,
+                                                        args['fragmentMassTolerance'],
+                                                        maxQuerySpectraToPool,
+                                                        args['correction'],
+                                                        histFile)
+
+            spectralFile = outFileHeader + '_spectralFDR.csv'
+            peptideFile = outFileHeader + '_peptideFDR.csv'
+            if args['proteinTargets']: proteinFile = outFileHeader + '_proteinFDR.csv'
+            else: proteinFile = ''
+
+            cbf.write_fdr_outputs(outFile, spectralFile, peptideFile, proteinFile)
+
+            reanalysisHeader = outFileHeader + '_mostIntenseTargs'
+            if args['proteinTargets']: inFile = proteinFile
+            else: inFile = peptideFile
+            #cbf.return_DISPA_targeted_reanalysis_dfs(reanalysisHeader, inFile, args['proteinTargets'], args['heavyMz'])
+            menu.write_DISPA_targeted_reanalysis_files(outFile, proteins = args['proteinTargets'], heavy=args['heavyMz'])
+
+
+    if args['command'] == 'quant':
+        if args['histogram']: hist = args['outDirectory'] + 'SILAC_Quantification_histogram.png'
+        else: hist = ''
+        menu.heavy_light_quantification(args['idFile'], args['library'], args['files'], args['outDirectory'], args['libraryPeaks'], args['fragmentMassTolerance'], args['minimumMatches'], args['ratioType'], args['correction'], hist)
+
+
+
+def set_command_line_settings():
     arg_parser = argparse.ArgumentParser(description='')
     subparsers = arg_parser.add_subparsers(dest='command', help='CsoDIAq Functions')
     arg_parser.version = '0.1'
@@ -37,51 +98,15 @@ def main():
     quant_parser.add_argument('-p', '--libraryPeaks', type=restricted_int, default=0, help='Maximum Number of Library Peaks - Maximum number of library peaks allowed in library spectra, prioritizing intensity. Program allows all peaks by default.')
     quant_parser.add_argument('-m', '--minimumMatches', type=restricted_int, default=0, help='Minimum Number of Matching Peaks - Minimum number of matched peaks . Program requires at least one match from the top 3 most intense peaks in the library spectrum by default.')
     quant_parser.add_argument('-r', '--ratioType', type=restricted_ratio_type, default='median', help='Ratio Determination Method - method for picking the ratio for a given peptide when several peaks match. Options are median or mean, default is median.')
+    return arg_parser
 
-    args = vars(arg_parser.parse_args())
-
-    if args['command'] == 'gui':
-        gui.main()
-        return
-
-    if args['command'] == 'mgf':
-        cbf.clean_mgf_file(args['mgf'], args['fasta'], ions=args['ions'])
-        return
-
-    if (args['histogram'] and args['correction']==-1): arg_parser.error('The -hist or --histogram argument requires the -c or -correction argument')
-    for file in args['files']:
-        if not restricted_file(file, permittedTypes=['mzxml']): arg_parser.error('The -f or --files argument must be an existing file of type mzxml')
-    if not restricted_file(args['library'], permittedTypes=['mgf','csv','tsv']): arg_parser.error('The -l or --library argument must be an existing file of type MGF (.mgf) or TraML (.tsv or .csv) format')
-    if not restricted_file(args['outDirectory']): arg_parser.error('The -o or --outDirectory argument must be an existing directory')
-
-    if args['command'] == 'id':
-        #lib = cbf.library_file_to_dict(args['library'])
-        #pickle.dump(lib, open(args['outDirectory']+'mgf_lib.p', 'wb'))
-        lib = pickle.load(open(args['outDirectory']+'mgf_lib.p', 'rb'))
-        maxQuerySpectraToPool = queryPooling=args['query']
-        if not maxQuerySpectraToPool: maxQuerySpectraToPool = np.inf
-        for i in range(len(args['files'])):
-            outFileHeader = args['outDirectory'] + 'CsoDIAq-file' +str(i+1)+'_'+ '.'.join(args['files'][i].split('/')[-1].split('.')[:-1])
-            if args['correction'] != -1: outFileHeader += '_corrected'
-            outFile = outFileHeader + '.csv'
-            if args['histogram']: histFile = outFileHeader + '_histogram.png'
-            else: histFile = ''
-            cbf.perform_spectra_pooling_and_analysis(   args['files'][i],
-                                                        outFile,
-                                                        lib,
-                                                        args['fragmentMassTolerance'],
-                                                        maxQuerySpectraToPool,
-                                                        args['correction'],
-                                                        histFile)
-
-            menu.write_csodiaq_fdr_outputs(outFile, args['proteinTargets'])
-            menu.write_DISPA_targeted_reanalysis_files(outFile, proteins = args['proteinTargets'], heavy=args['heavyMz'])
-
-    if args['command'] == 'quant':
-        if args['histogram']: hist = args['outDirectory'] + 'SILAC_Quantification_histogram.png'
-        else: hist = ''
-        menu.heavy_light_quantification(args['idFile'], args['library'], args['files'], args['outDirectory'], args['libraryPeaks'], args['fragmentMassTolerance'], args['minimumMatches'], args['ratioType'], args['correction'], hist)
-
+def check_for_invalid_input(arg_parser, args):
+    if args['command'] == 'id' or args['command'] == 'quant':
+        if (args['histogram'] and args['correction']==-1): arg_parser.error('The -hist or --histogram argument requires the -c or -correction argument')
+        for file in args['files']:
+            if not restricted_file(file, permittedTypes=['mzxml']): arg_parser.error('The -f or --files argument must be an existing file of type mzxml')
+        if not restricted_file(args['library'], permittedTypes=['mgf','csv','tsv']): arg_parser.error('The -l or --library argument must be an existing file of type MGF (.mgf) or TraML (.tsv or .csv) format')
+        if not restricted_file(args['outDirectory']): arg_parser.error('The -o or --outDirectory argument must be an existing directory')
 
 def restricted_float(x):
     try:
