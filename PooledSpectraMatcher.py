@@ -133,7 +133,6 @@ def calculate_score_fdr_cutoff(scores, decoys): #***NOTE***make return type
     # for every row in the dataframe
     count = 0
     for i in range(len(scores)):
-        #print(str(maccs[i])+':'+str(decoys[i]))
         if decoys[i]: numDecoys += 1
         # calculates the FDR up to this point in the data frame.
         curFDR = numDecoys/(count+1)
@@ -247,8 +246,6 @@ class PooledSpectraMatcher:
 
     def find_score_fdr_cutoff(self):
         scores, decoys = reduce_duplicate_rows(self.libraryTags, self.queryTags, self.scores, self.decoys)
-        print(len(self.scores))
-        print(len(self.decoys))
         scores = np.array(scores)
         decoys = np.array(decoys)
         i1 = (-scores).argsort()
