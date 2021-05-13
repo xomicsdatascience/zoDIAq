@@ -6,6 +6,7 @@ import csodiaq_menu_functions as menu
 import csodiaq_base_functions as cbf
 import csodiaq_gui as gui
 import pickle
+import numpy as np
 
 def main():
     fragMassTol, corrStDev, hist, protTarg = 20, 0, 0, 1
@@ -57,18 +58,24 @@ def main():
         #lib = cbf.library_file_to_dict(args['library'])
         #pickle.dump(lib, open(args['outDirectory']+'mgf_lib.p', 'wb'))
         lib = pickle.load(open(args['outDirectory']+'mgf_lib.p', 'rb'))
+        maxQuerySpectraToPool = queryPooling=args['query']
+        if not maxQuerySpectraToPool: maxQuerySpectraToPool = np.inf
         for i in range(len(args['files'])):
-            outFileHeader = 'CsoDIAq-file' +str(i+1)+'_'+ '.'.join(args['files'][i].split('/')[-1].split('.')[:-1])
+            outFileHeader = args['outDirectory'] + 'CsoDIAq-file' +str(i+1)+'_'+ '.'.join(args['files'][i].split('/')[-1].split('.')[:-1])
             if args['correction'] != -1: outFileHeader += '_corrected'
-            maxQuerySpectraToPool = queryPooling=args['query']
-            if not maxQuerySpectraToPool: maxQuerySpectraToPool = np.inf
+            outFile = outFileHeader + '.csv'
+            if args['histogram']: histFile = outFileHeader + '_histogram.png'
+            else: histFile = ''
+            cbf.perform_spectra_pooling_and_analysis(   args['files'][i],
+                                                        outFile,
+                                                        lib,
+                                                        args['fragmentMassTolerance'],
+                                                        maxQuerySpectraToPool,
+                                                        args['correction'],
+                                                        histFile)
 
-            outFile = args['outDirectory'] + outFileHeader + '.csv'
-            menu.write_csodiaq_output(lib, args['files'][i], outFile, args['histogram'], corrected=args['correction'], initialTol=args['fragmentMassTolerance'], queryPooling=args['query'])
-            cor = False
-            if args['correction']!=-1: cor=True
-            menu.write_csodiaq_fdr_outputs(outFile, args['proteinTargets'], corrected=cor)
-            menu.write_DISPA_targeted_reanalysis_files(outFile, proteins = args['proteinTargets'], corrected=cor, heavy=args['heavyMz'])
+            menu.write_csodiaq_fdr_outputs(outFile, args['proteinTargets'])
+            menu.write_DISPA_targeted_reanalysis_files(outFile, proteins = args['proteinTargets'], heavy=args['heavyMz'])
 
     if args['command'] == 'quant':
         if args['histogram']: hist = args['outDirectory'] + 'SILAC_Quantification_histogram.png'

@@ -50,7 +50,7 @@ def cosine_similarity(AB, A, B):
     return (AB / magnitude if magnitude else 0)
 
 @njit
-def tag_sparse_peak_matches_and_generate_scores(matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches):
+def tag_sparse_peak_matches_and_generate_scores(matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities):
 
     # Because the tags are sorted together, each spectrum-spectrum tag pair is grouped together. As soon as the pair changes, that means you've gone to to a new pair.
     #  We keep track of the current tags to determine if they have changed.
@@ -218,7 +218,6 @@ class PooledSpectraMatcher:
         self.remove_sparse_matches_and_generate_scores()
         self.decoys = [idToDecoyDict[x] for x in self.libraryTags]
 
-
     def sort_matches_by_tags(self):
         self.libraryTags, self.queryTags, self.libraryIntensities, self.queryIntensities, self.ppmMatches = [np.array(x) for x in [self.libraryTags, self.queryTags, self.libraryIntensities, self.queryIntensities, self.ppmMatches]]
         i1 = self.queryTags.argsort(kind='mergesort')
@@ -231,27 +230,9 @@ class PooledSpectraMatcher:
             self.libraryTags,
             self.libraryIntensities,
             self.queryTags,
-            self.queryIntensities,
-            self.ppmMatches)
-        self.libraryTags, self.queryTags, self.libraryIntensities, self.queryIntensities, self.ppmMatches = [np.delete(x,remove_indices) for x in [self.libraryTags, self.queryTags, self.libraryIntensities, self.queryIntensities, self.ppmMatches]]
-
-    def extend_all_spectra(self, spectraMatch):
-        self.libraryTags = np.append(self.libraryTags, spectraMatch.libraryTags)
-        self.libraryIntensities = np.append(self.libraryIntensities, spectraMatch.libraryIntensities)
-        self.queryTags = np.append(self.queryTags, spectraMatch.queryTags)
-        self.queryIntensities = np.append(self.queryIntensities, spectraMatch.queryIntensities)
-        self.ppmMatches = np.append(self.ppmMatches, spectraMatch.ppmMatches)
-        self.scores = np.append(self.scores, spectraMatch.scores)
-        self.decoys = np.append(self.decoys, spectraMatch.decoys)
-
-    def find_score_fdr_cutoff(self):
-        scores, decoys = reduce_duplicate_rows(self.libraryTags, self.queryTags, self.scores, self.decoys)
-        scores = np.array(scores)
-        decoys = np.array(decoys)
-        i1 = (-scores).argsort()
-        scores = scores[i1]
-        decoys = decoys[i1]
-        return calculate_score_fdr_cutoff(scores, decoys)
+            self.queryIntensities)
+        self.libraryTags, self.queryTags, self.libraryIntensities, self.queryIntensities, self.ppmMatches = [np.delete(x, remove_indices) for x in [self.libraryTags, self.queryTags, self.libraryIntensities, self.queryIntensities, self.ppmMatches]]
+        if len(self.decoys) > 0: self.decoys = np.delete(self.decoys, remove_indices)
 
     def filter_by_corrected_ppm_window(self, corrected, scoreCutoff, histFile):
 
@@ -263,6 +244,26 @@ class PooledSpectraMatcher:
         ppmIndices = np.where((self.ppmMatches>lowend)*(self.ppmMatches<highend))[0]
         self.libraryTags, self.queryTags, self.libraryIntensities, self.queryIntensities, self.decoys = [x[ppmIndices] for x in [self.libraryTags, self.queryTags, self.libraryIntensities, self.queryIntensities, self.decoys]]
         self.remove_sparse_matches_and_generate_scores()
+
+    def find_score_fdr_cutoff(self):
+        scores, decoys = reduce_duplicate_rows(self.libraryTags, self.queryTags, self.scores, self.decoys)
+        print(len(self.scores))
+        print(len(self.decoys))
+        scores = np.array(scores)
+        decoys = np.array(decoys)
+        i1 = (-scores).argsort()
+        scores = scores[i1]
+        decoys = decoys[i1]
+        return calculate_score_fdr_cutoff(scores, decoys)
+
+    def extend_all_spectra(self, spectraMatch):
+        self.libraryTags = np.append(self.libraryTags, spectraMatch.libraryTags)
+        self.libraryIntensities = np.append(self.libraryIntensities, spectraMatch.libraryIntensities)
+        self.queryTags = np.append(self.queryTags, spectraMatch.queryTags)
+        self.queryIntensities = np.append(self.queryIntensities, spectraMatch.queryIntensities)
+        self.ppmMatches = np.append(self.ppmMatches, spectraMatch.ppmMatches)
+        self.scores = np.append(self.scores, spectraMatch.scores)
+        self.decoys = np.append(self.decoys, spectraMatch.decoys)
 
     def write_output(self, outFile, expSpectraFile, scoreCutoff, queValDict, idToKeyDict, lib):
         columns = [
