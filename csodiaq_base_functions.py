@@ -93,7 +93,7 @@ def traml_library_upload(fileName):
     if fileName.endswith('.tsv'):
         lib_df = pd.read_csv(fileName, sep='\t')
     else:
-        lib_df = pd.read_csv(fileName, sep='\t')
+        lib_df = pd.read_csv(fileName)
 
     # Print statement for timing the program
     print('\nEnter library dictionary upload: ',flush=True)
