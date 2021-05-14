@@ -22,12 +22,6 @@ def main():
         cbf.clean_mgf_file(args['mgf'], args['fasta'], ions=args['ions'])
         return
 
-    if (args['histogram'] and args['correction']==-1): arg_parser.error('The -hist or --histogram argument requires the -c or -correction argument')
-    for file in args['files']:
-        if not restricted_file(file, permittedTypes=['mzxml']): arg_parser.error('The -f or --files argument must be an existing file of type mzxml')
-    if not restricted_file(args['library'], permittedTypes=['mgf','csv','tsv']): arg_parser.error('The -l or --library argument must be an existing file of type MGF (.mgf) or TraML (.tsv or .csv) format')
-    if not restricted_file(args['outDirectory']): arg_parser.error('The -o or --outDirectory argument must be an existing directory')
-
     if args['command'] == 'id':
         #lib = cbf.library_file_to_dict(args['library'])
         #pickle.dump(lib, open(args['outDirectory']+'mgf_lib.p', 'wb'))
@@ -59,15 +53,14 @@ def main():
             reanalysisHeader = outFileHeader + '_mostIntenseTargs'
             if args['proteinTargets']: inFile = proteinFile
             else: inFile = peptideFile
-            #cbf.return_DISPA_targeted_reanalysis_dfs(reanalysisHeader, inFile, args['proteinTargets'], args['heavyMz'])
-            menu.write_DISPA_targeted_reanalysis_files(outFile, proteins = args['proteinTargets'], heavy=args['heavyMz'])
-
+            cbf.write_targeted_reanalysis_outputs(reanalysisHeader, inFile, args['proteinTargets'], args['heavyMz'])
 
     if args['command'] == 'quant':
+        fragDict, libDict = cbf.make_quant_dicts(args['idFile'], args['library'], args['files'], args['libraryPeaks'])
         if args['histogram']: hist = args['outDirectory'] + 'SILAC_Quantification_histogram.png'
         else: hist = ''
-        menu.heavy_light_quantification(args['idFile'], args['library'], args['files'], args['outDirectory'], args['libraryPeaks'], args['fragmentMassTolerance'], args['minimumMatches'], args['ratioType'], args['correction'], hist)
-
+        df = cbf.heavy_light_quantification(fragDict, libDict, args['files'], args['outDirectory'], args['fragmentMassTolerance'], args['minimumMatches'], args['ratioType'], args['correction'], hist)
+        df.to_csv(args['outDirectory'] + 'CsoDIAq_output_SILAC_Quantification.csv', index=False)
 
 
 def set_command_line_settings():

@@ -628,6 +628,47 @@ def fdr_calculation(df, returnType=0): #***NOTE***make return type
     if returnType: return fdrValues, numDecoys-1
     else: return len(fdrValues), numDecoys-1
 
+def find_offset_tol(data, histFile, stdev, mean=True):
+    if len(data)==0: return 0, 10
+    hist, bins = np.histogram(data, bins=200)
+    width = 0.7 * (bins[1] - bins[0])
+    center = (bins[:-1] + bins[1:]) / 2
+
+    # offset is calculated as the mean or median value of the provided data, though this is overwritten if no corrected standard deviation is provided
+    if mean: offset = sum(data)/len(data)
+    else: offset = data[len(data)//2]
+
+    # If a corrected standard deviation is provided, it is used to set the tolerance. If not, see below conditional statement
+    tolerance = np.std(data)*stdev
+
+    # If no corrected standard deviation is provided, one is customized.
+    #  Offset is considered the highest point of the histogram,
+    #  tolerance the range necessary before the peaks are the same size as the noise on either end.
+    if not stdev:
+        index_max = max(range(len(hist)), key=hist.__getitem__)
+        histList = list(hist)
+        noise = np.mean(hist[:10] + hist[-10:])
+        min_i = 0
+        max_i = len(hist)-1
+        for i in range(index_max, 0, -1):
+            if hist[i] < noise: min_i = i; break
+        for i in range(index_max, len(hist)):
+            if hist[i] < noise: max_i = i; break
+
+        offset = center[index_max]
+        if index_max - min_i >= max_i - index_max: tolerance = offset - center[min_i]
+        else: tolerance = center[max_i] - offset
+
+    # if a histogram file is provided, it is created, with offset (black) and tolerance (red) lines drawn for reference
+    if histFile:
+        pyplot.clf()
+        pyplot.bar(center, hist, align='center', width=width)
+        pyplot.axvline(x=offset, color='black', linestyle = 'dashed', linewidth=4)
+        pyplot.axvline(x=offset-tolerance, color='red', linestyle = 'dashed', linewidth=4)
+        pyplot.axvline(x=offset+tolerance, color='red', linestyle = 'dashed', linewidth=4)
+        pyplot.suptitle('offset: '+str(offset) + ', tolerance: '+str(tolerance))
+        pyplot.savefig(histFile)
+    return offset, tolerance
 
 
 '''
@@ -664,7 +705,7 @@ Parameters:
 Returns:
     'finalDf' - Pandas dataframe. 'finalDf' can be written to a file for direct input to an MS machine.
 '''
-def return_DISPA_targeted_reanalysis_dfs(header, inFile, proteins, heavy):
+def write_targeted_reanalysis_outputs(header, inFile, proteins, heavy):
     print_milestone('Generate DISPA Targeted Reanalysis Files:')
     df = pd.read_csv(inFile)
     df = df[~df['protein'].str.contains('DECOY',na=False)].reset_index(drop=True)
@@ -794,7 +835,6 @@ Parameters:
         this number)
 Returns:
     dictionary - see parameter 'libDict' in heavy_light_quantification() function.
-
 '''
 def make_lib_dict_quant(libFile, libScanDict, fragDf, maxPeaks):
     fileType = libFile.split('.')[-1]
@@ -982,6 +1022,7 @@ Returns:
     'libPeakDict' - see parameter 'libDict' in heavy_light_quantification() function.
 '''
 def make_quant_dicts(inFile, libFile, mzxmlFiles, maxPeaks):
+    print_milestone('Enter SILAC Quantification:')
     fileType = inFile.split('.')[-1]
     if fileType == 'csv': fragDf = pd.read_csv(inFile)
     else: fragDf = pd.read_csv(inFile, sep='\t')
@@ -1210,6 +1251,7 @@ def heavy_light_quantification(fragDict, libDict, mzxmlFiles, outDir, massTol, m
 
         # column of ratios from the just-analyzed file is added to the output
         finalDf[f] = [ratioDict[key] for key in sorted(ratioDict.keys())]
+    print_milestone('Finish SILAC Quantification')
     return finalDf
 
 
