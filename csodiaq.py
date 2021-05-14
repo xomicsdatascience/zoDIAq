@@ -2,7 +2,6 @@
 
 import sys, csv, argparse
 from os import path
-import csodiaq_menu_functions as menu
 import csodiaq_base_functions as cbf
 import csodiaq_gui as gui
 import pickle

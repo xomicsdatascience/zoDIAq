@@ -248,6 +248,7 @@ def mgf_library_upload(fileName):
             'Peaks':peaks,
             'ID':id,
             'Decoy':decoy,
+            
         }
 
         # entry placed in final dictionary
