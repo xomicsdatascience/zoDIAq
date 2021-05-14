@@ -1,6 +1,8 @@
 # CsoDIAq
 ## Introduction
 
+*Uses an MIT License* 
+
 CsoDIAq (Cosine Similarity Optimization for DIA qualitative and quantitative analysis) is a software tool 
 for the analysis of direct infusion shotgun proteome analysis (DISPA) data and data independent acquisition (DIA) data.
 
