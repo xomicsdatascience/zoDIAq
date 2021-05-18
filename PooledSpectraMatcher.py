@@ -1,4 +1,3 @@
-import csodiaq_base_functions as cbf
 import numpy as np
 from numba import njit, typeof
 import matplotlib.pyplot as pyplot

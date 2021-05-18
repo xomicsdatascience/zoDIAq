@@ -609,79 +609,104 @@ def calc_heavy_mz(seq, mz, z):
     heavyMz = mz + (nK*hK)/z + (nR*hR)/z
     return heavyMz
 
-
-'''
-Function: prepare_DIA_rerun_data()
-Purpose: This function takes a protein FDR dataframe and converts it into a format that an MS machine can read for targetted
-            DISPA re-analysis.
-Parameters:
-    'df' - Pandas dataframe, representing the protein FDR output from write_csodiaq_fdr_outputs().
-    'trypsin' - boolean variable that indicates if identified peptides should be filtered for those that resulted from trypsin
-        treatment.
-Returns:
-    'finalDf' - Pandas dataframe. 'finalDf' can be written to a file for direct input to an MS machine.
-'''
-def write_targeted_reanalysis_outputs(header, inFile, proteins, heavy):
+def filter_fdr_output_for_targeted_reanalysis(fdrFile, proteins):
     print_milestone('Generate DISPA Targeted Reanalysis Files:')
-    df = pd.read_csv(inFile)
-    df = df[~df['protein'].str.contains('DECOY',na=False)].reset_index(drop=True)
-    if 'uniquePeptide' in df.columns: df = df[df['uniquePeptide']==1].sort_values('ionCount', ascending=False).reset_index(drop=True)
-    if proteins: df = df.groupby(['leadingProtein']).head(proteins).reset_index()
-    CVs = set(df['CompensationVoltage'])
-    def notNan(x): return ~np.isnan(x)
+    fdrDf = pd.read_csv(fdrFile)
+    fdrDf = fdrDf[~fdrDf['protein'].str.contains('DECOY',na=False)].reset_index(drop=True)
+    if proteins:
+        fdrDf = fdrDf[fdrDf['uniquePeptide']==1].sort_values('ionCount', ascending=False).reset_index(drop=True)
+        fdrDf = fdrDf.groupby(['leadingProtein']).head(proteins).reset_index()
+    return fdrDf
+
+def gather_all_possible_cv_values(fdrDf):
+    CVs = set(fdrDf['CompensationVoltage'])
+    def notNan(x): return ~np.isnan(x) # get list of all CVs, or CV==0 if there are no CVs
     CVs = set(filter(notNan, CVs))
-
-    allDfs = []
     if len(CVs)==0: CVs.add('')
+    return CVs
 
+def calculate_all_light_heavy_mzs(cvDf):
+    lightMzs = []
+    heavyMzs = []
+    peptides = []
+    for index, row in cvDf.iterrows():
+        peptide = row['peptide']
+        lightMz = float(row['MzLIB'])
+        charge = row['zLIB']
+        heavyMz = calc_heavy_mz(peptide, lightMz, charge)
+        lightMzs.append(lightMz)
+        heavyMzs.append(heavyMz)
+        peptides.append(peptide)
+    return lightMzs, heavyMzs, peptides
+
+def compile_reanalysis_files_with_bins(cvDf, heavy):
+    lightMzs, heavyMzs, peptides = calculate_all_light_heavy_mzs(cvDf)
+    binWidth = 1.0
+    lv, lBins = bin_assignment(lightMzs, binWidth)
+    hv, hBins = bin_assignment(heavyMzs, binWidth)
+    scanLightMzs = [lBins[lv[i]] for i in range(len(cvDf))]
+    scanHeavyMzs = [hBins[hv[i]] for i in range(len(cvDf))]
+
+    cvDf['scanLightMzs'] = [x-(binWidth/2) for x in scanLightMzs]
+    cvDf['scanHeavyMzs'] = [x-(binWidth/2) for x in scanHeavyMzs]
+
+    # preparing the allCSV output
+    binDict = defaultdict(list)
+    for i in range(len(cvDf)):
+        if heavy: binDict[scanLightMzs[i],scanHeavyMzs[i]].append(peptides[i])
+        else: binDict[scanLightMzs[i],0].append(peptides[i])
+
+    # preparing the files that are fed into an MS machine
+    data = []
+    binKeys = sorted(binDict)
+    for i in range(len(binKeys)):
+        data.append(['/'.join(binDict[binKeys[i]]), '', '(no adduct)', binKeys[i][0]-(binWidth/2), 2, i+1])
+        if heavy: data.append(['/'.join(binDict[binKeys[i]]), '', '(no adduct)', binKeys[i][1]-(binWidth/2), 2, i+1])
+    return cvDf, data
+
+def compile_reanalysis_files_without_bins(cvDf, heavy):
+    data = []
+    scanLightMzs = []
+    scanHeavyMzs = []
+    for i in range(len(cvDf)):
+        compound = cvDf.loc[i]['peptide']
+        formula = ''
+        adduct = '(no adduct)'
+        lightMz = float(cvDf.loc[i]['MzLIB'])
+        charge = cvDf.loc[i]['zLIB']
+        heavyMz = calc_heavy_mz(compound, lightMz, charge)
+        MSXID = i+1
+        scanLightMzs.append(round(lightMz, ndigits = 2))
+        scanHeavyMzs.append(round(heavyMz, ndigits = 2))
+        data.append([compound, formula, adduct, scanLightMzs[-1], charge, MSXID])
+        if heavy: data.append([compound, formula, scanHeavyMzs[-1], charge, MSXID])
+
+    cvDf['scanLightMzs'] = scanLightMzs
+    cvDf['scanHeavyMzs'] = scanHeavyMzs
+    return cvDf, data
+
+
+def write_targeted_reanalysis_outputs(header, fdrDf, heavy):
+    bins = False
+    CVs = gather_all_possible_cv_values(fdrDf)
+    allDfs = []
     for CV in CVs:
-        if CV: tempDf = df[df['CompensationVoltage']==CV].reset_index(drop=True)
-        else: tempDf = df
-        #if proteins: tempDf = tempDf.groupby(['leadingProtein']).head(proteins).reset_index()
-        lightMzs = []
-        heavyMzs = []
-        peptides = []
-        rows = len(tempDf)
-        for index, row in tempDf.iterrows():
-            peptide = row['peptide']
-            lightMz = float(row['MzLIB'])
-            charge = row['zLIB']
-            heavyMz = calc_heavy_mz(peptide, lightMz, charge)
-            lightMzs.append(lightMz)
-            heavyMzs.append(heavyMz)
-            peptides.append(peptide)
-
-        binWidth = 1.0
-        lv, lBins = bin_assignment(lightMzs, binWidth)
-        hv, hBins = bin_assignment(heavyMzs, binWidth)
-        scanLightMzs = [lBins[lv[i]] for i in range(rows)]
-        scanHeavyMzs = [hBins[hv[i]] for i in range(rows)]
-
-        tempDf['scanLightMzs'] = [x-(binWidth/2) for x in scanLightMzs]
-        tempDf['scanHeavyMzs'] = [x-(binWidth/2) for x in scanHeavyMzs]
-
-        #tempDf.to_csv('/Users/calebcranney/Desktop/0_DataFiles/delete'+str(CV)+'.csv',index=False)
-        allDfs.append(tempDf)
-
-        binDict = defaultdict(list)
-        for i in range(rows):
-            if heavy: binDict[scanLightMzs[i],scanHeavyMzs[i]].append(peptides[i])
-            else: binDict[scanLightMzs[i],0].append(peptides[i])
-
-        data = []
-        binKeys = sorted(binDict)
-        for i in range(len(binKeys)):
-            data.append(['/'.join(binDict[binKeys[i]]), '', '(no adduct)', binKeys[i][0]-(binWidth/2), 2, i+1])
-            if heavy: data.append(['/'.join(binDict[binKeys[i]]), '', '(no adduct)', binKeys[i][1]-(binWidth/2), 2, i+1])
-
+        if CV: cvDf = fdrDf[fdrDf['CompensationVoltage']==CV].reset_index(drop=True)
+        else: cvDf = fdrDf
+        if bins: cvDf, data = compile_reanalysis_files_with_bins(cvDf, heavy)
+        else: cvDf, data = compile_reanalysis_files_without_bins(cvDf, heavy)
+        allDfs.append(cvDf)
         finalDf = pd.DataFrame(data, columns=['Compound','Formula','Adduct','m.z','z','MSXID'])
         outFile = header
         if CV: outFile += '_' + str(CV)
         outFile += '.txt'
         finalDf.to_csv(outFile, sep='\t', index=False)
-    #if len(CVs) > 1:
+
+    #final print
     compDf = pd.concat(allDfs)
-    compDf.to_csv(header+'allCVs.csv', index=False)
+    if bins: binMark = '_withBins_'
+    else: binMark = '_withoutBins_'
+    compDf.to_csv(header+binMark+'allCVs.csv', index=False)
 
 
 
@@ -731,7 +756,7 @@ def ppm_offset(mz, ppm):
 
 
 '''
-Function: make_lib_dict_quant()
+Function: pool_library_spectra_by_scan()
 Purpose: This function reads the file type of the input file (accepts .mgf, .csv and .tsv formats) and runs it through the
             appropriate reading function. Basically, this function is a catch-all used in the corresponding menu function to
             determine how to best read in a particular library spectra file. This is similar to the library_file_to_dict()
@@ -746,24 +771,20 @@ Parameters:
                     spectrum.
         value - string representing the scan number of the DISPA re-analysis. Scan numbers are consistent across datasets
             from the same run.
-    'fragDf' - Pandas dataframe, created from 'inFile' parameter of make_quant_dicts() function.
+    'fragDf' - Pandas dataframe, created from 'inFile' parameter of connect_mzxml_csodiaq_library() function.
     'maxPeaks' - maximum number of peaks to be included in each library (light and heavy combined will have at most double
         this number)
 Returns:
     dictionary - see parameter 'libDict' in heavy_light_quantification() function.
 '''
-def make_lib_dict_quant(libFile, libScanDict, fragDf, maxPeaks):
+def pool_library_spectra_by_scan(libFile, libScanDict, fragDf, maxPeaks):
     fileType = libFile.split('.')[-1]
     if fileType == 'mgf':
-
-        # all code before the return statement assumes that the peptides have decimal values corresponding to non-standard modifications.
         uniquePeps = set(fragDf['peptide'])
         digPat = r'\+\d+\.\d+'
         uniqueDigs = set()
         for pep in uniquePeps: uniqueDigs.update(re.findall(digPat, pep))
         digDict = dict(zip(uniqueDigs, [str(x) for x in list(range(len(uniqueDigs)))]))
-
-        #NOTE: If you have more than 10 custom entries you'll have problems
         customAAmass = dict(mass.std_aa_mass)
         for key in digDict: customAAmass[digDict[key]] = float(key[1:])
         return mgf_library_upload_quant(libFile, libScanDict, digDict, customAAmass, maxPeaks)
@@ -779,7 +800,7 @@ Purpose: This function creates a dictionary with scan:peak entries for identifyi
 Parameters:
     'fileName' - string representing the path to the library spectra, ideally the same library that was used in steps leading
         up to FDR analysis.
-    dictionary 'scanDict' - see parameter 'libScanDict' in make_lib_dict_quant() function.
+    dictionary 'scanDict' - see parameter 'libScanDict' in pool_library_spectra_by_scan() function.
     dictionary 'digDict'
         key - numeric, single-digit string representing a modification found in a peptide sequence.
         value - string representing the mass of the modification (float).
@@ -855,7 +876,7 @@ Purpose: This function creates a dictionary with scan:peak entries for identifyi
 Parameters:
     'fileName' - string representing the path to the library spectra, ideally the same library that was used in steps leading
         up to FDR analysis.
-    dictionary 'scanDict' - see parameter 'libScanDict' in make_lib_dict_quant() function.
+    dictionary 'scanDict' - see parameter 'libScanDict' in pool_library_spectra_by_scan() function.
     'maxPeaks' - maximum number of peaks to be included in each library (light and heavy combined will have at most double
         this number)
 Returns:
@@ -922,45 +943,22 @@ def traml_library_upload_quant(fileName, scanDict, maxPeaks):
     return finalDict
 
 
-'''
-Function: make_quant_dicts()
-Purpose: This function prepares the dictionaries used by the heavy_light_quantification() function.
-Parameters:
-    'inFile' - string representing the path to output from the FDR calculation specific to the data that was used to target
-        the DISPA re-analysis.
-    'libFile' - string representing the path to the library spectra, ideally the same library that was used in steps leading
-        up to FDR analysis.
-    'mzxmlFiles' - list of strings representing the path to files from the DISPA re-analysis.
-    'maxPeaks' - maximum number of peaks to be included in each library (light and heavy combined will have at most double
-        this number)
-Returns:
-    'fragVarDict' - see parameter 'fragDict' in heavy_light_quantification() function.
-    'libPeakDict' - see parameter 'libDict' in heavy_light_quantification() function.
-'''
-def make_quant_dicts(inFile, libFile, mzxmlFiles, maxPeaks):
-    print_milestone('Enter SILAC Quantification:')
-    fileType = inFile.split('.')[-1]
-    if fileType == 'csv': fragDf = pd.read_csv(inFile)
-    else: fragDf = pd.read_csv(inFile, sep='\t')
-
-    # Dictionary is created that can match FDR calculation variables to the scan number of the DISPA re-analysis.
-    # NOTE: all DISPA re-analysis files should have corresponding scan numbers. The first of the list is arbitrarily chosen there.
-    fragScanDict = {}
-
-    with mzxml.read(mzxmlFiles[0]) as spectra:
+def create_mzxml_to_csodiaq_dict(mzxmlFile):
+    mzxmlToCsodiaqDict = {}
+    with mzxml.read(mzxmlFile) as spectra:
         for x in spectra:
-
-            # @MAKE NOTE
             key = ( round(x['precursorMz'][0]['precursorMz'], 2),
                     round(x['precursorMz'][1]['precursorMz'], 2),
                     x['compensationVoltage']
                     )
-            fragScanDict[key] = x['num']
+            mzxmlToCsodiaqDict[key] = x['num']
+    return mzxmlToCsodiaqDict
 
+def connect_csodiaq_data_to_scans(idFile, mzxmlToCsodiaqDict, fragDf):
     fragVarDict = defaultdict(list)
     libScanDict = {}
-    print('total scans: ' + str(len(fragScanDict)))
-    # each peptide of interest should have a corresponding scan. This runs over each peptide.
+
+
     for i in range(len(fragDf)):
 
         # @DEBUG: Top line for my ouput, bottom for Jesse's old output.
@@ -970,17 +968,22 @@ def make_quant_dicts(inFile, libFile, mzxmlFiles, maxPeaks):
 
         key = (round(fragDf.loc[i]['scanLightMzs'],2), round(fragDf.loc[i]['scanHeavyMzs'],2), CV)
         #key = (lightMz, heavyMz, CV)
-        if key in fragScanDict:
-            scan = fragScanDict[key]
+        if key in mzxmlToCsodiaqDict:
+            scan = mzxmlToCsodiaqDict[key]
             libScanDict[lightMz, seq] = scan
             fragVarDict[scan].append({'seq':seq, 'mz':mz, 'z':z, 'CV':CV})
+    return fragVarDict, libScanDict
 
+def connect_mzxml_to_csodiaq_and_library(idFile, libFile, mzxmlFiles, maxPeaks):
+    print_milestone('Preparing Quantification Dictionaries:')
+    metadataToScanDict = create_mzxml_to_csodiaq_dict(mzxmlFiles[0])
+    fileType = idFile.split('.')[-1]
+    if fileType == 'csv': fragDf = pd.read_csv(idFile)
+    else: fragDf = pd.read_csv(idFile, sep='\t')
 
-    print('scans identified: '+str(len(libScanDict)))
-    # dictionary with a scan:peaks entries is created.
-    libPeakDict = make_lib_dict_quant(libFile, libScanDict, fragDf, maxPeaks)
-    print('libraries identified: '+str(len(libPeakDict)))
-    return fragVarDict, libPeakDict
+    scanToCsodiaqDict, libMetadataToScanDict = connect_csodiaq_data_to_scans(idFile, metadataToScanDict, fragDf)
+    scanToLibPeaksDict = pool_library_spectra_by_scan(libFile,libMetadataToScanDict, fragDf, maxPeaks)
+    return scanToCsodiaqDict, scanToLibPeaksDict
 
 @njit()
 def spectra_peak_comparison_quant(libMzs, queMzs, ppmTol, ppmOffset):
@@ -1048,16 +1051,13 @@ Parameters:
             string differentiates between 'light' and 'heavy' peaks, and the int represents the rank of peak intensity (0
             being high), and the last string represents the peptide represented by the library.
     'mzxmlFiles' - list of strings representing the path to files from the DISPA re-analysis.
-    'var' - @DEBUG: It is expected that this parameter will be removed by the end of this project. It currently holds
-        variables that will be constant, but for testing/automating purposes are putting then in this list.
 Returns:
     'finalDf' - pandas dataframe. The first two columns of the dataframe are the scans and peptides, respectively. Each
         subsequent column represents the ratios for those peptides derived from each data file of the DISPA re-analysis.
 
 '''
-def heavy_light_quantification(fragDict, libDict, mzxmlFiles, outDir, massTol, minMatch, ratioType, correction, hist):
 
-    # final return value initialized, and the first two columns set.
+def initialize_quantification_output(fragDict, libDict):
     finalDf = pd.DataFrame()
 
     tempKeys = []
@@ -1073,6 +1073,11 @@ def heavy_light_quantification(fragDict, libDict, mzxmlFiles, outDir, massTol, m
 
     finalDf['scan'] = scans
     finalDf['peptide'] = peptides
+    return finalDf
+
+def heavy_light_quantification(fragDict, libDict, mzxmlFiles, outDir, massTol, minMatch, ratioType, correction, hist):
+
+    finalDf = initialize_quantification_output(fragDict, libDict)
 
     # Heavy:Light Ratio for each peptide is calculated for every DISPA reanalysis file. Looping over the files begins here.
     for f in mzxmlFiles:
@@ -1085,6 +1090,7 @@ def heavy_light_quantification(fragDict, libDict, mzxmlFiles, outDir, massTol, m
 
                     # experimental spectrum is formatted for peak comparison (see 'libDict' parameter value for peak description)
                     spec = file.get_by_id(scan)
+
                     spec['intensity array'] = [x for x in spec['intensity array']]
                     peakIDs = [scan for x in range(len(spec['m/z array']))]
                     expSpectrum = list(tuple(zip(spec['m/z array'],spec['intensity array'],peakIDs)))
@@ -1169,6 +1175,42 @@ def heavy_light_quantification(fragDict, libDict, mzxmlFiles, outDir, massTol, m
         finalDf[f] = [ratioDict[key] for key in sorted(ratioDict.keys())]
     print_milestone('Finish SILAC Quantification')
     return finalDf
+
+def make_lib_dict_quant(libFile, libScanDict, fragDf, maxPeaks):
+    fileType = libFile.split('.')[-1]
+    if fileType == 'mgf':
+
+        # all code before the return statement assumes that the peptides have decimal values corresponding to non-standard modifications.
+        uniquePeps = set(fragDf['peptide'])
+        digPat = r'\+\d+\.\d+'
+        uniqueDigs = set()
+        for pep in uniquePeps: uniqueDigs.update(re.findall(digPat, pep))
+        digDict = dict(zip(uniqueDigs, [str(x) for x in list(range(len(uniqueDigs)))]))
+
+        #NOTE: If you have more than 10 custom entries you'll have problems
+        customAAmass = dict(mass.std_aa_mass)
+        for key in digDict: customAAmass[digDict[key]] = float(key[1:])
+        return mgf_library_upload_quant(libFile, libScanDict, digDict, customAAmass, maxPeaks)
+    else:
+        return traml_library_upload_quant(libFile, libScanDict, maxPeaks)
+
+def initialize_return_values(tag):
+    if tag=='qPPM':
+        light = defaultdict(list)
+        heavy = defaultdict(list)
+        return [light, heavy]
+    elif tag=='ratio':
+        light = defaultdict(dict)
+        heavy = defaultdict(dict)
+        return [light, heavy]
+
+def update_return_values(returns, peak1, peak2, i1, i2, ppm, tag):
+    if tag=='qPPM':
+        if peak1[2][0] == 'light': returns[0][peak1[2][2]].append(ppm)
+        if peak1[2][0] == 'heavy': returns[1][peak1[2][2]].append(ppm)
+    elif tag=='ratio':
+        if peak1[2][0] == 'light': returns[0][peak1[2][2]][peak1[2][1]] = peak2[1]
+        if peak1[2][0] == 'heavy': returns[1][peak1[2][2]][peak1[2][1]] = peak2[1]
 
 
 def match_score(keys):
