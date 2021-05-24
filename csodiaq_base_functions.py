@@ -370,9 +370,10 @@ def gather_library_metadata(lib):
     for key in allLibKeys: libIdToKeyDict[lib[key]['ID']] = key; libIdToDecoyDict[lib[key]['ID']] = lib[key]['Decoy']
     return allLibKeys, libIdToKeyDict, libIdToDecoyDict
 
-def format_spectra_for_pooling(spectrum, scanNumber):
+def format_spectra_for_pooling(spectrum, scanNumber, sqrt=True):
     scanNumber = int(scanNumber)
-    intensity = [x**0.5 for x in spectrum['intensity array']]
+    if sqrt: intensity = [x**0.5 for x in spectrum['intensity array']]
+    else: intensity = [x for x in spectrum['intensity array']]
     peakIDs = [scanNumber for x in range(spectrum['peaksCount'])]
     return list(zip(spectrum['m/z array'],intensity,peakIDs))
 
@@ -1080,6 +1081,7 @@ def initialize_quantification_output(fragDict, libDict):
 def heavy_light_quantification(fragDict, libDict, mzxmlFiles, outDir, massTol, minMatch, ratioType, correction, hist):
 
     finalDf = initialize_quantification_output(fragDict, libDict)
+    def initialize_ratio_dict_values(): return np.nan
 
     # Heavy:Light Ratio for each peptide is calculated for every DISPA reanalysis file. Looping over the files begins here.
     for f in mzxmlFiles:
@@ -1095,19 +1097,21 @@ def heavy_light_quantification(fragDict, libDict, mzxmlFiles, outDir, massTol, m
 
                 scanToNoiseIntensityCutoffDict[int(scan)] = np.mean(sorted(spec['intensity array'])[:10])/2
 
-                expSpectrum = format_spectra_for_pooling(spec, scan)
+                expSpectrum = format_spectra_for_pooling(spec, scan, sqrt=False)
                 expSpectrum.sort()
 
                 libSpectra = sorted(libDict[scan])
 
                 quantSpectraMatch = QuantSpectraMatcher.QuantSpectraMatcher()
-                quantSpectraMatch.compare_spectra(libSpectra, expSpectrum, massTol)
+                quantSpectraMatch.compare_spectra(libSpectra, expSpectrum, massTol, minMatch)
                 allSpectraMatch.extend_all_spectra(quantSpectraMatch)
 
-        allSpectraMatch.filter_by_corrected_ppm_window(corrected, scoreCutoff, histFile)
-        ratioDict = allSpectraMatch.determine_ratios(scanToNoiseIntensityCutoffDict)
+        allSpectraMatch.filter_by_corrected_ppm_window(correction, hist, minMatch)
+        ratioDict = defaultdict(initialize_ratio_dict_values)
+        ratioDict = allSpectraMatch.determine_ratios(ratioDict, scanToNoiseIntensityCutoffDict, ratioType, minMatch)
 
-        finalDf[f] = [ratioDict[key] for key in sorted(ratioDict.keys())]
+
+        finalDf[f] = [ratioDict[(int(row['scan']),row['peptide'])] for index, row in finalDf.iterrows()]
     print_milestone('Finish SILAC Quantification')
     return finalDf
 
