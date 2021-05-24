@@ -13,6 +13,7 @@ import re
 from collections import defaultdict
 from numba import njit
 import PooledSpectraMatcher
+import QuantSpectraMatcher
 
 
 pd.set_option('display.max_rows', None)
@@ -291,7 +292,7 @@ def perform_spectra_pooling_and_analysis(querySpectraFile, outFile, lib, toleran
             for i in range(len(scans)):
                 scanNumber = scans[i]
                 queSpectrum = spectra.get_by_id(scanNumber)
-                pooledQueSpectra += format_spectra_for_pooling(queSpectrum, int(scanNumber))
+                pooledQueSpectra += format_spectra_for_pooling(queSpectrum, scanNumber)
 
                 if (i % maxQuerySpectraToPool == 0 and i!=0) or i == len(scans)-1:
                     pooledQueSpectra.sort()
@@ -370,6 +371,7 @@ def gather_library_metadata(lib):
     return allLibKeys, libIdToKeyDict, libIdToDecoyDict
 
 def format_spectra_for_pooling(spectrum, scanNumber):
+    scanNumber = int(scanNumber)
     intensity = [x**0.5 for x in spectrum['intensity array']]
     peakIDs = [scanNumber for x in range(spectrum['peaksCount'])]
     return list(zip(spectrum['m/z array'],intensity,peakIDs))
@@ -855,8 +857,8 @@ def mgf_library_upload_quant(fileName, scanDict, digDict, aaDict, maxPeaks):
         for i in range(len(fragList)):
             fragMz = fragList[i][1]
             fragInt = fragList[i][0]
-            peaks.append((fragMz, fragInt, ('light', i, seq)))
-            peaks.append((calc_heavy_mz(fragList[i][2], fragMz, 1), fragInt, ('heavy', i, seq)))
+            peaks.append((fragMz, fragInt, (0, i, seq)))
+            peaks.append((calc_heavy_mz(fragList[i][2], fragMz, 1), fragInt, (1, i, seq)))
 
         # peaks are sorted by mz value (as they appear in a spectrum)
         peaks.sort(key=lambda x:x[0])
@@ -932,10 +934,10 @@ def traml_library_upload_quant(fileName, scanDict, maxPeaks):
         for i in range(len(fragList)):
             fragMz = fragList[i][1]
             fragInt = fragList[i][0]
-            peaks.append((fragMz, fragInt, ('light',i,key[1])))
+            peaks.append((fragMz, fragInt, (0,i,key[1])))
             fragSeq = lib[key]['PeptideSequence'][-lib[key]['FragmentSeriesNumber']:]
             heavyMz = calc_heavy_mz(fragSeq, fragMz, lib[key]['FragmentCharge'])
-            peaks.append((heavyMz, fragInt, ('heavy',i,key[1])))
+            peaks.append((heavyMz, fragInt, (1,i,key[1])))
 
         # entry placed in final dictionary
         finalDict[scanDict[key]] += peaks
@@ -1081,97 +1083,30 @@ def heavy_light_quantification(fragDict, libDict, mzxmlFiles, outDir, massTol, m
 
     # Heavy:Light Ratio for each peptide is calculated for every DISPA reanalysis file. Looping over the files begins here.
     for f in mzxmlFiles:
-        if correction == -1: offset, tolerance = 0, massTol
-        else:
-            # In order to apply a ppm correction, optimal offset and tolerance for the data.
-            ppmDiffs = []
-            with mzxml.read(f, use_index =True) as file:
-                for scan in sorted(libDict.keys()):
-
-                    # experimental spectrum is formatted for peak comparison (see 'libDict' parameter value for peak description)
-                    spec = file.get_by_id(scan)
-
-                    spec['intensity array'] = [x for x in spec['intensity array']]
-                    peakIDs = [scan for x in range(len(spec['m/z array']))]
-                    expSpectrum = list(tuple(zip(spec['m/z array'],spec['intensity array'],peakIDs)))
-                    expSpectrum.sort(key=lambda x:x[0])
-
-                    libSpectra = sorted(libDict[scan])
-                    libMzs = np.array([x[0] for x in libSpectra])
-                    queMzs = np.array([x[0] for x in expSpectrum])
-                    tag = 'qPPM'
-                    returns = initialize_return_values(tag)
-                    pMatch, jMatch, ppmMatch = spectra_peak_comparison_quant(libMzs, queMzs, massTol, 0)
-                    for i in range(len(pMatch)):
-                        update_return_values(returns, libSpectra[pMatch[i]], expSpectrum[jMatch[i]], pMatch[i], jMatch[i], ppmMatch[i], tag)
-                    l, h = returns
-
-                    # all PPM differences from matches of interest are included for consideration
-                    #l, h = spectra_peak_comparison(sorted(libDict[scan]), expSpectrum, massTol, 0, tag='qPPM')
-                    for pep in l:
-                        if len(l[pep]) >= minMatch: ppmDiffs += l[pep]
-                    for pep in h:
-                        if len(h[pep]) >= minMatch: ppmDiffs += h[pep]
-
-
-            offset, tolerance = find_offset_tol(sorted(ppmDiffs), hist, stdev=correction)
-
-        # Now that an offset and tolerance has been established specific to the data, the program runs the algorithm to calculate heavy:light ratios
-        data = []
-        ratioDict = {}
+        # In order to apply a ppm correction, optimal offset and tolerance for the data.
         ppmDiffs = []
+        allSpectraMatch = QuantSpectraMatcher.QuantSpectraMatcher()
+        scanToNoiseIntensityCutoffDict = dict()
         with mzxml.read(f, use_index =True) as file:
             for scan in sorted(libDict.keys()):
 
-                # as above, the scan spectrum is formatted appropriately.
+                # experimental spectrum is formatted for peak comparison (see 'libDict' parameter value for peak description)
                 spec = file.get_by_id(scan)
-                spec['intensity array'] = [x for x in spec['intensity array']]
-                peakIDs = [scan for x in range(len(spec['m/z array']))]
-                expSpectrum = list(tuple(zip(spec['m/z array'],spec['intensity array'],peakIDs)))
-                expSpectrum.sort(key=lambda x:x[0])
+
+                scanToNoiseIntensityCutoffDict[int(scan)] = np.mean(sorted(spec['intensity array'])[:10])/2
+
+                expSpectrum = format_spectra_for_pooling(spec, scan)
+                expSpectrum.sort()
+
                 libSpectra = sorted(libDict[scan])
-                libMzs = np.array([x[0] for x in libSpectra])
-                queMzs = np.array([x[0] for x in expSpectrum])
-                tag = 'ratio'
-                returns = initialize_return_values(tag)
-                pMatch, jMatch, ppmMatch = spectra_peak_comparison_quant(libMzs, queMzs, tolerance, offset)
-                for i in range(len(pMatch)):
-                    update_return_values(returns, libSpectra[pMatch[i]], expSpectrum[jMatch[i]], pMatch[i], jMatch[i], ppmMatch[i], tag)
 
-                lightPeps, heavyPeps = returns
+                quantSpectraMatch = QuantSpectraMatcher.QuantSpectraMatcher()
+                quantSpectraMatch.compare_spectra(libSpectra, expSpectrum, massTol)
+                allSpectraMatch.extend_all_spectra(quantSpectraMatch)
 
-                #lightPeps, heavyPeps = spectra_peak_comparison(sorted(libDict[scan]), expSpectrum, tolerance, offset, tag='ratio')
-                peps = [x['seq'] for x in fragDict[scan]]
-                for pep in peps:
-                    l = lightPeps[pep]
-                    h = heavyPeps[pep]
-                    # for light or heavy peaks that are identified without a match, a psuedo peak is created
-                    #   with an intensity equal to the average of 10 least intense peaks divided by two.
+        allSpectraMatch.filter_by_corrected_ppm_window(corrected, scoreCutoff, histFile)
+        ratioDict = allSpectraMatch.determine_ratios(scanToNoiseIntensityCutoffDict)
 
-                    smallPeakIntensity = np.mean(sorted(spec['intensity array'])[:10])/2
-
-                    # creating the psuedo peaks
-                    lightSet = set(l.keys())
-                    heavySet = set(h.keys())
-                    onlyLight = lightSet - heavySet
-                    for key in onlyLight: h[key] = smallPeakIntensity
-                    onlyHeavy = heavySet - lightSet
-                    for key in onlyHeavy: l[key] = smallPeakIntensity
-
-                    # ratio is calculated if there are enough peaks to warrant a match.
-                    if minMatch: check = (len(l) >= minMatch)
-                    else: check = match_score(list(l.keys()))
-                    if check:
-                        ratio = return_ratio(l, h, ratioType)
-
-                    # if there are not enough peaks to warrant a match, the ratio is returned as NaN.
-                    else:
-                        ratio=np.nan
-
-                    # This dictionary maps scans to calculated ratios.
-                    ratioDict[scan, pep] = ratio
-
-        # column of ratios from the just-analyzed file is added to the output
         finalDf[f] = [ratioDict[key] for key in sorted(ratioDict.keys())]
     print_milestone('Finish SILAC Quantification')
     return finalDf
@@ -1206,11 +1141,11 @@ def initialize_return_values(tag):
 
 def update_return_values(returns, peak1, peak2, i1, i2, ppm, tag):
     if tag=='qPPM':
-        if peak1[2][0] == 'light': returns[0][peak1[2][2]].append(ppm)
-        if peak1[2][0] == 'heavy': returns[1][peak1[2][2]].append(ppm)
+        if peak1[2][0] == 0: returns[0][peak1[2][2]].append(ppm)
+        if peak1[2][0] == 1: returns[1][peak1[2][2]].append(ppm)
     elif tag=='ratio':
-        if peak1[2][0] == 'light': returns[0][peak1[2][2]][peak1[2][1]] = peak2[1]
-        if peak1[2][0] == 'heavy': returns[1][peak1[2][2]][peak1[2][1]] = peak2[1]
+        if peak1[2][0] == 0: returns[0][peak1[2][2]][peak1[2][1]] = peak2[1]
+        if peak1[2][0] == 1: returns[1][peak1[2][2]][peak1[2][1]] = peak2[1]
 
 
 def match_score(keys):

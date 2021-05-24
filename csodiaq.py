@@ -23,7 +23,7 @@ def main():
 
     if args['command'] == 'id':
         lib = cbf.library_file_to_dict(args['library'])
-        pickle.dump(lib, open(args['outDirectory']+'mgf_lib.p', 'wb'))
+        #pickle.dump(lib, open(args['outDirectory']+'mgf_lib.p', 'wb'))
         #lib = pickle.load(open(args['outDirectory']+'mgf_lib.p', 'rb'))
         maxQuerySpectraToPool = queryPooling=args['query']
         if not maxQuerySpectraToPool: maxQuerySpectraToPool = np.inf
@@ -34,7 +34,6 @@ def main():
             outFile = outFileHeader + '.csv'
             if args['histogram']: histFile = outFileHeader + '_histogram.png'
             else: histFile = ''
-            #'''
             cbf.perform_spectra_pooling_and_analysis(   args['files'][i],
                                                         outFile,
                                                         lib,
@@ -42,7 +41,6 @@ def main():
                                                         maxQuerySpectraToPool,
                                                         args['correction'],
                                                         histFile)
-            #'''
             spectralFile = outFileHeader + '_spectralFDR.csv'
             peptideFile = outFileHeader + '_peptideFDR.csv'
             if args['proteinTargets']: proteinFile = outFileHeader + '_proteinFDR.csv'
@@ -58,8 +56,13 @@ def main():
 
     if args['command'] == 'quant':
         #print(args['outDirectory'] + 'CsoDIAq_output_SILAC_Quantification.csv', flush=True)
-        scanToCsodiaqDict, scanToLibPeaksDict = cbf.connect_mzxml_to_csodiaq_and_library(args['idFile'], args['library'], args['files'], args['libraryPeaks'])
-        #scanToCsodiaqDict, scanToLibPeaksDict = cbf.make_quant_dicts(args['idFile'], args['library'], args['files'], args['libraryPeaks'])
+        #scanToCsodiaqDict, scanToLibPeaksDict = cbf.connect_mzxml_to_csodiaq_and_library(args['idFile'], args['library'], args['files'], args['libraryPeaks'])
+        #pickle.dump(scanToCsodiaqDict, open(args['outDirectory']+'scanToCsodiaqDict.p', 'wb'))
+        #pickle.dump(scanToLibPeaksDict, open(args['outDirectory']+'scanToLibPeaksDict.p', 'wb'))
+        scanToCsodiaqDict = pickle.load(open(args['outDirectory']+'scanToCsodiaqDict.p', 'rb'))
+        scanToLibPeaksDict = pickle.load(open(args['outDirectory']+'scanToLibPeaksDict.p', 'rb'))
+
+
         if args['histogram']: hist = args['outDirectory'] + 'SILAC_Quantification_histogram.png'
         else: hist = ''
         df = cbf.heavy_light_quantification(scanToCsodiaqDict, scanToLibPeaksDict, args['files'], args['outDirectory'], args['fragmentMassTolerance'], args['minimumMatches'], args['ratioType'], args['correction'], hist)
