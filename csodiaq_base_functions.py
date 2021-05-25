@@ -1106,7 +1106,7 @@ def heavy_light_quantification(fragDict, libDict, mzxmlFiles, outDir, massTol, m
                 quantSpectraMatch.compare_spectra(libSpectra, expSpectrum, massTol, minMatch)
                 allSpectraMatch.extend_all_spectra(quantSpectraMatch)
 
-        allSpectraMatch.filter_by_corrected_ppm_window(correction, hist, minMatch)
+        if correction != -1: allSpectraMatch.filter_by_corrected_ppm_window(correction, hist, minMatch)
         ratioDict = defaultdict(initialize_ratio_dict_values)
         ratioDict = allSpectraMatch.determine_ratios(ratioDict, scanToNoiseIntensityCutoffDict, ratioType, minMatch)
 
