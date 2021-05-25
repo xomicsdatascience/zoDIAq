@@ -88,8 +88,8 @@ def calculate_ratio(currentRankTable, ratioType, minMatch, smallestIntensityValu
     for row in currentRankTable:
         if row[0] != row[1]:
             log2Ratios.append(np.log2(row[1]/row[0]))
-            if printer: print('heavy: ' + str(row[1]) + ', light: '+ str(row[0]))
-    if printer: print(str(smallestIntensityValue)+'\n\n')
+            #if printer: print('heavy: ' + str(row[1]) + ', light: '+ str(row[0]))
+    #if printer: print(str(smallestIntensityValue)+'\n\n')
     if ratioType=='median': return np.median(log2Ratios)
     elif ratioType=='mean': return np.mean(log2Ratios)
 

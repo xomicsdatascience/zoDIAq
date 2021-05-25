@@ -56,11 +56,11 @@ def main():
 
     if args['command'] == 'quant':
         #print(args['outDirectory'] + 'CsoDIAq_output_SILAC_Quantification.csv', flush=True)
-        #scanToCsodiaqDict, scanToLibPeaksDict = cbf.connect_mzxml_to_csodiaq_and_library(args['idFile'], args['library'], args['files'], args['libraryPeaks'])
+        scanToCsodiaqDict, scanToLibPeaksDict = cbf.connect_mzxml_to_csodiaq_and_library(args['idFile'], args['library'], args['files'], args['libraryPeaks'])
         #pickle.dump(scanToCsodiaqDict, open(args['outDirectory']+'scanToCsodiaqDict.p', 'wb'))
         #pickle.dump(scanToLibPeaksDict, open(args['outDirectory']+'scanToLibPeaksDict.p', 'wb'))
-        scanToCsodiaqDict = pickle.load(open(args['outDirectory']+'scanToCsodiaqDict.p', 'rb'))
-        scanToLibPeaksDict = pickle.load(open(args['outDirectory']+'scanToLibPeaksDict.p', 'rb'))
+        #scanToCsodiaqDict = pickle.load(open(args['outDirectory']+'scanToCsodiaqDict.p', 'rb'))
+        #scanToLibPeaksDict = pickle.load(open(args['outDirectory']+'scanToLibPeaksDict.p', 'rb'))
 
 
         if args['histogram']: hist = args['outDirectory'] + 'SILAC_Quantification_histogram.png'
