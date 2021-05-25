@@ -79,17 +79,15 @@ def insufficient_matches(currentRankTable, minMatch, smallestIntensityValue):
     if minMatch:
         smallestIntensityOccurrences = 30 - np.count_nonzero(currentRankTable == smallestIntensityValue, axis = 0)
         return max(smallestIntensityOccurrences[0]) < minMatch
-    return np.all(currentRankTable[:3]==currentRankTable[0][0])
+    return np.all(currentRankTable[:3]==smallestIntensityValue)
 
 
-def calculate_ratio(currentRankTable, ratioType, minMatch, smallestIntensityValue, printer):
+def calculate_ratio(currentRankTable, ratioType, minMatch, smallestIntensityValue):
     if insufficient_matches(currentRankTable, minMatch, smallestIntensityValue): return np.nan
     log2Ratios = []
     for row in currentRankTable:
         if row[0] != row[1]:
             log2Ratios.append(np.log2(row[1]/row[0]))
-            if printer: print('heavy: ' + str(row[1]) + ', light: '+ str(row[0]))
-    if printer: print('\n\n')
     if ratioType=='median': return np.median(log2Ratios)
     elif ratioType=='mean': return np.mean(log2Ratios)
 
@@ -204,22 +202,21 @@ class QuantSpectraMatcher:
         length = len(self.libraryPeptides)
         for i in range(1,length):
             if self.libraryPeptides[i] != curLibTag or self.queryTags[i] != curQueTag:
-                smallestIntensityValue = scanToNoiseIntensityCutoffDict[curQueTag]
-                if curLibTag == 'C+57.0215DSSPDSAEDVRK': printer=1
-                else: printer=0
-                ratio = calculate_ratio(currentRankTable, ratioType, minMatch, smallestIntensityValue, printer) # needs ratio type, probably minMatch too
+                ratio = calculate_ratio(currentRankTable, ratioType, minMatch, smallestIntensityValue) # needs ratio type, probably minMatch too
                 ratioDict[curQueTag, curLibTag] = ratio
+                curLibTag = self.libraryPeptides[i]
+                curQueTag = self.queryTags[i]
+                smallestIntensityValue = scanToNoiseIntensityCutoffDict[curQueTag]
                 currentRankTable = np.full((30,2),smallestIntensityValue)
                 if self.libraryLightHeavyMark[i]: currentRankTable[self.libraryIntensityRank[i]][1] = self.queryIntensities[i]
                 else: currentRankTable[self.libraryIntensityRank[i]][0] = self.queryIntensities[i]
-                curLibTag = self.libraryPeptides[i]
-                curQueTag = self.queryTags[i]
+
             else:
                 if self.libraryLightHeavyMark[i]: currentRankTable[self.libraryIntensityRank[i]][1] = self.queryIntensities[i]
                 else: currentRankTable[self.libraryIntensityRank[i]][0] = self.queryIntensities[i]
 
         smallestIntensityValue = scanToNoiseIntensityCutoffDict[self.queryTags[-1]]
-        ratio = calculate_ratio(currentRankTable, ratioType, minMatch, smallestIntensityValue, printer) # needs ratio type, probably minMatch too
+        ratio = calculate_ratio(currentRankTable, ratioType, minMatch, smallestIntensityValue) # needs ratio type, probably minMatch too
         ratioDict[curQueTag, curLibTag] = ratio
 
         return ratioDict
