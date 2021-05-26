@@ -44,9 +44,10 @@ def find_matching_peaks(libMzs, libIntensities, libTags, queMzs, queIntensities,
     return matchLibTags, matchLibIntensities, matchQueTags, matchQueIntensities, ppmMatches
 
 @njit
-def too_few_counts(minMatch, lightCount, heavyCount, minRank):
-    if minMatch: return (lightCount < minMatch and heavyCount < minMatch)
-    else: return (minRank > 2)
+def too_few_counts(minMatch, lightCount, heavyCount, ranks):
+    #if minMatch: return (lightCount < minMatch and heavyCount < minMatch)
+    if minMatch: return len(set(ranks)) < minMatch
+    else: return (min(ranks) > 2)
 
 @njit
 def tag_sparse_peak_matches(matchLibTags, lightHeavyMarks, libraryIntensityRank, matchQueTags, minMatch):
@@ -60,8 +61,8 @@ def tag_sparse_peak_matches(matchLibTags, lightHeavyMarks, libraryIntensityRank,
     length = len(matchLibTags)
     for i in range(1,length):
         if matchLibTags[i] != curLibTag or matchQueTags[i] != curQueTag:
-            if curLibTag == 'A+42.01057AGTAAALAFLSQESR': print('lightCount: '+str(lightCount)+', heavyCount: '+str(heavyCount))
-            if too_few_counts(minMatch, lightCount, heavyCount, min(ranks)): remove.extend([i-j for j in range(1,count+1)])
+            if curLibTag == 'GGIVDEGALLR': print('lightCount: '+str(lightCount)+', heavyCount: '+str(heavyCount))
+            if too_few_counts(minMatch, lightCount, heavyCount, ranks): remove.extend([i-j for j in range(1,count+1)])
             if lightHeavyMarks[i]: heavyCount = 1; lightCount = 0
             else: heavyCount = 0; lightCount = 1
             count = 1
@@ -73,14 +74,16 @@ def tag_sparse_peak_matches(matchLibTags, lightHeavyMarks, libraryIntensityRank,
             else: lightCount += 1
             count += 1
             ranks.append(libraryIntensityRank[i])
-    if too_few_counts(minMatch, lightCount, heavyCount, min(ranks)): remove.extend([length-j for j in range(1,count+1)])
+    if too_few_counts(minMatch, lightCount, heavyCount, ranks): remove.extend([length-j for j in range(1,count+1)])
     return remove
 
 def insufficient_matches(currentRankTable, minMatch, smallestIntensityValue, printer):
     if minMatch:
-        smallestIntensityOccurrences = 30 - np.count_nonzero(currentRankTable == smallestIntensityValue, axis = 0)
-        if printer: print(smallestIntensityOccurrences); print(currentRankTable)
-        return max(smallestIntensityOccurrences) < minMatch
+        abbreviatedRankTable = currentRankTable[~np.all(currentRankTable == smallestIntensityValue, axis=1)]
+        return len(abbreviatedRankTable) < minMatch
+        #smallestIntensityOccurrences = 30 - np.count_nonzero(currentRankTable == smallestIntensityValue, axis = 0)
+        #if printer: print(smallestIntensityOccurrences); print(currentRankTable)
+        #return max(smallestIntensityOccurrences) < minMatch
     return np.all(currentRankTable[:3]==smallestIntensityValue)
 
 
@@ -90,8 +93,8 @@ def calculate_ratio(currentRankTable, ratioType, minMatch, smallestIntensityValu
     for row in currentRankTable:
         if row[0] != row[1]:
             log2Ratios.append(np.log2(row[1]/row[0]))
-            #if printer: print('heavy: ' + str(row[1]) + ', light: '+ str(row[0]))
-    #if printer: print(str(smallestIntensityValue)+'\n\n')
+            if printer: print('heavy: ' + str(row[1]) + ', light: '+ str(row[0]))
+    if printer: print(str(smallestIntensityValue)+'\n\n')
     if ratioType=='median': return np.median(log2Ratios)
     elif ratioType=='mean': return np.mean(log2Ratios)
 
@@ -206,7 +209,7 @@ class QuantSpectraMatcher:
         length = len(self.libraryPeptides)
         for i in range(1,length):
             if self.libraryPeptides[i] != curLibTag or self.queryTags[i] != curQueTag:
-                if curLibTag == 'A+42.01057AGTAAALAFLSQESR': printer=1
+                if curLibTag == 'GGIVDEGALLR': printer=1
                 else: printer=0
                 ratio = calculate_ratio(currentRankTable, ratioType, minMatch, smallestIntensityValue, printer) # needs ratio type, probably minMatch too
                 ratioDict[curQueTag, curLibTag] = ratio
