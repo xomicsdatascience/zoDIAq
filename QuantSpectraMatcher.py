@@ -60,6 +60,7 @@ def tag_sparse_peak_matches(matchLibTags, lightHeavyMarks, libraryIntensityRank,
     length = len(matchLibTags)
     for i in range(1,length):
         if matchLibTags[i] != curLibTag or matchQueTags[i] != curQueTag:
+            if curLibTag == 'A+42.01057AGTAAALAFLSQESR': print('lightCount: '+str(lightCount)+', heavyCount: '+str(heavyCount))
             if too_few_counts(minMatch, lightCount, heavyCount, min(ranks)): remove.extend([i-j for j in range(1,count+1)])
             if lightHeavyMarks[i]: heavyCount = 1; lightCount = 0
             else: heavyCount = 0; lightCount = 1
@@ -75,15 +76,16 @@ def tag_sparse_peak_matches(matchLibTags, lightHeavyMarks, libraryIntensityRank,
     if too_few_counts(minMatch, lightCount, heavyCount, min(ranks)): remove.extend([length-j for j in range(1,count+1)])
     return remove
 
-def insufficient_matches(currentRankTable, minMatch, smallestIntensityValue):
+def insufficient_matches(currentRankTable, minMatch, smallestIntensityValue, printer):
     if minMatch:
         smallestIntensityOccurrences = 30 - np.count_nonzero(currentRankTable == smallestIntensityValue, axis = 0)
-        return max(smallestIntensityOccurrences[0]) < minMatch
+        if printer: print(smallestIntensityOccurrences); print(currentRankTable)
+        return max(smallestIntensityOccurrences) < minMatch
     return np.all(currentRankTable[:3]==smallestIntensityValue)
 
 
 def calculate_ratio(currentRankTable, ratioType, minMatch, smallestIntensityValue, printer):
-    if insufficient_matches(currentRankTable, minMatch, smallestIntensityValue): return np.nan
+    if insufficient_matches(currentRankTable, minMatch, smallestIntensityValue, printer): return np.nan
     log2Ratios = []
     for row in currentRankTable:
         if row[0] != row[1]:
@@ -204,7 +206,7 @@ class QuantSpectraMatcher:
         length = len(self.libraryPeptides)
         for i in range(1,length):
             if self.libraryPeptides[i] != curLibTag or self.queryTags[i] != curQueTag:
-                if curLibTag == 'A+42.01057ESDWDTVTVLRK': printer=1
+                if curLibTag == 'A+42.01057AGTAAALAFLSQESR': printer=1
                 else: printer=0
                 ratio = calculate_ratio(currentRankTable, ratioType, minMatch, smallestIntensityValue, printer) # needs ratio type, probably minMatch too
                 ratioDict[curQueTag, curLibTag] = ratio
