@@ -680,7 +680,7 @@ def compile_reanalysis_files_without_bins(cvDf, heavy):
         scanLightMzs.append(round(lightMz, ndigits = 2))
         scanHeavyMzs.append(round(heavyMz, ndigits = 2))
         data.append([compound, formula, adduct, scanLightMzs[-1], charge, MSXID])
-        if heavy: data.append([compound, formula, scanHeavyMzs[-1], charge, MSXID])
+        if heavy: data.append([compound, formula, adduct, scanHeavyMzs[-1], charge, MSXID])
 
     cvDf['scanLightMzs'] = scanLightMzs
     cvDf['scanHeavyMzs'] = scanHeavyMzs
@@ -688,7 +688,7 @@ def compile_reanalysis_files_without_bins(cvDf, heavy):
 
 
 def write_targeted_reanalysis_outputs(header, fdrDf, heavy):
-    bins = False
+    bins = True
     CVs = gather_all_possible_cv_values(fdrDf)
     allDfs = []
     for CV in CVs:

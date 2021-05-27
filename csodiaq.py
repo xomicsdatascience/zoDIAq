@@ -52,6 +52,7 @@ def main():
             if args['proteinTargets']: inFile = proteinFile
             else: inFile = peptideFile
             fdrDf = cbf.filter_fdr_output_for_targeted_reanalysis(inFile, args['proteinTargets'])
+            fdrDf.to_csv(outFileHeader + '_dummyDf.csv', index=False)
             cbf.write_targeted_reanalysis_outputs(reanalysisHeader, fdrDf, args['heavyMz'])
 
     if args['command'] == 'quant':
