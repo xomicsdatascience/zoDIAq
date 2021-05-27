@@ -610,10 +610,11 @@ def calc_heavy_mz(seq, mz, z):
     heavyMz = mz + (nK*hK)/z + (nR*hR)/z
     return heavyMz
 
-def filter_fdr_output_for_targeted_reanalysis(fdrFile, proteins):
+def filter_fdr_output_for_targeted_reanalysis(fdrFile, proteins, heavy):
     print_milestone('Generate DISPA Targeted Reanalysis Files:')
     fdrDf = pd.read_csv(fdrFile)
     fdrDf = fdrDf[~fdrDf['protein'].str.contains('DECOY',na=False)].reset_index(drop=True)
+    if heavy: fdrDf = fdrDf[fdrDf['peptide'].str.endswith('R') | fdrDf['peptide'].str.endswith('K')].reset_index(drop=True)
     if proteins:
         fdrDf = fdrDf[fdrDf['uniquePeptide']==1].sort_values('ionCount', ascending=False).reset_index(drop=True)
         fdrDf = fdrDf.groupby(['leadingProtein']).head(proteins).reset_index()
