@@ -61,7 +61,6 @@ def tag_sparse_peak_matches(matchLibTags, lightHeavyMarks, libraryIntensityRank,
     length = len(matchLibTags)
     for i in range(1,length):
         if matchLibTags[i] != curLibTag or matchQueTags[i] != curQueTag:
-            if curLibTag == 'GGIVDEGALLR': print('lightCount: '+str(lightCount)+', heavyCount: '+str(heavyCount))
             if too_few_counts(minMatch, lightCount, heavyCount, ranks): remove.extend([i-j for j in range(1,count+1)])
             if lightHeavyMarks[i]: heavyCount = 1; lightCount = 0
             else: heavyCount = 0; lightCount = 1
@@ -77,24 +76,19 @@ def tag_sparse_peak_matches(matchLibTags, lightHeavyMarks, libraryIntensityRank,
     if too_few_counts(minMatch, lightCount, heavyCount, ranks): remove.extend([length-j for j in range(1,count+1)])
     return remove
 
-def insufficient_matches(currentRankTable, minMatch, smallestIntensityValue, printer):
+def insufficient_matches(currentRankTable, minMatch, smallestIntensityValue):
     if minMatch:
         abbreviatedRankTable = currentRankTable[~np.all(currentRankTable == smallestIntensityValue, axis=1)]
         return len(abbreviatedRankTable) < minMatch
-        #smallestIntensityOccurrences = 30 - np.count_nonzero(currentRankTable == smallestIntensityValue, axis = 0)
-        #if printer: print(smallestIntensityOccurrences); print(currentRankTable)
-        #return max(smallestIntensityOccurrences) < minMatch
     return np.all(currentRankTable[:3]==smallestIntensityValue)
 
 
-def calculate_ratio(currentRankTable, ratioType, minMatch, smallestIntensityValue, printer):
-    if insufficient_matches(currentRankTable, minMatch, smallestIntensityValue, printer): return np.nan
+def calculate_ratio(currentRankTable, ratioType, minMatch, smallestIntensityValue):
+    if insufficient_matches(currentRankTable, minMatch, smallestIntensityValue): return np.nan
     log2Ratios = []
     for row in currentRankTable:
         if row[0] != row[1]:
             log2Ratios.append(np.log2(row[1]/row[0]))
-            if printer: print('heavy: ' + str(row[1]) + ', light: '+ str(row[0]))
-    if printer: print(str(smallestIntensityValue)+'\n\n')
     if ratioType=='median': return np.median(log2Ratios)
     elif ratioType=='mean': return np.mean(log2Ratios)
 
@@ -205,13 +199,10 @@ class QuantSpectraMatcher:
         if self.libraryLightHeavyMark[0]: currentRankTable[self.libraryIntensityRank[0]][1] = self.queryIntensities[0]
         else: currentRankTable[self.libraryIntensityRank[0]][0] = self.queryIntensities[0]
 
-
         length = len(self.libraryPeptides)
         for i in range(1,length):
             if self.libraryPeptides[i] != curLibTag or self.queryTags[i] != curQueTag:
-                if curLibTag == 'GGIVDEGALLR': printer=1
-                else: printer=0
-                ratio = calculate_ratio(currentRankTable, ratioType, minMatch, smallestIntensityValue, printer) # needs ratio type, probably minMatch too
+                ratio = calculate_ratio(currentRankTable, ratioType, minMatch, smallestIntensityValue) # needs ratio type, probably minMatch too
                 ratioDict[curQueTag, curLibTag] = ratio
                 curLibTag = self.libraryPeptides[i]
                 curQueTag = self.queryTags[i]
@@ -225,7 +216,7 @@ class QuantSpectraMatcher:
                 else: currentRankTable[self.libraryIntensityRank[i]][0] = self.queryIntensities[i]
 
         smallestIntensityValue = scanToNoiseIntensityCutoffDict[self.queryTags[-1]]
-        ratio = calculate_ratio(currentRankTable, ratioType, minMatch, smallestIntensityValue, printer) # needs ratio type, probably minMatch too
+        ratio = calculate_ratio(currentRankTable, ratioType, minMatch, smallestIntensityValue) # needs ratio type, probably minMatch too
         ratioDict[curQueTag, curLibTag] = ratio
 
         return ratioDict

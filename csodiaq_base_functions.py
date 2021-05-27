@@ -99,8 +99,7 @@ def traml_library_upload(fileName):
         lib_df = pd.read_csv(fileName)
 
     # Print statement for timing the program
-    print('\nEnter library dictionary upload: ',flush=True)
-    print(str(timedelta(seconds=timer())),flush=True)
+    print_milestone('Enter library dictionary upload: ')
 
     # Pan human and spectraST libraries have different column names. This normalizes the columns.
     headings = traml_column_headings(lib_df.columns)
@@ -205,8 +204,7 @@ def mgf_library_upload(fileName):
     libMGF = mgf.read(fileName)
 
     # Print statement for timing the program
-    print('\nEnter library dictionary upload: ',flush=True)
-    print(str(timedelta(seconds=timer())),flush=True)
+    print_milestone('Enter library dictionary upload: ')
 
     # return value is initialized
     lib = {}
@@ -1108,7 +1106,7 @@ def heavy_light_quantification(fragDict, libDict, mzxmlFiles, outDir, massTol, m
 
         if correction != -1: allSpectraMatch.filter_by_corrected_ppm_window(correction, hist, minMatch)
         ratioDict = defaultdict(initialize_ratio_dict_values)
-        ratioDict = allSpectraMatch.determine_ratios(ratioDict, scanToNoiseIntensityCutoffDict, ratioType, minMatch)
+        if len(allSpectraMatch.libraryIntensities) != 0: ratioDict = allSpectraMatch.determine_ratios(ratioDict, scanToNoiseIntensityCutoffDict, ratioType, minMatch)
 
 
         finalDf[f] = [ratioDict[(int(row['scan']),row['peptide'])] for index, row in finalDf.iterrows()]
