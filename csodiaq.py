@@ -1,11 +1,12 @@
 #!/usr/bin/env python
-
 import sys, csv, argparse
 from os import path
-import csodiaq_base_functions as cbf
 import csodiaq_gui as gui
 import pickle
 import numpy as np
+import csodiaq_identification_functions as cif
+import csodiaq_quantification_functions as cqf
+import csodiaq_mgf_cleaning_functions as cmf
 
 def main():
     fragMassTol, corrStDev, hist, protTarg = 20, 0, 0, 1
@@ -18,13 +19,11 @@ def main():
         return
 
     if args['command'] == 'mgf':
-        cbf.clean_mgf_file(args['mgf'], args['fasta'], ions=args['ions'])
+        cmf.clean_mgf_file(args['mgf'], args['fasta'], ions=args['ions'])
         return
 
     if args['command'] == 'id':
-        lib = cbf.library_file_to_dict(args['library'])
-        #pickle.dump(lib, open(args['outDirectory']+'mgf_lib.p', 'wb'))
-        #lib = pickle.load(open(args['outDirectory']+'mgf_lib.p', 'rb'))
+        lib = cif.library_file_to_dict(args['library'])
         maxQuerySpectraToPool = queryPooling=args['query']
         if not maxQuerySpectraToPool: maxQuerySpectraToPool = np.inf
         for i in range(len(args['files'])):
@@ -34,7 +33,7 @@ def main():
             outFile = outFileHeader + '.csv'
             if args['histogram']: histFile = outFileHeader + '_histogram.png'
             else: histFile = ''
-            cbf.perform_spectra_pooling_and_analysis(   args['files'][i],
+            cif.perform_spectra_pooling_and_analysis(   args['files'][i],
                                                         outFile,
                                                         lib,
                                                         args['fragmentMassTolerance'],
@@ -46,27 +45,21 @@ def main():
             if args['proteinTargets']: proteinFile = outFileHeader + '_proteinFDR.csv'
             else: proteinFile = ''
 
-            cbf.write_fdr_outputs(outFile, spectralFile, peptideFile, proteinFile)
+            cif.write_fdr_outputs(outFile, spectralFile, peptideFile, proteinFile)
 
             reanalysisHeader = outFileHeader + '_mostIntenseTargs'
             if args['proteinTargets']: inFile = proteinFile
             else: inFile = peptideFile
-            fdrDf = cbf.filter_fdr_output_for_targeted_reanalysis(inFile, args['proteinTargets'], args['heavyMz'])
-            cbf.write_targeted_reanalysis_outputs(reanalysisHeader, fdrDf, args['heavyMz'])
+            fdrDf = cif.filter_fdr_output_for_targeted_reanalysis(inFile, args['proteinTargets'], args['heavyMz'])
+            cif.write_targeted_reanalysis_outputs(reanalysisHeader, fdrDf, args['heavyMz'])
 
     if args['command'] == 'quant':
-        #print(args['outDirectory'] + 'CsoDIAq_output_SILAC_Quantification.csv', flush=True)
-        scanToCsodiaqDict, scanToLibPeaksDict = cbf.connect_mzxml_to_csodiaq_and_library(args['idFile'], args['library'], args['files'], args['libraryPeaks'])
-        #pickle.dump(scanToCsodiaqDict, open(args['outDirectory']+'scanToCsodiaqDict.p', 'wb'))
-        #pickle.dump(scanToLibPeaksDict, open(args['outDirectory']+'scanToLibPeaksDict.p', 'wb'))
-        #scanToCsodiaqDict = pickle.load(open(args['outDirectory']+'scanToCsodiaqDict.p', 'rb'))
-        #scanToLibPeaksDict = pickle.load(open(args['outDirectory']+'scanToLibPeaksDict.p', 'rb'))
-
+        scanToCsodiaqDict, scanToLibPeaksDict = cqf.connect_mzxml_to_csodiaq_and_library(args['idFile'], args['library'], args['files'], args['libraryPeaks'])
 
         if args['histogram']: hist = args['outDirectory'] + 'SILAC_Quantification_histogram.png'
         else: hist = ''
-        df = cbf.heavy_light_quantification(scanToCsodiaqDict, scanToLibPeaksDict, args['files'], args['outDirectory'], args['fragmentMassTolerance'], args['minimumMatches'], args['ratioType'], args['correction'], hist)
-        #df = cbf.heavy_light_quantification(scanToCsodiaqDict, scanToLibPeaksDict, args['files'])
+        df = cqf.heavy_light_quantification(scanToCsodiaqDict, scanToLibPeaksDict, args['files'], args['outDirectory'], args['fragmentMassTolerance'], args['minimumMatches'], args['ratioType'], args['correction'], hist)
+
         df.to_csv(args['outDirectory'] + 'CsoDIAq_output_SILAC_Quantification.csv', index=False)
 
 

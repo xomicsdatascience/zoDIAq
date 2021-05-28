@@ -25,8 +25,6 @@ from PyQt5.QtWidgets import QListWidget
 from PyQt5.QtWidgets import QComboBox
 from PyQt5.QtCore import Qt
 
-import csodiaq_base_functions as cbf
-
 #!/usr/bin/env python3
 
 import sys
