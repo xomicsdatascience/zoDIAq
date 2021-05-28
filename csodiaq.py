@@ -1,14 +1,69 @@
 #!/usr/bin/env python
-
 import sys, csv, argparse
 from os import path
-import csodiaq_menu_functions as menu
-import csodiaq_base_functions as cbf
 import csodiaq_gui as gui
 import pickle
+import numpy as np
+import csodiaq_identification_functions as cif
+import csodiaq_quantification_functions as cqf
+import csodiaq_mgf_cleaning_functions as cmf
 
 def main():
     fragMassTol, corrStDev, hist, protTarg = 20, 0, 0, 1
+    arg_parser = set_command_line_settings()
+    args = vars(arg_parser.parse_args())
+    check_for_invalid_input(arg_parser, args)
+
+    if args['command'] == 'gui':
+        gui.main()
+        return
+
+    if args['command'] == 'mgf':
+        cmf.clean_mgf_file(args['mgf'], args['fasta'], ions=args['ions'])
+        return
+
+    if args['command'] == 'id':
+        lib = cif.library_file_to_dict(args['library'])
+        maxQuerySpectraToPool = queryPooling=args['query']
+        if not maxQuerySpectraToPool: maxQuerySpectraToPool = np.inf
+        for i in range(len(args['files'])):
+
+            outFileHeader = args['outDirectory'] + 'CsoDIAq-file' +str(i+1)+'_'+ '.'.join(args['files'][i].split('/')[-1].split('.')[:-1])
+            if args['correction'] != -1: outFileHeader += '_corrected'
+            outFile = outFileHeader + '.csv'
+            if args['histogram']: histFile = outFileHeader + '_histogram.png'
+            else: histFile = ''
+            cif.perform_spectra_pooling_and_analysis(   args['files'][i],
+                                                        outFile,
+                                                        lib,
+                                                        args['fragmentMassTolerance'],
+                                                        maxQuerySpectraToPool,
+                                                        args['correction'],
+                                                        histFile)
+            spectralFile = outFileHeader + '_spectralFDR.csv'
+            peptideFile = outFileHeader + '_peptideFDR.csv'
+            if args['proteinTargets']: proteinFile = outFileHeader + '_proteinFDR.csv'
+            else: proteinFile = ''
+
+            cif.write_fdr_outputs(outFile, spectralFile, peptideFile, proteinFile)
+
+            reanalysisHeader = outFileHeader + '_mostIntenseTargs'
+            if args['proteinTargets']: inFile = proteinFile
+            else: inFile = peptideFile
+            fdrDf = cif.filter_fdr_output_for_targeted_reanalysis(inFile, args['proteinTargets'], args['heavyMz'])
+            cif.write_targeted_reanalysis_outputs(reanalysisHeader, fdrDf, args['heavyMz'])
+
+    if args['command'] == 'quant':
+        scanToCsodiaqDict, scanToLibPeaksDict = cqf.connect_mzxml_to_csodiaq_and_library(args['idFile'], args['library'], args['files'], args['libraryPeaks'])
+
+        if args['histogram']: hist = args['outDirectory'] + 'SILAC_Quantification_histogram.png'
+        else: hist = ''
+        df = cqf.heavy_light_quantification(scanToCsodiaqDict, scanToLibPeaksDict, args['files'], args['outDirectory'], args['fragmentMassTolerance'], args['minimumMatches'], args['ratioType'], args['correction'], hist)
+
+        df.to_csv(args['outDirectory'] + 'CsoDIAq_output_SILAC_Quantification.csv', index=False)
+
+
+def set_command_line_settings():
     arg_parser = argparse.ArgumentParser(description='')
     subparsers = arg_parser.add_subparsers(dest='command', help='CsoDIAq Functions')
     arg_parser.version = '0.1'
@@ -36,41 +91,15 @@ def main():
     quant_parser.add_argument('-p', '--libraryPeaks', type=restricted_int, default=0, help='Maximum Number of Library Peaks - Maximum number of library peaks allowed in library spectra, prioritizing intensity. Program allows all peaks by default.')
     quant_parser.add_argument('-m', '--minimumMatches', type=restricted_int, default=0, help='Minimum Number of Matching Peaks - Minimum number of matched peaks . Program requires at least one match from the top 3 most intense peaks in the library spectrum by default.')
     quant_parser.add_argument('-r', '--ratioType', type=restricted_ratio_type, default='median', help='Ratio Determination Method - method for picking the ratio for a given peptide when several peaks match. Options are median or mean, default is median.')
+    return arg_parser
 
-    args = vars(arg_parser.parse_args())
-
-    if args['command'] == 'gui':
-        gui.main()
-        return
-
-    if args['command'] == 'mgf':
-        cbf.clean_mgf_file(args['mgf'], args['fasta'], ions=args['ions'])
-        return
-
-    if (args['histogram'] and args['correction']==-1): arg_parser.error('The -hist or --histogram argument requires the -c or -correction argument')
-    for file in args['files']:
-        if not restricted_file(file, permittedTypes=['mzxml']): arg_parser.error('The -f or --files argument must be an existing file of type mzxml')
-    if not restricted_file(args['library'], permittedTypes=['mgf','csv','tsv']): arg_parser.error('The -l or --library argument must be an existing file of type MGF (.mgf) or TraML (.tsv or .csv) format')
-    if not restricted_file(args['outDirectory']): arg_parser.error('The -o or --outDirectory argument must be an existing directory')
-
-    if args['command'] == 'id':
-        lib = cbf.library_file_to_dict(args['library'])
-        #pickle.dump(lib, open(args['outDirectory']+'mgf_lib.p', 'wb'))
-        #lib = pickle.load(open(args['outDirectory']+'mgf_lib.p', 'rb'))
-        for i in range(len(args['files'])):
-            outFileHeader = 'CsoDIAq-file' +str(i+1)+'_'+ '.'.join(args['files'][i].split('/')[-1].split('.')[:-1])
-            outFile = args['outDirectory'] + outFileHeader + '.csv'
-            menu.write_csodiaq_output(lib, args['files'][i], outFile, args['histogram'], corrected=args['correction'], initialTol=args['fragmentMassTolerance'], queryPooling=args['query'])
-            cor = False
-            if args['correction']!=-1: cor=True
-            menu.write_csodiaq_fdr_outputs(outFile, args['proteinTargets'], corrected=cor)
-            menu.write_DISPA_targeted_reanalysis_files(outFile, proteins = args['proteinTargets'], corrected=cor, heavy=args['heavyMz'])
-
-    if args['command'] == 'quant':
-        if args['histogram']: hist = args['outDirectory'] + 'SILAC_Quantification_histogram.png'
-        else: hist = ''
-        menu.heavy_light_quantification(args['idFile'], args['library'], args['files'], args['outDirectory'], args['libraryPeaks'], args['fragmentMassTolerance'], args['minimumMatches'], args['ratioType'], args['correction'], hist)
-
+def check_for_invalid_input(arg_parser, args):
+    if args['command'] == 'id' or args['command'] == 'quant':
+        if (args['histogram'] and args['correction']==-1): arg_parser.error('The -hist or --histogram argument requires the -c or -correction argument')
+        for file in args['files']:
+            if not restricted_file(file, permittedTypes=['mzxml']): arg_parser.error('The -f or --files argument must be an existing file of type mzxml')
+        if not restricted_file(args['library'], permittedTypes=['mgf','csv','tsv']): arg_parser.error('The -l or --library argument must be an existing file of type MGF (.mgf) or TraML (.tsv or .csv) format')
+        if not restricted_file(args['outDirectory']): arg_parser.error('The -o or --outDirectory argument must be an existing directory')
 
 def restricted_float(x):
     try:

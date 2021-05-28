@@ -1,4 +1,4 @@
-'''
+#'''
 import pandas as pd
 from pyteomics import mzxml, mgf, mass
 from collections import defaultdict
@@ -15,7 +15,7 @@ import bz2
 from numba import njit
 from timeit import default_timer as timer
 import io
-'''
+#'''
 pd.set_option('display.max_columns', None)
 
 
@@ -146,5 +146,6 @@ def clean_mgf_file(file):
 
 print('\n'*30)
 
-df = pd.read_csv('C:/Users/ccranney/Desktop/Caleb_Files/data/phl004_canonical_sall_osw_decoys.csv', sep='\t')
-print(df.head(10))
+test = np.array([[2,3]])
+test2 = 1 - test
+print(test2)
