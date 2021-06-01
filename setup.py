@@ -6,19 +6,19 @@ def readfile(filename):
         return f.read()
 
 setuptools.setup(
-    name="csodiaq", # Replace with your own username
+    name="csodiaq",
     version="0.0.1",
     author="Caleb Cranney",
     author_email="caleb.cranney.app@gmail.com",
     description="CsoDIAq Package",
     long_description=readfile('README.md'),
     long_description_content_type="text/markdown",
-    url="https://github.com/CCranney/csoDIAq",
+    url="https://github.com/CCranney/CsoDIAq",
     classifiers=[
         'Intended Audience :: Science/Research',
         "Programming Language :: Python :: 3",
     ],
-    py_modules=['csodiaq','csodiaq_identification_functions','csodiaq_quantification_functions','csodiaq_mgf_cleaning_functions','spectra_matcher_functions','csodiaq_gui','idpicker'],
+    py_modules=['csodiaq','csodiaq_identification_functions','csodiaq_quantification_functions','csodiaq_mgf_cleaning_functions','spectra_matcher_functions','csodiaq_gui','idpicker','IdentificationSpectraMatcher','QuantificationSpectraMatcher'],
     packages=setuptools.find_packages(),
     python_requires='>=3.6',
     license=readfile('LICENSE'),
