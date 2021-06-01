@@ -127,7 +127,7 @@ def filter_fdr_output_for_targeted_reanalysis(fdrFile, proteins, heavy):
 
 
 def write_targeted_reanalysis_outputs(header, fdrDf, heavy):
-    bins = True
+    bins = False
     CVs = gather_all_possible_cv_values(fdrDf)
     allDfs = []
     for CV in CVs:
