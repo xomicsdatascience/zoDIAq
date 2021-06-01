@@ -11,7 +11,7 @@ setuptools.setup(
     author="Caleb Cranney",
     author_email="caleb.cranney.app@gmail.com",
     description="CsoDIAq Package",
-    long_description=readfile('README.ipynb'),
+    long_description=readfile('README.md'),
     long_description_content_type="text/markdown",
     url="https://github.com/CCranney/csoDIAq",
     classifiers=[
