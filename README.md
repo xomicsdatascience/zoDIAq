@@ -10,7 +10,7 @@ See [here](https://www.biorxiv.org/content/10.1101/2021.05.12.443833v1) for the 
 ## Instructions
 ### Installation
 
-All installation instructions are done from the command line. Download and use of CsoDIAq requires access to the `git` and `pip` packages. 
+All installation instructions are done from the command line. Download and use of CsoDIAq requires access to the `git` and `pip` packages. For system-specific instructions on using the command line or installing these packages, see the [wiki page.](https://github.com/CCranney/CsoDIAq/wiki)
 
 1. Clone the CsoDIAq github repository. [Click here](https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/cloning-a-repository) for 
 instructions on cloning a github repository.
