@@ -15,9 +15,8 @@ for the analysis of direct infusion shotgun proteome analysis (DISPA) data and d
 
 All installation instructions are done from the command line. Download and use of CsoDIAq requires access to the `git` and `pip` packages. For system-specific instructions on using the command line or installing these packages, see the [wiki page.](https://github.com/CCranney/CsoDIAq/wiki)
 
-1. Clone the CsoDIAq github repository. [Click here](https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/cloning-a-repository) for 
-instructions on cloning a github repository.
-2. From the command line, enter `pip install <path to CsoDIAq clone>`
+* [Windows install instructions click here](https://github.com/CCranney/CsoDIAq/wiki/Install-Instructions-for-Windows)
+* [Mac install instructions click here](https://github.com/CCranney/CsoDIAq/wiki/Install-Instructions-for-Mac)
 
 ### Accessing the GUI
 
