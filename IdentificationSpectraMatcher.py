@@ -129,6 +129,7 @@ class IdentificationSpectraMatcher:
         libMzs, libIntensities, libTags = list(map(list, zip(*pooledLibSpectra)))
         queMzs, queIntensities, queTags = list(map(list, zip(*pooledQueSpectra)))
         self.libraryTags, self.libraryIntensities, self.queryTags, self.queryIntensities, self.ppmMatches = smf.find_matching_peaks(libMzs, libIntensities, libTags, queMzs, queIntensities, queTags, tolerance)
+        if len(self.libraryTags) == 0: return None
         self.sort_matches_by_tags()
         self.remove_sparse_matches_and_generate_scores()
         self.decoys = [idToDecoyDict[x] for x in self.libraryTags]
@@ -200,6 +201,7 @@ class IdentificationSpectraMatcher:
         with open(outFile, 'w', newline='') as csvFile:
             writer = csv.writer(csvFile)
             writer.writerow(columns)
+            if len(self.libraryTags) == 0: return None
 
             # Looping format is similar to functions such as reduce_final_df(). I'd consolidate them, but it was getting tricky to use numba.
             curLibTag = self.libraryTags[0]
@@ -213,6 +215,7 @@ class IdentificationSpectraMatcher:
                     if curScore >= scoreCutoff:
                         libKey = idToKeyDict[curLibTag]
                         scan = str(curQueTag)
+                        if scan not in queValDict: continue
                         temp = [
                             expSpectraFile, #fileName
                             scan, #scan
