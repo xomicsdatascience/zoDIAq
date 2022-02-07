@@ -128,8 +128,9 @@ class IdentificationSpectraMatcher:
         #NOTE: Numba is remarkably slow with 2d numpy arrays, so data is tracked in 1d arrays of the same length until that is updated
         libMzs, libIntensities, libTags = list(map(list, zip(*pooledLibSpectra)))
         queMzs, queIntensities, queTags = list(map(list, zip(*pooledQueSpectra)))
-        self.libraryTags, self.libraryIntensities, self.queryTags, self.queryIntensities, self.ppmMatches = smf.find_matching_peaks(libMzs, libIntensities, libTags, queMzs, queIntensities, queTags, tolerance)
-        if len(self.libraryTags) == 0: return None
+        libraryTags, libraryIntensities, queryTags, queryIntensities, ppmMatches = smf.find_matching_peaks(libMzs, libIntensities, libTags, queMzs, queIntensities, queTags, tolerance)
+        if len(libraryTags) == 0: return None
+        self.libraryTags, self.libraryIntensities, self.queryTags, self.queryIntensities, self.ppmMatches = np.array(libraryTags, dtype=int), np.array(libraryIntensities,dtype=float), np.array(queryTags,dtype=int), np.array(queryIntensities,dtype=float), np.array(ppmMatches,dtype=float)
         self.sort_matches_by_tags()
         self.remove_sparse_matches_and_generate_scores()
         self.decoys = [idToDecoyDict[x] for x in self.libraryTags]
@@ -215,7 +216,6 @@ class IdentificationSpectraMatcher:
                     if curScore >= scoreCutoff:
                         libKey = idToKeyDict[curLibTag]
                         scan = str(curQueTag)
-                        if scan not in queValDict: continue
                         temp = [
                             expSpectraFile, #fileName
                             scan, #scan
