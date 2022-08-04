@@ -8,7 +8,7 @@ for the analysis of direct infusion shotgun proteome analysis (DISPA) data and d
 
 [Click here for the paper published in *Analytical Chemistry*.](https://doi.org/10.1021/acs.analchem.1c02021)
 
-![Preprint Title Header](https://github.com/xomicsdatascience/CsoDIAq/blob/main/img/csodiaq-paper.png)
+![Paper Title Header](https://github.com/xomicsdatascience/CsoDIAq/blob/main/img/csodiaq-paper.png)
 
 ## Instructions
 ### Installation
