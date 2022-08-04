@@ -6,9 +6,9 @@
 CsoDIAq (Cosine Similarity Optimization for DIA qualitative and quantitative analysis, pronounced "Zodiac") is a software tool 
 for the analysis of direct infusion shotgun proteome analysis (DISPA) data and data independent acquisition (DIA) data.
 
-[See here for the preprint of our paper on the package.](https://www.biorxiv.org/content/10.1101/2021.05.12.443833v1)
+[Click here for the paper published in *Analytical Chemistry*.](https://doi.org/10.1021/acs.analchem.1c02021)
 
-![Preprint Title Header](https://github.com/CCranney/CsoDIAq/blob/master/Python%20Extras/preprint_title.png)
+![Preprint Title Header](https://github.com/xomicsdatascience/CsoDIAq/blob/main/Python%20Extras/csodiaq-paper.png)
 
 ## Instructions
 ### Installation
