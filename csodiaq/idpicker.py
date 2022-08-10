@@ -16,18 +16,24 @@ Returns:
         combined. All values of the peptide/protein, regardless of whether or not the peptide/proteins have been grouped with
         others, are now cast as tuples.
 '''
+
+
 def group_nodes_with_same_edge(data, first=True):
 
     # separates the list of tuple connections into two lists of matching indices.
     # Note: which group of indices that are being "grouped" depends on the value of the function parameter 'first'
-    if first: l1, l2 = map(list,zip(*data))
-    else: l2, l1 = map(list,zip(*data))
+    if first:
+        l1, l2 = map(list, zip(*data))
+    else:
+        l2, l1 = map(list, zip(*data))
 
     # all connections relating to a single node are consolidated into a dictionary.
     initialDict = {}
     for i in range(len(l1)):
-        if l1[i] not in initialDict: initialDict[l1[i]] = [l2[i]]
-        else: initialDict[l1[i]].append(l2[i])
+        if l1[i] not in initialDict:
+            initialDict[l1[i]] = [l2[i]]
+        else:
+            initialDict[l1[i]].append(l2[i])
 
     # nodes with identical connections are grouped together.
     reverseDict = defaultdict(list)
@@ -45,8 +51,10 @@ def group_nodes_with_same_edge(data, first=True):
         l1[i] = tuple(groups[l1[i]])
 
     # The two lists are zipped back up into tuples, placed in a set to remove duplicates, and then returned as a new list
-    if first: return list(set(tuple(zip(l1, l2))))
-    else: return list(set(tuple(zip(l2, l1))))
+    if first:
+        return list(set(tuple(zip(l1, l2))))
+    else:
+        return list(set(tuple(zip(l2, l1))))
 
 
 # step 3 - cluster
@@ -62,6 +70,8 @@ Returns:
     list - list - (tuple, tuple) tuples. In essence, the original list has been subdivided into multiple lists, each sublist
         representing a cluster.
 '''
+
+
 def separate_into_clusters(data):
     # nodeDict has a key:value relationship of peptide:set(connected proteins). Same effect if you flip peptides with proteins, I just picked peptides first.
     nodeDict = defaultdict(set)
@@ -117,7 +127,8 @@ def separate_into_clusters(data):
     finalClusters = [[] for i in clusters]
     for x in data:
         for i in range(len(clusters)):
-            if x[0] in clusters[i]: finalClusters[i].append(x)
+            if x[0] in clusters[i]:
+                finalClusters[i].append(x)
     return finalClusters
 
 
@@ -143,6 +154,8 @@ Returns:
     by '/' characters). Thus, by using the str.split() function and removing the first value you can get a list of the
     individual proteins (list of strings).
 '''
+
+
 def reduce_cluster(data):
     # proteins will be the final return value of this function, containing a list of strings that represent one protein group each
     proteins = []
@@ -155,7 +168,8 @@ def reduce_cluster(data):
     #   This is used as a tie-breaker for proteins that have the same number of "current" connections. While the numbers of "current" connections and
     #   "former" connections starts the same, the number of "current" connections decreases as proteins and their connected peptides are removed.
     overallScoreDict = defaultdict(int)
-    for x in data: overallScoreDict[x[1]] += 1
+    for x in data:
+        overallScoreDict[x[1]] += 1
 
     # A protein is added to the list for each iteration of this while loop. When the number of peptides connected to the chosen peptides equals the number of total peptides, leave the loop.
     while len(usedPeptides) != len(totalPeptides):
@@ -167,7 +181,8 @@ def reduce_cluster(data):
         # 'protDict' is a dictionary with key:values of protein:set(connected peptides) relation. Note that because various peptides are excluded with each iteration of the while loop, the number of connected peptides can shrink with each iteration.
         protDict = defaultdict(set)
         for x in data:
-            if x[0] not in usedPeptides: protDict[x[1]].update(set([x[0]]))
+            if x[0] not in usedPeptides:
+                protDict[x[1]].update(set([x[0]]))
 
         # presuming the chosen scoring mechanisms can result in two or more top proteins with the same score(s), the proteins are ordered alphabetically as a final tier of consideration.
         #   It is recommended one make the scoring mechanism stringent enough to never use alphabetical choices as a criteria (as that has nothing to do with the actual probability the
@@ -182,7 +197,7 @@ def reduce_cluster(data):
                     number of original connections,
                     peptide score ~negative representation value if lower==better~)
             '''
-            scoreDict[key] = (len(protDict[key]),overallScoreDict[key])
+            scoreDict[key] = (len(protDict[key]), overallScoreDict[key])
         sortedKeys = sorted(scoreDict, key=scoreDict.get, reverse=True)
         topKeys = [sortedKeys[0]]
         '''
@@ -195,10 +210,12 @@ def reduce_cluster(data):
         #   from future consideration.
         for key in topKeys:
             protein = str(len(key))
-            for x in key: protein += ('/'+str(x))
+            for x in key:
+                protein += ('/'+str(x))
             proteins.append(protein)
             usedPeptides.update(protDict[key])
     return proteins
+
 
 '''
 Function: find_valid_proteins()
@@ -216,6 +233,8 @@ Returns:
     peptide connections in the output of this function, perhaps in a peptide:set(connected protein groups) depiction. I
     just thought of this format first.
 '''
+
+
 def find_valid_proteins(data):
 
     # Part 2 of the original paper - grouping proteins/peptides with identical connections together
@@ -227,7 +246,8 @@ def find_valid_proteins(data):
 
     # Part 4 of the paper - reducing the number of proteins under consideration.
     finalProteins = []
-    for c in cl: finalProteins += reduce_cluster(c)
+    for c in cl:
+        finalProteins += reduce_cluster(c)
 
     # Formatting the final dictionary return value.
     finalDict = {}
@@ -236,6 +256,7 @@ def find_valid_proteins(data):
         for protein in proteins:
             finalDict[protein] = proteinGroup
     return finalDict
+
 
 '''
 ## Using test data based on the original IDPicker algorithm.

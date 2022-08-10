@@ -5,6 +5,7 @@ def readfile(filename):
     with open(filename, 'r+') as f:
         return f.read()
 
+
 setuptools.setup(
     name="csodiaq",
     version="0.0.1",

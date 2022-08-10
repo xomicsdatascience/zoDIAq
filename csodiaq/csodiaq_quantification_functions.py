@@ -14,10 +14,13 @@ def pool_library_spectra_by_scan(libFile, libScanDict, fragDf, maxPeaks):
         uniquePeps = set(fragDf['peptide'])
         digPat = r'\+\d+\.\d+'
         uniqueDigs = set()
-        for pep in uniquePeps: uniqueDigs.update(re.findall(digPat, pep))
-        digDict = dict(zip(uniqueDigs, [str(x) for x in list(range(len(uniqueDigs)))]))
+        for pep in uniquePeps:
+            uniqueDigs.update(re.findall(digPat, pep))
+        digDict = dict(zip(uniqueDigs, [str(x)
+                       for x in list(range(len(uniqueDigs)))]))
         customAAmass = dict(mass.std_aa_mass)
-        for key in digDict: customAAmass[digDict[key]] = float(key[1:])
+        for key in digDict:
+            customAAmass[digDict[key]] = float(key[1:])
         return mgf_library_upload_quant(libFile, libScanDict, digDict, customAAmass, maxPeaks)
     else:
         return traml_library_upload_quant(libFile, libScanDict, maxPeaks)
@@ -38,8 +41,9 @@ def mgf_library_upload_quant(fileName, scanDict, digDict, aaDict, maxPeaks):
         seq = spec['params']['seq']
         precMz = spec['params']['pepmass'][0]
 
-        key = (round(precMz,2), seq)
-        if key not in scanDict: continue
+        key = (round(precMz, 2), seq)
+        if key not in scanDict:
+            continue
 
         # Decimal values are replaced with numeric placeholders to be included in the analysis.
         sequence = re.sub(r'\+\d+\.\d+', lambda m: digDict.get(m.group()), seq)
@@ -54,14 +58,18 @@ def mgf_library_upload_quant(fileName, scanDict, digDict, aaDict, maxPeaks):
         fragList = []
         for x in range(1, len(sequence)-1):
             fragseq = sequence[x:]
-            lightfragmz = mass.fast_mass(sequence=sequence[x:], ion_type='y', charge=1, aa_mass = aaDict) # Do I need to use different possible charges?
+            # Do I need to use different possible charges?
+            lightfragmz = mass.fast_mass(
+                sequence=sequence[x:], ion_type='y', charge=1, aa_mass=aaDict)
             i = smf.approx_list(lightfragmz, mz)
-            if i==-1: continue
+            if i == -1:
+                continue
             fragList.append((intensity[i], lightfragmz, fragseq))
 
         # y-ion peaks are sorted by intensity, and lower-intensity peaks are filtered out.
         fragList.sort(reverse=True)
-        if maxPeaks !=0 and len(fragList) >= maxPeaks: fragList = fragList[:maxPeaks]
+        if maxPeaks != 0 and len(fragList) >= maxPeaks:
+            fragList = fragList[:maxPeaks]
 
         # heavy counterpart mz is calculated. Light and heavy pairs are additionally tagged by their intensity rank and included in the final output.
         peaks = []
@@ -69,9 +77,10 @@ def mgf_library_upload_quant(fileName, scanDict, digDict, aaDict, maxPeaks):
             fragMz = fragList[i][1]
             fragInt = fragList[i][0]
             peaks.append((fragMz, fragInt, (0, i, seq)))
-            peaks.append((smf.calculate_heavy_mz(fragList[i][2], fragMz, 1), fragInt, (1, i, seq)))
+            peaks.append((smf.calculate_heavy_mz(
+                fragList[i][2], fragMz, 1), fragInt, (1, i, seq)))
 
-        peaks.sort(key=lambda x:x[0])
+        peaks.sort(key=lambda x: x[0])
 
         lib[scanDict[key]] += peaks
     return lib
@@ -90,6 +99,8 @@ Parameters:
         this number)
 Returns:
 '''
+
+
 def traml_library_upload_quant(fileName, scanDict, maxPeaks):
 
     # Library spectra file is read as a pandas dataframe - conditional statement allows for both .tsv and .csv files to be uploaded.
@@ -103,28 +114,32 @@ def traml_library_upload_quant(fileName, scanDict, maxPeaks):
     lib_df = lib_df[lib_df['FullUniModPeptideName'].isin(peptides)]
 
     # Unneeded columns are removed from the dataframe
-    lib_df = lib_df.loc[:, lib_df.columns.intersection(['PrecursorMz','PeptideSequence','FullUniModPeptideName','ProductMz','LibraryIntensity','FragmentCharge','FragmentType','FragmentSeriesNumber'])]
+    lib_df = lib_df.loc[:, lib_df.columns.intersection(
+        ['PrecursorMz', 'PeptideSequence', 'FullUniModPeptideName', 'ProductMz', 'LibraryIntensity', 'FragmentCharge', 'FragmentType', 'FragmentSeriesNumber'])]
 
     # Rounding to two decimal places to match the re-analysis files
-    lib_df['PrecursorMz'] = [round(x,2) for x in lib_df['PrecursorMz']]
+    lib_df['PrecursorMz'] = [round(x, 2) for x in lib_df['PrecursorMz']]
 
     # ID created to become the key of the resulting dictionary
-    lib_df['ID'] = list(zip(lib_df['PrecursorMz'].tolist(),lib_df['FullUniModPeptideName'].tolist()))
+    lib_df['ID'] = list(zip(lib_df['PrecursorMz'].tolist(),
+                        lib_df['FullUniModPeptideName'].tolist()))
 
     # Dataframe filters out rows with an ID that is not found in the scanDict dictionary
     lib_df = lib_df[lib_df['ID'].isin(scanDict)]
 
     # b-ions are removed from consideration.
     # NOTE: y-ions are singled out because they should have at least one lysine or arginine, so will have a heavy counterpart that can show up. B-ions don't have that guarantee.
-    lib_df = lib_df[lib_df['FragmentType']=='y']
+    lib_df = lib_df[lib_df['FragmentType'] == 'y']
 
     # M/z and intensity columns are grouped by ID to be later combined as a list of peaks included in the dictionary
     mz_dict = lib_df.groupby("ID")['ProductMz'].apply(list).to_dict()
-    intensity_dict = lib_df.groupby("ID")['LibraryIntensity'].apply(list).to_dict()
+    intensity_dict = lib_df.groupby(
+        "ID")['LibraryIntensity'].apply(list).to_dict()
 
     # Dataframe is prepared for and converted to a dictionary
-    lib_df.drop_duplicates(subset="ID",inplace=True)
-    lib_df = lib_df.loc[:, lib_df.columns.intersection(['ID', 'PeptideSequence', 'FragmentCharge', 'FragmentSeriesNumber'])]
+    lib_df.drop_duplicates(subset="ID", inplace=True)
+    lib_df = lib_df.loc[:, lib_df.columns.intersection(
+        ['ID', 'PeptideSequence', 'FragmentCharge', 'FragmentSeriesNumber'])]
     lib_df.set_index("ID", drop=True, inplace=True)
     lib = lib_df.to_dict(orient="index")
 
@@ -133,18 +148,22 @@ def traml_library_upload_quant(fileName, scanDict, maxPeaks):
     for key in lib:
 
         # y-ion peaks are sorted by intensity, and lower-intensity peaks are filtered out.
-        fragList = sorted(list(tuple(zip(intensity_dict[key], mz_dict[key]))), reverse=True)
-        if maxPeaks !=0 and len(fragList) >= maxPeaks: fragList = fragList[:maxPeaks]
+        fragList = sorted(
+            list(tuple(zip(intensity_dict[key], mz_dict[key]))), reverse=True)
+        if maxPeaks != 0 and len(fragList) >= maxPeaks:
+            fragList = fragList[:maxPeaks]
 
         # heavy counterpart mz is calculated. Light and heavy pairs are additionally tagged by their intensity rank and included in the final output.
         peaks = []
         for i in range(len(fragList)):
             fragMz = fragList[i][1]
             fragInt = fragList[i][0]
-            peaks.append((fragMz, fragInt, (0,i,key[1])))
-            fragSeq = lib[key]['PeptideSequence'][-lib[key]['FragmentSeriesNumber']:]
-            heavyMz = smf.calculate_heavy_mz(fragSeq, fragMz, lib[key]['FragmentCharge'])
-            peaks.append((heavyMz, fragInt, (1,i,key[1])))
+            peaks.append((fragMz, fragInt, (0, i, key[1])))
+            fragSeq = lib[key]['PeptideSequence'][-lib[key]
+                                                  ['FragmentSeriesNumber']:]
+            heavyMz = smf.calculate_heavy_mz(
+                fragSeq, fragMz, lib[key]['FragmentCharge'])
+            peaks.append((heavyMz, fragInt, (1, i, key[1])))
 
         # entry placed in final dictionary
         finalDict[scanDict[key]] += peaks
@@ -156,36 +175,44 @@ def create_mzxml_to_csodiaq_dict(mzxmlFile):
     mzxmlToCsodiaqDict = {}
     with mzxml.read(mzxmlFile) as spectra:
         for x in spectra:
-            key = ( round(x['precursorMz'][0]['precursorMz'], 2),
-                    round(x['precursorMz'][1]['precursorMz'], 2),
-                    x['compensationVoltage']
-                    )
+            key = (round(x['precursorMz'][0]['precursorMz'], 2),
+                   round(x['precursorMz'][1]['precursorMz'], 2),
+                   x['compensationVoltage']
+                   )
             mzxmlToCsodiaqDict[key] = x['num']
     return mzxmlToCsodiaqDict
+
 
 def connect_csodiaq_data_to_scans(idFile, mzxmlToCsodiaqDict, fragDf):
     fragVarDict = defaultdict(list)
     libScanDict = {}
 
     for i in range(len(fragDf)):
-        seq, mz, z, CV = fragDf.loc[i]['peptide'], fragDf.loc[i]['MzLIB'], fragDf.loc[i]['zLIB'], fragDf.loc[i]['CompensationVoltage']
+        seq, mz, z, CV = fragDf.loc[i]['peptide'], fragDf.loc[i][
+            'MzLIB'], fragDf.loc[i]['zLIB'], fragDf.loc[i]['CompensationVoltage']
         lightMz = round(mz, 2)
-        key = (round(fragDf.loc[i]['scanLightMzs'],2), round(fragDf.loc[i]['scanHeavyMzs'],2), CV)
+        key = (round(fragDf.loc[i]['scanLightMzs'], 2),
+               round(fragDf.loc[i]['scanHeavyMzs'], 2), CV)
         if key in mzxmlToCsodiaqDict:
             scan = mzxmlToCsodiaqDict[key]
             libScanDict[lightMz, seq] = scan
-            fragVarDict[scan].append({'seq':seq, 'mz':mz, 'z':z, 'CV':CV})
+            fragVarDict[scan].append({'seq': seq, 'mz': mz, 'z': z, 'CV': CV})
     return fragVarDict, libScanDict
+
 
 def connect_mzxml_to_csodiaq_and_library(idFile, libFile, mzxmlFiles, maxPeaks):
     smf.print_milestone('Preparing Quantification Dictionaries:')
     metadataToScanDict = create_mzxml_to_csodiaq_dict(mzxmlFiles[0])
     fileType = idFile.split('.')[-1]
-    if fileType == 'csv': fragDf = pd.read_csv(idFile)
-    else: fragDf = pd.read_csv(idFile, sep='\t')
+    if fileType == 'csv':
+        fragDf = pd.read_csv(idFile)
+    else:
+        fragDf = pd.read_csv(idFile, sep='\t')
 
-    scanToCsodiaqDict, libMetadataToScanDict = connect_csodiaq_data_to_scans(idFile, metadataToScanDict, fragDf)
-    scanToLibPeaksDict = pool_library_spectra_by_scan(libFile,libMetadataToScanDict, fragDf, maxPeaks)
+    scanToCsodiaqDict, libMetadataToScanDict = connect_csodiaq_data_to_scans(
+        idFile, metadataToScanDict, fragDf)
+    scanToLibPeaksDict = pool_library_spectra_by_scan(
+        libFile, libMetadataToScanDict, fragDf, maxPeaks)
     return scanToCsodiaqDict, scanToLibPeaksDict
 
 
@@ -207,6 +234,7 @@ def initialize_quantification_output(fragDict, libDict):
     finalDf['peptide'] = peptides
     return finalDf
 
+
 def heavy_light_quantification(fragDict, libDict, mzxmlFiles, outDir, massTol, minMatch, ratioType, correction, hist):
 
     finalDf = initialize_quantification_output(fragDict, libDict)
@@ -216,27 +244,34 @@ def heavy_light_quantification(fragDict, libDict, mzxmlFiles, outDir, massTol, m
         ppmDiffs = []
         allSpectraMatch = QuantificationSpectraMatcher.QuantificationSpectraMatcher()
         scanToNoiseIntensityCutoffDict = dict()
-        with mzxml.read(f, use_index =True) as file:
+        with mzxml.read(f, use_index=True) as file:
             for scan in sorted(libDict.keys()):
 
                 spec = file.get_by_id(scan)
 
-                scanToNoiseIntensityCutoffDict[int(scan)] = np.mean(sorted(spec['intensity array'])[:10])/2
+                scanToNoiseIntensityCutoffDict[int(scan)] = np.mean(
+                    sorted(spec['intensity array'])[:10])/2
 
-                expSpectrum = smf.format_spectra_for_pooling(spec, scan, sqrt=False)
+                expSpectrum = smf.format_spectra_for_pooling(
+                    spec, scan, sqrt=False)
                 expSpectrum.sort()
 
                 libSpectra = sorted(libDict[scan])
 
                 quantSpectraMatch = QuantificationSpectraMatcher.QuantificationSpectraMatcher()
-                quantSpectraMatch.compare_spectra(libSpectra, expSpectrum, massTol, minMatch)
+                quantSpectraMatch.compare_spectra(
+                    libSpectra, expSpectrum, massTol, minMatch)
                 allSpectraMatch.extend_all_spectra(quantSpectraMatch)
 
-        if correction != -1: allSpectraMatch.filter_by_corrected_ppm_window(correction, hist, minMatch)
+        if correction != -1:
+            allSpectraMatch.filter_by_corrected_ppm_window(
+                correction, hist, minMatch)
         ratioDict = defaultdict(initialize_ratio_dict_values)
-        if len(allSpectraMatch.libraryIntensities) != 0: ratioDict = allSpectraMatch.determine_ratios(ratioDict, scanToNoiseIntensityCutoffDict, ratioType, minMatch)
+        if len(allSpectraMatch.libraryIntensities) != 0:
+            ratioDict = allSpectraMatch.determine_ratios(
+                ratioDict, scanToNoiseIntensityCutoffDict, ratioType, minMatch)
 
-
-        finalDf[f] = [ratioDict[(int(row['scan']),row['peptide'])] for index, row in finalDf.iterrows()]
+        finalDf[f] = [ratioDict[(int(row['scan']), row['peptide'])]
+                      for index, row in finalDf.iterrows()]
     smf.print_milestone('Finish SILAC Quantification')
     return finalDf

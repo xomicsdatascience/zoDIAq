@@ -84,18 +84,22 @@ class csodiaqWindow(QWidget):
         self.clrBtn.clicked.connect(self.diaFiles.clear)
         self.diaFileText = QLabel('DIA Data File:')
         self.diaBtn = QPushButton('Browse')
-        self.diaBtn.clicked.connect(lambda:self.getfile(self.diaFiles))
-        self.diaFileText.setToolTip('Data File Requirements:\n-Required, must be populated\n-Must be of type MzXML')
+        self.diaBtn.clicked.connect(lambda: self.getfile(self.diaFiles))
+        self.diaFileText.setToolTip(
+            'Data File Requirements:\n-Required, must be populated\n-Must be of type MzXML')
         self.libFileText = QLabel('Library File:')
         self.libBtn = QPushButton('Browse')
-        self.libBtn.clicked.connect(lambda:self.getfile(self.libFile))
-        self.libFileText.setToolTip('Library Spectra File Requirements:\n-Required, must be populated\n-Must be in MGF (.mgf) or TraML (.csv or .tsv) format')
+        self.libBtn.clicked.connect(lambda: self.getfile(self.libFile))
+        self.libFileText.setToolTip(
+            'Library Spectra File Requirements:\n-Required, must be populated\n-Must be in MGF (.mgf) or TraML (.csv or .tsv) format')
         self.libFile = QLineEdit()
         self.outDirText = QLabel('Outfile Directory:')
         self.dirBtn = QPushButton('Browse')
-        self.outDirText.setToolTip('Data File Requirements:\n-Required, must be populated')
+        self.outDirText.setToolTip(
+            'Data File Requirements:\n-Required, must be populated')
         self.outDir = QLineEdit()
-        self.dirBtn.clicked.connect(lambda:self.getfile(self.outDir, isFile=False))
+        self.dirBtn.clicked.connect(
+            lambda: self.getfile(self.outDir, isFile=False))
         fileLayout.addRow(self.diaFileText, self.diaBtn)
         fileLayout.addRow(self.diaFiles)
         fileLayout.addRow(self.delBtn, self.clrBtn)
@@ -108,17 +112,22 @@ class csodiaqWindow(QWidget):
         pass
 
     def set_settings_parent(self, settingLayout):
-        self.fragMassTolText = QLabel('Initial Fragment Mass Tolerance (in ppm):')
-        self.fragMassTolText.setToolTip('Fragment Mass Tolerance Requirements:\n-Must be blank or an integer greater than 0')
+        self.fragMassTolText = QLabel(
+            'Initial Fragment Mass Tolerance (in ppm):')
+        self.fragMassTolText.setToolTip(
+            'Fragment Mass Tolerance Requirements:\n-Must be blank or an integer greater than 0')
         self.fragMassTol = QLineEdit()
         self.corr = QLineEdit()
         self.corrCheckBox = QCheckBox()
         self.corrText = QLabel('Corrective Standard Deviations:')
-        self.corrText.setToolTip('Corrective Standard Deviations Requirements:\n-Must be blank or a float (decimal value) between or equal to 0.5 and 2.0')
+        self.corrText.setToolTip(
+            'Corrective Standard Deviations Requirements:\n-Must be blank or a float (decimal value) between or equal to 0.5 and 2.0')
         self.histCheckBox = QCheckBox()
 
-        self.corrCheckBox.stateChanged.connect(lambda:self.check_grey(self.corrCheckBox, self.corr))
-        self.corrCheckBox.stateChanged.connect(lambda:self.enable_second_box(self.corrCheckBox, self.histCheckBox))
+        self.corrCheckBox.stateChanged.connect(
+            lambda: self.check_grey(self.corrCheckBox, self.corr))
+        self.corrCheckBox.stateChanged.connect(
+            lambda: self.enable_second_box(self.corrCheckBox, self.histCheckBox))
         settingLayout.addRow(self.fragMassTolText, self.fragMassTol)
         settingLayout.addRow('Correction:', self.corrCheckBox)
         settingLayout.addRow(self.corrText, self.corr)
@@ -150,9 +159,16 @@ class csodiaqWindow(QWidget):
 
     def getfile(self, text, isFile=True):
         dialog = QFileDialog()
-        if type(text) is QListWidget and isFile: fname = QFileDialog.getOpenFileNames(self, 'Open File', 'c:\\'); text.addItems([x for x in fname[0]])
-        elif type(text) is QLineEdit and isFile: fname = QFileDialog.getOpenFileName(self, 'Open File', 'c:\\'); text.setText(fname[0])
-        else: fname = QFileDialog.getExistingDirectory(self, 'Open Directory', 'c:\\'); text.setText(fname)
+        if type(text) is QListWidget and isFile:
+            fname = QFileDialog.getOpenFileNames(self, 'Open File', 'c:\\')
+            text.addItems([x for x in fname[0]])
+        elif type(text) is QLineEdit and isFile:
+            fname = QFileDialog.getOpenFileName(self, 'Open File', 'c:\\')
+            text.setText(fname[0])
+        else:
+            fname = QFileDialog.getExistingDirectory(
+                self, 'Open Directory', 'c:\\')
+            text.setText(fname)
 
     def delete_selected_values(self):
         for x in self.diaFiles.selectedItems():
@@ -163,19 +179,30 @@ class csodiaqWindow(QWidget):
         self.set_dict_parent(tempDict)
         self.set_dict_child(tempDict)
 
-        if -1 in list(tempDict.values()): self.dict = None; return
-        else: self.dict = tempDict
+        if -1 in list(tempDict.values()):
+            self.dict = None
+            return
+        else:
+            self.dict = tempDict
 
     def set_dict_parent(self, tempDict):
-        tempDict['diaFiles'] = self.return_dia_file_values(self.diaFiles, self.diaFileText, permittedTypes=['mzxml'])
-        tempDict['libFile'] = self.return_file_path_value(self.libFile.text(), self.libFileText, permittedTypes=['mgf','csv','tsv'])
-        tempDict['outDir'] = self.return_file_path_value(self.outDir.text(), self.outDirText)
-        tempDict['fragMassTol'] = self.return_integer_above_0(self.fragMassTol.text(), self.fragMassTolText)
-        if self.corrCheckBox.isChecked(): tempDict['corr'] = self.return_float_between_P5_2(self.corr.text(), self.corrText)
-        else: tempDict['corr'] = self.return_valid(self.corrText, False)
-        if self.histCheckBox.isChecked(): tempDict['hist'] = True
-        else: tempDict['hist'] = False
-
+        tempDict['diaFiles'] = self.return_dia_file_values(
+            self.diaFiles, self.diaFileText, permittedTypes=['mzxml'])
+        tempDict['libFile'] = self.return_file_path_value(
+            self.libFile.text(), self.libFileText, permittedTypes=['mgf', 'csv', 'tsv'])
+        tempDict['outDir'] = self.return_file_path_value(
+            self.outDir.text(), self.outDirText)
+        tempDict['fragMassTol'] = self.return_integer_above_0(
+            self.fragMassTol.text(), self.fragMassTolText)
+        if self.corrCheckBox.isChecked():
+            tempDict['corr'] = self.return_float_between_P5_2(
+                self.corr.text(), self.corrText)
+        else:
+            tempDict['corr'] = self.return_valid(self.corrText, False)
+        if self.histCheckBox.isChecked():
+            tempDict['hist'] = True
+        else:
+            tempDict['hist'] = False
 
     def set_dict_child(self, tempDict):
         pass
@@ -183,20 +210,24 @@ class csodiaqWindow(QWidget):
     def return_dia_file_values(self, filesObject, text, permittedTypes=[]):
         if filesObject.count() == 0:
             return self.return_valid(text)
-        files = [filesObject.item(i).text() for i in range(filesObject.count())]
+        files = [filesObject.item(i).text()
+                 for i in range(filesObject.count())]
         if len(permittedTypes) != 0:
             for file in files:
-                if file.split('.')[-1].lower() not in permittedTypes: return self.return_valid(text)
+                if file.split('.')[-1].lower() not in permittedTypes:
+                    return self.return_valid(text)
         return self.return_valid(text, files)
 
     def return_file_path_value(self, path, text, permittedTypes=[]):
-        if len(path)==0:
+        if len(path) == 0:
             return self.return_valid(text)
-        if len(permittedTypes)!=0 and path.split('.')[-1].lower() not in permittedTypes: return self.return_valid(text)
+        if len(permittedTypes) != 0 and path.split('.')[-1].lower() not in permittedTypes:
+            return self.return_valid(text)
         return self.return_valid(text, path)
 
     def return_integer_above_0(self, x, text):
-        if x=='': return self.return_valid(text, 'default')
+        if x == '':
+            return self.return_valid(text, 'default')
         try:
             v = int(x)
             if v < 1:
@@ -206,7 +237,8 @@ class csodiaqWindow(QWidget):
             return self.return_valid(text)
 
     def return_float_between_P5_2(self, x, text):
-        if x=='': return self.return_valid(text, 'default')
+        if x == '':
+            return self.return_valid(text, 'default')
         try:
             v = float(x)
             if v < 0.5 or v > 2.0:
@@ -215,9 +247,8 @@ class csodiaqWindow(QWidget):
         except ValueError:
             return self.return_valid(text)
 
-
     def return_valid(self, text, x=-1):
-        if x==-1:
+        if x == -1:
             text.setStyleSheet('background-color: ' + self.INVALID_COLOR)
             return -1
         else:
@@ -229,7 +260,8 @@ class csodiaqWindow(QWidget):
 
     def start_process(self):
         self.set_dict()
-        if self.dict==None: return
+        if self.dict == None:
+            return
         self.killBtn.setEnabled(True)
 
         if self.p is None:  # No process running.
@@ -238,20 +270,27 @@ class csodiaqWindow(QWidget):
             self.set_args_child(args)
 
             self.message("Executing process")
-            self.p = QProcess()  # Keep a reference to the QProcess (e.g. on self) while it's running.
+            # Keep a reference to the QProcess (e.g. on self) while it's running.
+            self.p = QProcess()
             self.p.readyReadStandardOutput.connect(self.handle_stdout)
             self.p.readyReadStandardError.connect(self.handle_stderr)
-            self.p.finished.connect(self.process_finished)  # Clean up once complete.
+            # Clean up once complete.
+            self.p.finished.connect(self.process_finished)
             self.p.start('csodiaq', args)
 
     def set_args_parent(self, args):
-        for file in self.dict['diaFiles']: args += ['-f', file]
+        for file in self.dict['diaFiles']:
+            args += ['-f', file]
         args += ['-l', self.dict['libFile']]
         args += ['-o', self.dict['outDir']+'/']
-        if self.dict['fragMassTol']!= 'default': args += ['-t', self.dict['fragMassTol']]
-        if self.dict['corr'] == 'default': args += ['-c']
-        elif self.dict['corr']: args += ['-c', self.dict['corr']]
-        if self.dict['hist']: args += ['-hist']
+        if self.dict['fragMassTol'] != 'default':
+            args += ['-t', self.dict['fragMassTol']]
+        if self.dict['corr'] == 'default':
+            args += ['-c']
+        elif self.dict['corr']:
+            args += ['-c', self.dict['corr']]
+        if self.dict['hist']:
+            args += ['-hist']
 
     def set_args_child(self, args):
         pass
@@ -274,6 +313,7 @@ class csodiaqWindow(QWidget):
         self.killBtn.setEnabled(False)
         self.p = None
 
+
 class IdWindow(csodiaqWindow):
     def __init__(self):
         super().__init__()
@@ -281,36 +321,47 @@ class IdWindow(csodiaqWindow):
     def set_settings_child(self, settingLayout):
         self.protTarg = QLineEdit()
         self.protTargText = QLabel('Number of Target Peptides per Protein: ')
-        self.protTargText.setToolTip('Target Peptide Requirements:\n-Must be blank or an integer greater than 0')
+        self.protTargText.setToolTip(
+            'Target Peptide Requirements:\n-Must be blank or an integer greater than 0')
         self.protCheckBox = QCheckBox()
         self.query = QLineEdit()
         self.queryText = QLabel('Maximum Number of Query Spectra to Pool: ')
-        self.queryText.setToolTip('Query Spectra Pooling Requirements:\n-Must be blank or an integer greater than 0')
+        self.queryText.setToolTip(
+            'Query Spectra Pooling Requirements:\n-Must be blank or an integer greater than 0')
         self.heavyCheckBox = QCheckBox()
 
         settingLayout.addRow(self.protTargText, self.protTarg)
         settingLayout.addRow('Protein Inference:', self.protCheckBox)
         settingLayout.addRow(self.queryText, self.query)
-        settingLayout.addRow('Permit Heavy Targets in Re-Analysis File:', self.heavyCheckBox)
+        settingLayout.addRow(
+            'Permit Heavy Targets in Re-Analysis File:', self.heavyCheckBox)
 
-        self.protCheckBox.stateChanged.connect(lambda:self.check_grey(self.protCheckBox, self.protTarg,filledText='1'))
+        self.protCheckBox.stateChanged.connect(lambda: self.check_grey(
+            self.protCheckBox, self.protTarg, filledText='1'))
         self.protTarg.setPlaceholderText('untargeted peptide analysis')
         self.protTarg.setEnabled(False)
         self.query.setPlaceholderText('pool all matching query spectra')
         self.heavyCheckBox.setCheckState(2)
 
-
     def set_dict_child(self, tempDict):
-        if self.protCheckBox.isChecked(): tempDict['protTarg'] = self.return_integer_above_0(self.protTarg.text(), self.protTargText)
-        else: tempDict['protTarg'] = self.return_valid(self.protTargText, False)
-        tempDict['query'] = self.return_integer_above_0(self.query.text(), self.queryText)
+        if self.protCheckBox.isChecked():
+            tempDict['protTarg'] = self.return_integer_above_0(
+                self.protTarg.text(), self.protTargText)
+        else:
+            tempDict['protTarg'] = self.return_valid(self.protTargText, False)
+        tempDict['query'] = self.return_integer_above_0(
+            self.query.text(), self.queryText)
         tempDict['heavy'] = self.heavyCheckBox.isChecked()
 
     def set_args_child(self, args):
-        args.insert(0,'id')
-        if self.dict['protTarg']: args += ['-p', self.dict['protTarg']]
-        if self.dict['query']!= 'default': args += ['-q', self.dict['query']]
-        if self.dict['heavy']: args += ['-heavy']
+        args.insert(0, 'id')
+        if self.dict['protTarg']:
+            args += ['-p', self.dict['protTarg']]
+        if self.dict['query'] != 'default':
+            args += ['-q', self.dict['query']]
+        if self.dict['heavy']:
+            args += ['-heavy']
+
 
 class quantWindow(csodiaqWindow):
     def __init__(self):
@@ -318,10 +369,11 @@ class quantWindow(csodiaqWindow):
 
     def set_files_child(self, fileLayout):
         self.idFileText = QLabel('CsoDIAq ID Output File:')
-        self.idFileText.setToolTip('CsoDIAq ID File Requirements:\n-Required, must be populated')
+        self.idFileText.setToolTip(
+            'CsoDIAq ID File Requirements:\n-Required, must be populated')
         self.idFile = QLineEdit()
         self.idBtn = QPushButton('Browse')
-        self.idBtn.clicked.connect(lambda:self.getfile(self.idFile))
+        self.idBtn.clicked.connect(lambda: self.getfile(self.idFile))
         fileLayout.addRow(self.idFileText, self.idBtn)
         fileLayout.addRow(self.idFile)
 
@@ -329,11 +381,13 @@ class quantWindow(csodiaqWindow):
         self.libPeaks = QLineEdit()
         self.libPeaks.setPlaceholderText('all spectra peaks')
         self.libPeaksText = QLabel('Number of Max Peaks per Library Spectra: ')
-        self.libPeaksText.setToolTip('Library Peaks Requirements:\n-Must be blank or an integer greater than 0')
+        self.libPeaksText.setToolTip(
+            'Library Peaks Requirements:\n-Must be blank or an integer greater than 0')
         self.minMatch = QLineEdit()
         self.minMatch.setPlaceholderText('default: 1 of 3 most intense peaks')
         self.minMatchText = QLabel('Number of Min Peak Matches Required: ')
-        self.minMatchText.setToolTip('Minimum Peak Match Requirements:\n-Must be blank or an integer greater than 0')
+        self.minMatchText.setToolTip(
+            'Minimum Peak Match Requirements:\n-Must be blank or an integer greater than 0')
         self.ratioType = QComboBox()
         self.ratioType.addItem('median')
         self.ratioType.addItem('mean')
@@ -342,17 +396,23 @@ class quantWindow(csodiaqWindow):
         settingLayout.addRow(QLabel('Ratio Selection Method:'), self.ratioType)
 
     def set_dict_child(self, tempDict):
-        tempDict['idFile'] = self.return_file_path_value(self.idFile.text(), self.idFileText, permittedTypes=['csv'])
-        tempDict['libPeaks'] = self.return_integer_above_0(self.libPeaks.text(), self.libPeaksText)
-        tempDict['minMatch'] = self.return_integer_above_0(self.minMatch.text(), self.minMatchText)
+        tempDict['idFile'] = self.return_file_path_value(
+            self.idFile.text(), self.idFileText, permittedTypes=['csv'])
+        tempDict['libPeaks'] = self.return_integer_above_0(
+            self.libPeaks.text(), self.libPeaksText)
+        tempDict['minMatch'] = self.return_integer_above_0(
+            self.minMatch.text(), self.minMatchText)
         tempDict['ratioType'] = self.ratioType.currentText()
 
     def set_args_child(self, args):
-        args.insert(0,'quant')
+        args.insert(0, 'quant')
         args += ['-i', self.dict['idFile']]
-        if self.dict['libPeaks']!= 'default': args += ['-p', self.dict['libPeaks']]
-        if self.dict['minMatch']!= 'default': args += ['-m', self.dict['minMatch']]
+        if self.dict['libPeaks'] != 'default':
+            args += ['-p', self.dict['libPeaks']]
+        if self.dict['minMatch'] != 'default':
+            args += ['-m', self.dict['minMatch']]
         args += ['-r', self.dict['ratioType']]
+
 
 class MyTableWidget(QWidget):
 
@@ -363,8 +423,8 @@ class MyTableWidget(QWidget):
         self.tabs = QTabWidget()
         self.tab1 = IdWindow()
         self.tab2 = quantWindow()
-        self.tabs.addTab(self.tab1,'Peptide/Protein Identification')
-        self.tabs.addTab(self.tab2,'SILAC Quantification')
+        self.tabs.addTab(self.tab1, 'Peptide/Protein Identification')
+        self.tabs.addTab(self.tab2, 'SILAC Quantification')
 
         self.layout.addWidget(self.tabs)
         self.setLayout(self.layout)
@@ -379,13 +439,16 @@ class MainWindow(QMainWindow):
         quit.triggered.connect(self.closeEvent)
 
     def closeEvent(self, event):
-        if self.table_widget.tab1.p: self.table_widget.tab1.p.kill()
+        if self.table_widget.tab1.p:
+            self.table_widget.tab1.p.kill()
+
 
 def main():
     app = QApplication(sys.argv)
     view = MainWindow()
     view.show()
     sys.exit(app.exec_())
+
 
 if __name__ == '__main__':
     main()

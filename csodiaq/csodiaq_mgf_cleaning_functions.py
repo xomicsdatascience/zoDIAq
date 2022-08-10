@@ -29,11 +29,12 @@ def return_frag_mzs(peptide, z):
         mzValues.append(mz)
     return mzValues
 
+
 def clean_mgf_file(mgfFile, fasta, ions=False):
     spectra = mgf.read(mgfFile)
     fDict = {}
     longPep = ''
-    for record in SeqIO.parse(open(fasta,'r'),'fasta'):
+    for record in SeqIO.parse(open(fasta, 'r'), 'fasta'):
         fDict[len(longPep)] = record.id
         longPep += str(record.seq) + '.'
     cleaned = []
@@ -41,38 +42,49 @@ def clean_mgf_file(mgfFile, fasta, ions=False):
     pepCount = 0
     for spec in spectra:
         count += 1
-        #if count % 40 == 0: break
+        # if count % 40 == 0: break
         if ions:
-            mzValues = return_frag_mzs(spec['params']['seq'],1)
-            peaks = list(tuple(zip(spec['m/z array'],spec['intensity array'])))
-            for i in range(len(peaks)-1,-1,-1):
-                if smf.approx_list(peaks[i][0],mzValues)==-1: peaks.pop(i)
-            if len(peaks)==0: continue
-            peaks.sort(key=lambda x:x[0])
-            spec['m/z array'],spec['intensity array'] = map(list,zip(*peaks))
+            mzValues = return_frag_mzs(spec['params']['seq'], 1)
+            peaks = list(
+                tuple(zip(spec['m/z array'], spec['intensity array'])))
+            for i in range(len(peaks)-1, -1, -1):
+                if smf.approx_list(peaks[i][0], mzValues) == -1:
+                    peaks.pop(i)
+            if len(peaks) == 0:
+                continue
+            peaks.sort(key=lambda x: x[0])
+            spec['m/z array'], spec['intensity array'] = map(list, zip(*peaks))
         decoy = False
-        if 'protein' in spec['params'] and 'DECOY' in spec['params']['protein']: decoy = True
+        if 'protein' in spec['params'] and 'DECOY' in spec['params']['protein']:
+            decoy = True
         else:
             seq = re.sub(r'\+\d+\.\d+', '', spec['params']['seq'])
             listOfI = [m.start() for m in re.finditer(seq, longPep)]
             sorted_keys = sorted(fDict.keys())
             proteins = set()
             for i in listOfI:
-                insertion_point = bisect_left(sorted_keys,i)
-                if insertion_point==len(sorted_keys) or sorted_keys[insertion_point]!=i:
-                    insertion_point-=1
+                insertion_point = bisect_left(sorted_keys, i)
+                if insertion_point == len(sorted_keys) or sorted_keys[insertion_point] != i:
+                    insertion_point -= 1
                 protein = fDict[sorted_keys[insertion_point]]
                 proteins.add(fDict[sorted_keys[insertion_point]])
-            if len(proteins)==0: proteins.add('protein_not_in_fasta_'+spec['params']['seq'])
+            if len(proteins) == 0:
+                proteins.add('protein_not_in_fasta_'+spec['params']['seq'])
 
-        if decoy: proteins = ['DECOY_0_'+x for x in proteins]
+        if decoy:
+            proteins = ['DECOY_0_'+x for x in proteins]
 
         protein = str(len(proteins)) + '/' + '/'.join(sorted(proteins))
-        if protein != '0/': spec['params']['protein'] = protein; pepCount += 1
+        if protein != '0/':
+            spec['params']['protein'] = protein
+            pepCount += 1
         cleaned.append(spec)
-        if count % 1000 == 0: print(count); print(pepCount); print(protein)
-
+        if count % 1000 == 0:
+            print(count)
+            print(pepCount)
+            print(protein)
 
     cleanedFile = re.sub('(.*).mgf', r'\1_proteinsAdded.mgf', mgfFile)
-    if ions: cleanedFile = re.sub('(.*).mgf', r'\1_YBionsOnly.mgf', cleanedFile)
+    if ions:
+        cleanedFile = re.sub('(.*).mgf', r'\1_YBionsOnly.mgf', cleanedFile)
     mgf.write(cleaned, cleanedFile)
