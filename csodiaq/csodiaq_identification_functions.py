@@ -10,14 +10,15 @@ from collections import defaultdict
 from numba import njit
 from . import IdentificationSpectraMatcher
 from . import spectra_matcher_functions as smf
-
+from csodiaq import loaders
 
 def library_file_to_dict(inFile):
     fileType = inFile.split('.')[-1]
-    if fileType == 'mgf':
-        lib = mgf_library_upload(inFile)
-    else:
-        lib = traml_library_upload(inFile)
+    lib = loaders.libraries.load_library(inFile)
+    # if fileType == 'mgf':
+    #     lib = loaders.libraries.mgf_library_upload(inFile)
+    # else:
+    #     lib = traml_library_upload(inFile)
     return lib
 
 
@@ -263,43 +264,7 @@ def traml_column_headings(columns):
         }
 
 
-def mgf_library_upload(fileName):
-    libMGF = mgf.read(fileName)
-    smf.print_milestone('Enter library dictionary upload: ')
-    lib = {}
-    id = 0
-    for spec in libMGF:
-        id += 1
-        key = (spec['params']['pepmass'][0], spec['params']['seq'])
-        charge = int(re.sub('[+-]', '', str(spec['params']['charge'][0])))
-        name = spec['params']['title']
-        if 'protein' in spec['params']:
-            protein = spec['params']['protein']
-        else:
-            protein = ''
-        if 'DECOY' in name:
-            decoy = 1
-        else:
-            decoy = 0
-        mz = spec['m/z array']
-        intensity = spec['intensity array']
-        intensity = [x**0.5 for x in intensity]
-        keyList = [id for x in mz]
-        peaks = list(tuple(zip(mz, intensity, keyList)))
-        peaks.sort(key=lambda x: x[1], reverse=True)
-        if len(peaks) > 10:
-            peaks = peaks[:10]
-        peaks.sort(key=lambda x: x[0])
-        tempDict = {
-            'PrecursorCharge': charge,
-            'transition_group_id': name,
-            'ProteinName': protein,
-            'Peaks': peaks,
-            'ID': id,
-            'Decoy': decoy,
-        }
-        lib[key] = tempDict
-    return lib
+
 
 
 def identify_lib_spectra_in_window(top_mz, bottom_mz, sortedLibKeys):
