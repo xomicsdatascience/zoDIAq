@@ -3,6 +3,7 @@ import sys
 import csv
 import argparse
 from os import path
+from os.path import join
 from . import csodiaq_gui as gui
 import pickle
 import numpy as np
@@ -31,7 +32,6 @@ def main():
         if not maxQuerySpectraToPool:
             maxQuerySpectraToPool = np.inf
         for i in range(len(args['files'])):
-
             outFileHeader = args['outDirectory'] + 'CsoDIAq-file' + str(
                 i+1)+'_' + '.'.join(args['files'][i].split('/')[-1].split('.')[:-1])
             if args['correction'] != -1:

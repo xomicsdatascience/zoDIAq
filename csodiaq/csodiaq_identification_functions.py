@@ -10,11 +10,11 @@ from collections import defaultdict
 from numba import njit
 from . import IdentificationSpectraMatcher
 from . import spectra_matcher_functions as smf
-from csodiaq import loaders
+import csodiaq
 
 def library_file_to_dict(inFile):
     fileType = inFile.split('.')[-1]
-    lib = loaders.libraries.load_library(inFile)
+    lib = csodiaq.loaders.libraries.load_library(inFile)
     # if fileType == 'mgf':
     #     lib = loaders.libraries.mgf_library_upload(inFile)
     # else:
@@ -319,6 +319,8 @@ def gather_library_metadata(lib):
     allLibKeys = sorted(lib.keys())
     libIdToKeyDict = {}
     libIdToDecoyDict = {}
+    # print(f'keys: {allLibKeys}')
+    # print(f'type: {type(lib)}')
     for key in allLibKeys:
         libIdToKeyDict[lib[key]['ID']] = key
         libIdToDecoyDict[lib[key]['ID']] = lib[key]['Decoy']

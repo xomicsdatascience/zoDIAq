@@ -3,14 +3,14 @@ import os
 from pyteomics import mgf
 import re
 from csodiaq.loaders.library_format_columns import naming_list, data_extraction
-from typing import Callable
 
 """
 This file consists of the loaders for the different types of library files.
 """
 
 
-def load_library(library_file: os.PathLike) -> dict:
+def load_library(library_file: os.PathLike,
+                 max_peaks: int = 10) -> dict:
     """
     Loads a library file and returns the contents as a dict. Attempts to automatically identify the type of file
     from the file extension and/or headers in the data.
@@ -19,7 +19,8 @@ def load_library(library_file: os.PathLike) -> dict:
     ----------
     library_file : os.PathLike
         Pathlike to the library file.
-
+    max_peaks : int
+        Number of peaks to retain.
     Returns
     -------
     dict
@@ -37,6 +38,30 @@ def load_library(library_file: os.PathLike) -> dict:
         elif(library_file_str.endswith('.tsv')):
             data = pd.read_csv(library_file, sep='\t')
         _remap_table_columns(data)  # Renames columns to CsoDIAq standard
+
+    # data table now has expected columns
+    # Need to add new columns
+    data['ID'] = list(zip(data['PrecursorMz'].tolist(),
+                            data['FullUniModPeptideName'].tolist()))
+    mz = data.groupby("ID")['ProductMz'].apply(list).to_dict()
+    intensities = data.groupby("ID")['LibraryIntensity'].apply(list).to_dict()
+    data.drop_duplicates(subset="ID", inplace=True)
+    data.set_index('ID', drop=True, inplace=True)
+
+    data = data.to_dict(orient='index')
+    idx = 0
+    for k in data.keys():
+        idx += 1
+        mz_pairs = zip(intensities[k], mz[k])
+        pair_sorted = sorted(mz_pairs, reverse=True)  # greatest intensities first; use mz as secondary sort index
+        # NOTE: This favours peaks that have a higher m/z; if two peaks are equal intensities, the one with
+        # higher m/z will be returned first.
+        peak_intensities, peak_mzs = zip(*pair_sorted)  # separate the sorted values back into separate lists
+        peak_tuple = [(peak_mz, peak_intensity, idx) for peak_mz, peak_intensity in zip(peak_mzs[:max_peaks], peak_intensities[:max_peaks])]
+        data[k]['Peaks'] = peak_tuple
+        data[k]['ID'] = idx
+
+        data[k]['Decoy'] = int('decoy' in data[k]['ProteinName'].lower())  # set 'Decoy' to 0/1 if protein is decoy
     return data
 
 def mgf_library_upload(file_name: str,
@@ -91,7 +116,7 @@ def mgf_library_upload(file_name: str,
     return lib
 
 
-def traml_library_upload(file_name):
+def traml_library_upload(file_name, max_peaks=10):
     if file_name.endswith('.tsv'):
         lib_df = pd.read_csv(file_name, sep='\t')
     else:
@@ -141,16 +166,18 @@ def traml_library_upload(file_name):
         id += 1
         mz, intensity = (list(t) for t in zip(
             *sorted(zip(mz_dict[key], intensity_dict[key]))))
-        keyList = [id for i in range(len(mz))]
+        keyList = [id for _ in range(len(mz))]
+
+        # Get most intense peaks
         peaks = list(tuple(zip(mz, intensity, keyList)))
-
         peaks.sort(key=lambda x: x[1], reverse=True)
-        if len(peaks) > 10:
-            peaks = peaks[:10]
+        peaks = peaks[:max_peaks]
+        peaks.sort(key=lambda x: x[0])  # order by m/z
 
-        peaks.sort(key=lambda x: x[0])
         lib[key]['Peaks'] = peaks
         lib[key]['ID'] = id
+
+        # Chcek for decoy
         if 'DECOY' in lib[key]['ProteinName']:
             lib[key]['Decoy'] = 1
         else:
@@ -198,11 +225,13 @@ def _get_renaming(cols: list):
     """
     # Convert to set for easy comparison
     cols_set = set(cols)
-
+    idx = 0
     for reference_mapping, conversion_func in zip(naming_list, data_extraction):
         ref_set = set(reference_mapping.keys())
         if(ref_set.issubset(cols_set)):  # Are all required columns in the data's columns?
+            print(f'idx: {idx}')
             return reference_mapping, conversion_func
+        idx += 1
     else:
         raise ValueError(f'The input library does not match a known template. Please check the data.')
 
