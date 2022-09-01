@@ -229,7 +229,6 @@ def _get_renaming(cols: list):
     for reference_mapping, conversion_func in zip(naming_list, data_extraction):
         ref_set = set(reference_mapping.keys())
         if(ref_set.issubset(cols_set)):  # Are all required columns in the data's columns?
-            print(f'idx: {idx}')
             return reference_mapping, conversion_func
         idx += 1
     else:

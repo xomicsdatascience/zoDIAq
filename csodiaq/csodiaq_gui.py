@@ -24,7 +24,7 @@ from PyQt5.QtWidgets import QTabWidget
 from PyQt5.QtWidgets import QListWidget
 from PyQt5.QtWidgets import QComboBox
 from PyQt5.QtCore import Qt
-
+import numpy as np
 #!/usr/bin/env python3
 
 import sys
@@ -194,6 +194,11 @@ class csodiaqWindow(QWidget):
             self.outDir.text(), self.outDirText)
         tempDict['fragMassTol'] = self.return_integer_above_0(
             self.fragMassTol.text(), self.fragMassTolText)
+
+        tempDict['num_peaks'] = self.validate_positive_integer(
+            self.num_peaks_for_quantification.text(), self.num_peaks_text)
+        if(tempDict['num_peaks'] == 0):
+            tempDict['num_peaks'] = np.inf
         if self.corrCheckBox.isChecked():
             tempDict['corr'] = self.return_float_between_P5_2(
                 self.corr.text(), self.corrText)
@@ -235,6 +240,34 @@ class csodiaqWindow(QWidget):
             return self.return_valid(text, x)
         except ValueError:
             return self.return_valid(text)
+
+    def validate_positive_integer(self,
+                                  x: str,
+                                  label_to_color: QLabel = None):
+        '''
+        Validates that 'x' is a positive integer. Optionally color the label red/green if value is invalid/valid.
+        Parameters
+        ----------
+        x : str
+            String to validate and convert to int.
+        label_to_color : QLabel
+            Optional.  Label to color.
+
+        Returns
+        -------
+        int
+            Converted integer.
+        '''
+        if x == '':
+            return self.return_valid(label_to_color, x)
+        try:
+            int_x = int(x)
+            if int_x < 0:
+                return self.return_valid(label_to_color)
+            return self.return_valid(label_to_color, x)
+        except ValueError:
+            return self.return_valid(label_to_color)
+
 
     def return_float_between_P5_2(self, x, text):
         if x == '':
@@ -291,6 +324,8 @@ class csodiaqWindow(QWidget):
             args += ['-c', self.dict['corr']]
         if self.dict['hist']:
             args += ['-hist']
+        if self.dict['num_peaks']:
+            args += ['--peaks', self.dict['num_peaks']]
 
     def set_args_child(self, args):
         pass
@@ -330,11 +365,16 @@ class IdWindow(csodiaqWindow):
             'Query Spectra Pooling Requirements:\n-Must be blank or an integer greater than 0')
         self.heavyCheckBox = QCheckBox()
 
+        self.num_peaks_for_quantification = QLineEdit()
+        self.num_peaks_for_quantification.setPlaceholderText('0')
+        self.num_peaks_text = QLabel('# peaks for quantification:')
+
         settingLayout.addRow(self.protTargText, self.protTarg)
         settingLayout.addRow('Protein Inference:', self.protCheckBox)
         settingLayout.addRow(self.queryText, self.query)
         settingLayout.addRow(
             'Permit Heavy Targets in Re-Analysis File:', self.heavyCheckBox)
+        settingLayout.addRow(self.num_peaks_text, self.num_peaks_for_quantification)
 
         self.protCheckBox.stateChanged.connect(lambda: self.check_grey(
             self.protCheckBox, self.protTarg, filledText='1'))

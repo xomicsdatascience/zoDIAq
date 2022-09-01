@@ -41,13 +41,17 @@ def main():
                 histFile = outFileHeader + '_histogram.png'
             else:
                 histFile = ''
+            if args['peaks'] == 0:
+                args['peaks'] = np.inf
+
             cif.perform_spectra_pooling_and_analysis(args['files'][i],
                                                      outFile,
                                                      lib,
                                                      args['fragmentMassTolerance'],
                                                      maxQuerySpectraToPool,
                                                      args['correction'],
-                                                     histFile)
+                                                     histFile,
+                                                     num_peaks=args['peaks'])
             spectralFile = outFileHeader + '_spectralFDR.csv'
             peptideFile = outFileHeader + '_peptideFDR.csv'
             if args['proteinTargets']:
@@ -122,6 +126,8 @@ def set_command_line_settings():
                            help='Enable Query Pooling - This flag indicates that query spectra should NOT be pooled. This action increases the overall time complexity of the algorithm while reducing memory complexity.')
     id_parser.add_argument('-heavy', '--heavyMz', action='store_true',
                            help='Heavy Mz - Files for targetted re-analysis include heavy fragment isotopes for SILAC quantification.')
+    id_parser.add_argument('--peaks', type=int, default=0,
+                           help='Number of peaks from the query spectrum to use for quantification of ions.')
 
     quant_parser.add_argument('-i', '--idFile', type=str, required=True,
                               help='Protein/Identification File - Output from the identification portion of QsoDIAq. The file ending will have "all_CVs.csv"')
