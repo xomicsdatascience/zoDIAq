@@ -209,7 +209,7 @@ class IdentificationSpectraMatcher:
         self.scores = np.append(self.scores, spectraMatch.scores)
         self.decoys = np.append(self.decoys, spectraMatch.decoys)
 
-    def write_output(self, outFile, expSpectraFile, scoreCutoff, queValDict, idToKeyDict, lib):
+    def write_output(self, outFile, expSpectraFile, scoreCutoff, queValDict, idToKeyDict, lib, num_peaks: int = 3):
         columns = [
             'fileName',  # Name of the query spectra file.
             # Scan number, corresponding to scans in the query spectra file.
@@ -253,10 +253,21 @@ class IdentificationSpectraMatcher:
             count = 1
             length = len(self.libraryTags)
             for i in range(1, length):
-                if self.libraryTags[i] != curLibTag or self.queryTags[i] != curQueTag:
+                if self.libraryTags[i] != curLibTag or self.queryTags[i] != curQueTag:  # if the tag has changed; write out the data
                     curScore = self.scores[i-1]
                     if curScore >= scoreCutoff:
                         libKey = idToKeyDict[curLibTag]
+                        print(f"libkey: {libKey}")
+                        print(f"lib val: {lib[libKey]}")
+                        print(f"curIonCount: {curIonCount}")
+                        ###
+                        # curIonCount is recomputed here
+                        ###
+                        if count <= num_peaks:
+                            peak_count = count
+                        else:
+                            peak_count = num_peaks
+                        #
                         scan = str(curQueTag)
                         temp = [
                             expSpectraFile,  # fileName
@@ -266,11 +277,11 @@ class IdentificationSpectraMatcher:
                             lib[libKey]['ProteinName'],  # protein
                             libKey[0],  # MzLIB
                             lib[libKey]['PrecursorCharge'],  # zLIB
-                            curScore/(count**(1/5)),  # cosine
+                            curScore / (count ** (1 / 5)),  # cosine ; use full peak count for scoring
                             lib[libKey]['transition_group_id'],  # name
                             queValDict[scan]['peaksCount'],  # Peaks(Query)
                             len(lib[libKey]['Peaks']),  # Peaks(Library)
-                            count,  # shared
+                            peak_count,  # shared
                             curIonCount,  # ionCount
                             queValDict[scan]['CV'],  # compensationVoltage
                             # totalWindowWidth
@@ -282,13 +293,19 @@ class IdentificationSpectraMatcher:
                     curQueTag = self.queryTags[i]
                     curIonCount = self.queryIntensities[i]
                     count = 1
-                else:
-                    curIonCount += self.queryIntensities[i]
+                else:  # if the tag is the same, accumulate intensities
                     count += 1
+                    if count <= num_peaks:
+                        curIonCount += self.queryIntensities[i]
+
             curScore = self.scores[-1]
             if curScore >= scoreCutoff:
                 libKey = idToKeyDict[self.libraryTags[-1]]
                 scan = str(self.queryTags[-1])
+                if count <= num_peaks:
+                    peak_count = count
+                else:
+                    peak_count = num_peaks
                 temp = [
                     expSpectraFile,  # fileName
                     scan,  # scan
@@ -301,7 +318,7 @@ class IdentificationSpectraMatcher:
                     lib[libKey]['transition_group_id'],  # name
                     queValDict[scan]['peaksCount'],  # Peaks(Query)
                     len(lib[libKey]['Peaks']),  # Peaks(Library)
-                    count,  # shared
+                    peak_count,  # shared
                     curIonCount,  # ionCount
                     queValDict[scan]['CV'],  # compensationVoltage
                     queValDict[scan]['windowWideness'],  # totalWindowWidth

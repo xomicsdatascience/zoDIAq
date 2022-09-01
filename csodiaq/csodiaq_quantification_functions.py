@@ -102,7 +102,6 @@ Returns:
 
 
 def traml_library_upload_quant(fileName, scanDict, maxPeaks):
-
     # Library spectra file is read as a pandas dataframe - conditional statement allows for both .tsv and .csv files to be uploaded.
     if fileName.endswith('.tsv'):
         lib_df = pd.read_csv(fileName, sep='\t')

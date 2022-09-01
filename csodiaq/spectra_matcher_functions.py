@@ -4,14 +4,43 @@ import matplotlib.pyplot as pyplot
 from timeit import default_timer as timer
 from datetime import timedelta
 
+@njit
+def calc_ppm_diff(ref_val: float, val: float):
+    '''
+    Calculates the difference and returns the value in parts per million (ppm) of ref_val.
+    Parameters
+    ----------
+    ref_val : float
+        Value used as reference for the difference and ppm.
+    val : float
+        Value to use for the difference.
+    Returns
+    -------
+    float
+        Difference between ref_val and val in ppm.
+    '''
+    return (ref_val-val)*(1e6)/ref_val
 
 @njit
-def approx(x, y, ppmTol):
-    if x == y:
-        return 1e-7
-    ppmDiff = ((x-y)*1000000)/x
-    return (ppmDiff if abs(ppmDiff) < ppmTol else 0)
+def is_within_ppm_tol(ref_val: float, val: float, ppm_tol: float):
+    '''
+    Verifies that the input values are within ppm_tol (±ppm_tol) of each other.
+    Parameters
+    ----------
+    ref_val : float
+        First value.
+    val : float
+        Second value.
+    ppm_tol : float
+        Tolerance value in ppm.
 
+    Returns
+    -------
+    bool
+        True if the input values are within tolerance. False otherwise
+    '''
+    ppm_diff = calc_ppm_diff(ref_val, val)
+    return abs(ppm_diff) <= ppm_tol
 
 @njit
 def find_matching_peaks(libMzs, libIntensities, libTags, queMzs, queIntensities, queTags, ppmTol):
@@ -24,7 +53,7 @@ def find_matching_peaks(libMzs, libIntensities, libTags, queMzs, queIntensities,
     ppmMatches = []
     i, j = 0, 0
     while i < lenLib and j < lenQue:
-        if not approx(libMzs[i], queMzs[j], ppmTol):
+        if not is_within_ppm_tol(libMzs[i], queMzs[j], ppmTol):
             if libMzs[i] > queMzs[j]:
                 j += 1
                 continue
@@ -33,9 +62,11 @@ def find_matching_peaks(libMzs, libIntensities, libTags, queMzs, queIntensities,
                 continue
         p = i + 0
         while (p < lenLib):
-            ppm = approx(libMzs[p], queMzs[j], ppmTol)
-            if p == lenLib or not ppm:
+            ppm = calc_ppm_diff(libMzs[p], queMzs[j])
+            ppm_within_tol = is_within_ppm_tol(libMzs[p], queMzs[j], ppmTol)
+            if not ppm_within_tol:  # if library and que aren't within tol, continue to next match
                 break
+            # Store matches
             matchLibTags.append(libTags[p])
             matchLibIntensities.append(libIntensities[p])
             matchQueTags.append(queTags[j])
@@ -129,6 +160,6 @@ def calculate_heavy_mz(seq, mz, z):
 
 def approx_list(x, l, ppmTol=10):
     for i in range(len(l)):
-        if approx(x, l[i], ppmTol):
+        if is_within_ppm_tol(x, l[i], ppm_tol=ppmTol):
             return i
     return -1

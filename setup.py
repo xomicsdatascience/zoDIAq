@@ -22,7 +22,8 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License"
     ],
 
-    packages=['csodiaq'],
+    # packages=['csodiaq'],
+    packages=setuptools.find_packages(),
     python_requires='>=3.8',
     license="MIT",
     entry_points={

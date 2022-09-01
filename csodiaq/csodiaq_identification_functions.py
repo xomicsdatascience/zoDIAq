@@ -10,11 +10,11 @@ from collections import defaultdict
 from numba import njit
 from . import IdentificationSpectraMatcher
 from . import spectra_matcher_functions as smf
-from csodiaq import loaders
+import csodiaq
 
 def library_file_to_dict(inFile):
     fileType = inFile.split('.')[-1]
-    lib = loaders.libraries.load_library(inFile)
+    lib = csodiaq.loaders.libraries.load_library(inFile)
     # if fileType == 'mgf':
     #     lib = loaders.libraries.mgf_library_upload(inFile)
     # else:
@@ -22,7 +22,8 @@ def library_file_to_dict(inFile):
     return lib
 
 
-def perform_spectra_pooling_and_analysis(querySpectraFile, outFile, lib, tolerance, maxQuerySpectraToPool, corrected, histFile):
+def perform_spectra_pooling_and_analysis(querySpectraFile, outFile, lib, tolerance, maxQuerySpectraToPool,
+                                         corrected, histFile, num_peaks: int = 3):
 
     smf.print_milestone('Begin Grouping Scans by m/z Windows:')
     queWindowDict, queScanValuesDict = pool_scans_by_mz_windows(
@@ -97,7 +98,7 @@ def perform_spectra_pooling_and_analysis(querySpectraFile, outFile, lib, toleran
 
     smf.print_milestone('\nBegin Writing to File: ')
     allSpectraMatches.write_output(
-        outFile, querySpectraFile, maccCutoff, queScanValuesDict, libIdToKeyDict, lib)
+        outFile, querySpectraFile, maccCutoff, queScanValuesDict, libIdToKeyDict, lib, num_peaks=num_peaks)
 
 
 def write_fdr_outputs(inFile, specFile, pepFile, protFile):
@@ -282,11 +283,25 @@ def identify_lib_spectra_in_window(top_mz, bottom_mz, sortedLibKeys):
     return temp[i1+1:i2]
 
 
-def pool_lib_spectra(lib, libKeys):
-    finalList = []
+def pool_lib_spectra(lib: dict, libKeys: list) -> list:
+    '''
+    Extracts the 'Peaks' entry from lib[key] for each key listed in libKeys.
+    Parameters
+    ----------
+    lib : dict
+        Spectral library as loaded by the csodiaq library loader.
+    libKeys : list
+        List of tuples containing (PrecursorMz, PeptideSequence).
+
+    Returns
+    -------
+    list
+        List of tuples containing (ProductMz, Intensity)
+    '''
+    extracted_peaks = []
     for key in libKeys:
-        finalList += lib[key]['Peaks']
-    return sorted(finalList)
+        extracted_peaks += lib[key]['Peaks']
+    return sorted(extracted_peaks)
 
 
 def pool_scans_by_mz_windows(querySpectraFile):
