@@ -208,7 +208,7 @@ class csodiaqWindow(QWidget):
         if self.do_common_protein_quantification.isChecked():
             tempDict['do_common_protein_quantification'] = True
         else:
-            tempDict['do_common_protein_quantification'] = True
+            tempDict['do_common_protein_quantification'] = False
 
         if self.corrCheckBox.isChecked():
             tempDict['corr'] = self.return_float_between_P5_2(

@@ -7,6 +7,7 @@ from pandas.api.types import is_numeric_dtype
 import pyteomics.mzxml
 from csodiaq.spectrum import Spectrum
 import re
+import itertools
 
 # library_peptide_column_name = 'PeptideSequence'  # for later expansion to other library formats
 library_peptide_column_name = 'FullUniModPeptideName'
@@ -15,6 +16,7 @@ library_productmz_column_name = 'ProductMz'      # m/z of fragment
 library_intensity_column_name = 'LibraryIntensity'  # intensity of fragment
 csodiaq_query_scan_name = 'scan'  # CsoDIAq column name for scan id
 csodiaq_mz_lib_name = 'MzLIB'  # CsoDIAq column name for library precursor m/z
+csodiaq_protein_column_name = 'protein'
 experimental_query_mz_name = 'm/z array'  # mz name for the input to CsoDIAq
 experimental_query_intensity_name = 'intensity array'  # intensity name for the input to CsoDIAq
 output_peptide_format = 'peptide_quantity_{x}'  # format for output column
@@ -22,6 +24,7 @@ output_peptide_format = 'peptide_quantity_{x}'  # format for output column
 def get_peptide_quantities(file_list: list,
                            library_file: str,
                            csodiaq_output_dir: str,
+                           num_library_fragments: int = 10,
                            save_file: str = None):
     """
     Calculates the quantities of peptides that returned by CsoDIAq.
@@ -33,6 +36,9 @@ def get_peptide_quantities(file_list: list,
         Path to the library file to use as reference. Expected to be .tsv
     csodiaq_output_dir : str
         Path to the output directory of CsoDIAq, containing the _proteinFDR.csv files.
+    num_library_fragments : int
+        Number of library fragments to use for matching. The fragments are ordered by library fragment intensity;
+        10 fragments indicate that only the 10 most intense fragments will be used for quantification.
     save_file : str
         Optional. Path where to store DataFrame. If None, output is returned instead of saved.
 
@@ -44,7 +50,7 @@ def get_peptide_quantities(file_list: list,
     # Get peptides predicted by CsoDIAq
     common_dataframe = extract_common_entries(csodiaq_output_dir,
                                               input_file_list=file_list,
-                                              common_col=['peptide', 'MzLIB'],
+                                              common_col=['peptide'],
                                               load_columns=[csodiaq_query_scan_name,
                                                             csodiaq_mz_lib_name, 'peptide', 'ionCount'],
                                               normalize=False)
@@ -64,23 +70,22 @@ def get_peptide_quantities(file_list: list,
     peptide_quant_df = pd.DataFrame(columns=file_names_for_dataframe)
 
     # Go through each peptide common across files; quantify
-    count = 0
     len_frame = common_dataframe.shape[0]
     for peptide_idx, peptide_dat in common_dataframe.iterrows():
         peptide = peptide_idx[0]
         precursor_mz = peptide_idx[1]
-        print(f"completed: {100*count / len_frame}")
 
         # Go through each (pre-loaded) input, fetch relevant scan, quantify peptide
         peptide_intensity_data = []  # use to collect intensity to later append to peptide_quant_df
 
         peptide_library_spectrum = get_library_spectrum_for_peptide(library_dataframe,
                                                                     peptide=peptide,
-                                                                    precursor_mz=precursor_mz)
+                                                                    precursor_mz=precursor_mz,
+                                                                    num_fragments=num_library_fragments)
 
         for exp_idx, exp in enumerate(exp_data):
             # Get scan id
-            scan_id = peptide_dat[f'scan_{exp_idx}']  # Patch
+            scan_id = peptide_dat[f'scan_{exp_idx}']
             scan_data = exp.get_by_id(str(int(scan_id)))
             scan_spectrum = Spectrum(mz=scan_data[experimental_query_mz_name],
                                      intensity=scan_data[experimental_query_intensity_name])
@@ -89,7 +94,6 @@ def get_peptide_quantities(file_list: list,
                                                                           match_tolerance_ppm=30)
             peptide_intensity_data.append(sum(scan_spectrum.intensity[scan_idx]))
         peptide_quant_df.loc[peptide] = peptide_intensity_data
-        count += 1
 
     # Get mean + std across files
     peptide_quant_df['mean'] = peptide_quant_df.apply(np.mean, axis=1)
@@ -106,6 +110,7 @@ def get_peptide_quantities(file_list: list,
 def get_protein_quantities(file_list: list,
                            library_file: str,
                            csodiaq_output_dir: str,
+                           num_library_fragments: int = 10,
                            save_file: str = None) -> None:
     """
     Calculates the quantities of peptides that returned by CsoDIAq.
@@ -117,6 +122,9 @@ def get_protein_quantities(file_list: list,
         Path to the library file to use as reference. Expected to be .tsv
     csodiaq_output_dir : str
         Path to the output directory of CsoDIAq, containing the _proteinFDR.csv files.
+    num_library_fragments : int
+        Number of library fragments to use for matching. The fragments are ordered by library fragment intensity;
+        10 fragments indicate that only the 10 most intense fragments will be used for quantification.
     save_file : str
         Optional. Path where to store DataFrame. If None, output is returned instead of saved.
 
@@ -127,12 +135,89 @@ def get_protein_quantities(file_list: list,
 
     common_dataframe = extract_common_entries(csodiaq_output_dir,
                                               input_file_list=file_list,
-                                              common_col=['protein', 'MzLIB'],
+                                              common_col=['peptide', 'MzLIB', 'protein'],
                                               load_columns=[csodiaq_query_scan_name,
-                                                            csodiaq_mz_lib_name, 'protein', 'ionCount'],
+                                                            csodiaq_mz_lib_name, 'protein', 'ionCount', 'peptide'],
                                               normalize=False)
-    return
+    common_dataframe.reset_index(inplace=True)
+    common_dataframe.set_index(['peptide','MzLIB'], inplace=True)
+    if common_dataframe.shape[0] == 0:
+        return  # no common peptides
+    # Get library spectra
+    library_dataframe = pd.read_csv(library_file, sep='\t')
 
+    # Get experimental spectra
+    exp_data = []
+    for f in file_list:
+        exp_data.append(pyteomics.mzxml.read(f))  # These are the input files to CsoDIAq
+
+    # initialize new dataframe
+    file_names_for_dataframe = format_filenames(file_list)  # this reduces the column names
+
+    protein_quant_df = pd.DataFrame(columns=file_names_for_dataframe)
+
+    # iterate through each peptide that is common across the data; quantify each one
+    # Get list of unique proteins
+    protein_set = set(common_dataframe['protein'])
+    for protein in protein_set:
+        # Get all rows that correspond to this protein
+        protein_df = common_dataframe[common_dataframe['protein'] == protein]
+        # Go through each row; quantify all peptides associated with the protein
+        protein_intensity_data = np.zeros(len(exp_data))
+        for peptide_idx, peptide_dat in protein_df.iterrows():
+            peptide = peptide_idx[0]
+            precursor_mz = peptide_idx[1]
+            peptide_library_spectrum = get_library_spectrum_for_peptide(library_dataframe,
+                                                                        peptide=peptide,
+                                                                        precursor_mz=precursor_mz,
+                                                                        num_fragments=num_library_fragments)
+            # Go through each experiment
+            for exp_idx, exp in enumerate(exp_data):
+                # Get scan
+                scan_id = peptide_dat[f"scan_{exp_idx}"]
+                scan_data = exp.get_by_id(str(int(scan_id)))
+                scan_spectrum = Spectrum(mz=scan_data[experimental_query_mz_name],
+                                         intensity=scan_data[experimental_query_intensity_name])
+                # Get intensity at matched m/z
+                scan_idx, library_idx = scan_spectrum.get_matching_mz_indices(
+                    spectrum_to_match=peptide_library_spectrum,
+                    match_tolerance_ppm=30)
+                protein_intensity_data[exp_idx] += sum(scan_spectrum.intensity[scan_idx])
+        protein_quant_df.loc[protein] = protein_intensity_data
+        # Get mean + std across files
+    protein_quant_df['mean'] = protein_quant_df.apply(np.mean, axis=1)
+    protein_quant_df['std'] = protein_quant_df.apply(np.std, axis=1)
+
+    if save_file is not None:
+        protein_quant_df.to_csv(save_file, index=True, header=True)
+    return protein_quant_df
+
+
+def get_possible_protein_keys(protein_str: str) -> list:
+    """
+    Returns the n! factorial possible reorderings of the protein synonyms
+    Parameters
+    ----------
+    protein_str : str
+        String formatted for protein names (e.g. 3/sp|Q01813|PFKAP_HUMAN/sp|P17858|PFKAL_HUMAN/sp|P08237|PFKAM_HUMAN).
+
+    Returns
+    -------
+    list
+        List of possible re-orderings of the protein synonyms
+    """
+
+    # First value indicates how many synonyms there are
+    synonyms = protein_str.split('/')
+    num_synonyms = int(synonyms[0])
+    if num_synonyms == 1:
+        return [protein_str]  # only one name; done
+    possible_orders = itertools.permutations(synonyms[1:], num_synonyms)
+    protein_name_list = []
+    # Construct reordered protein name
+    for order in possible_orders:
+        protein_name_list.append(f"{num_synonyms}/{'/'.join(order)}")
+    return protein_name_list
 
 
 def format_filenames(file_list: list) -> list:
@@ -155,7 +240,8 @@ def format_filenames(file_list: list) -> list:
 
 def get_library_spectrum_for_peptide(library_dataframe: pd.DataFrame,
                                      peptide: str,
-                                     precursor_mz: float) -> Spectrum:
+                                     precursor_mz: float,
+                                     num_fragments: int = 10) -> Spectrum:
     """
     Returns the Spectrum object corresponding to specified peptide and precursor M/z.
     Parameters
@@ -198,7 +284,7 @@ def get_library_spectrum_for_peptide(library_dataframe: pd.DataFrame,
     # Extract values
     library_intensity = peptide_df[library_intensity_column_name].values
     library_mz = peptide_df[library_productmz_column_name].values
-    return Spectrum(mz=library_mz, intensity=library_intensity)
+    return Spectrum(mz=library_mz, intensity=library_intensity, num_fragments=num_fragments)
 
 
 def extract_common_entries(csodiaq_output_dir: str,
