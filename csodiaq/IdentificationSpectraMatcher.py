@@ -1,8 +1,11 @@
 import numpy as np
+import os
+import pandas as pd
 from numba import njit
 import csv
 from . import spectra_matcher_functions as smf
 
+import tempfile
 
 @njit
 def cosine_similarity(AB, A, B):
@@ -209,7 +212,27 @@ class IdentificationSpectraMatcher:
         self.scores = np.append(self.scores, spectraMatch.scores)
         self.decoys = np.append(self.decoys, spectraMatch.decoys)
 
-    def write_output(self, outFile, expSpectraFile, scoreCutoff, queValDict, idToKeyDict, lib, num_peaks: int = 3):
+    def write_output(self, outFile, expSpectraFile, scoreCutoff, queValDict, idToKeyDict, lib,
+                     num_peaks: int = 3, only_use_peak_above_precursor_mz: bool = True):
+        """
+        Compute quantification of matched library and query spectra, then write out to .csv file.
+        Parameters
+        ----------
+        outFile
+        expSpectraFile
+        scoreCutoff
+        queValDict
+        idToKeyDict
+        lib
+        num_peaks : int
+            Max peaks to use for quantification
+        only_use_peak_above_precursor_mz : bool
+            If True, only consider peaks that are above the precursor m/z. Otherwise, use all peaks.
+
+        Returns
+        -------
+        None
+        """
         columns = [
             'fileName',  # Name of the query spectra file.
             # Scan number, corresponding to scans in the query spectra file.
@@ -239,6 +262,7 @@ class IdentificationSpectraMatcher:
             'totalWindowWidth',
             # score unique to CsoDIAq, the fifth root of the number of matches ('shared') multiplied by the cosine score ('cosine')
             'MaCC_Score',
+            'num_exclude', # number of fragments excluded due to < precursorMz
         ]
         with open(outFile, 'w', newline='') as csvFile:
             writer = csv.writer(csvFile)
@@ -249,26 +273,37 @@ class IdentificationSpectraMatcher:
             # Looping format is similar to functions such as reduce_final_df(). I'd consolidate them, but it was getting tricky to use numba.
             curLibTag = self.libraryTags[0]
             curQueTag = self.queryTags[0]
-            curIonCount = self.queryIntensities[0]
-            count = 1
+            # curIonCount = self.queryIntensities[0]
+            libKey = idToKeyDict[curLibTag]
+            scan = str(curQueTag)
+            precursor_mz = queValDict[scan]['precursorMz']
+            query_mz = lib[libKey]['Peaks'][0][0]  # move to before count is incremented?
+            # Check whether query m/z below precursor
+            excluded_count = 0
+            peak_list = []
+            peak_mz_list = []
+            peak_list.append(self.queryIntensities[0])
+            peak_mz_list.append(query_mz)
+            if not only_use_peak_above_precursor_mz or query_mz >= precursor_mz:
+                curIonCount = self.queryIntensities[0] **2  # Query intensities are initially rooted
+                count = 1
+            else:
+                curIonCount = 0
+                excluded_count += 1
+                count = 0
+            total_peak_count = 1
+
             length = len(self.libraryTags)
             for i in range(1, length):
                 if self.libraryTags[i] != curLibTag or self.queryTags[i] != curQueTag:  # if the tag has changed; write out the data
                     curScore = self.scores[i-1]
                     if curScore >= scoreCutoff:
                         libKey = idToKeyDict[curLibTag]
-                        print(f"libkey: {libKey}")
-                        print(f"lib val: {lib[libKey]}")
-                        print(f"curIonCount: {curIonCount}")
-                        ###
-                        # curIonCount is recomputed here
-                        ###
-                        if count <= num_peaks:
-                            peak_count = count
+                        scan = str(curQueTag)
+                        if total_peak_count <= num_peaks:
+                            peak_count = total_peak_count
                         else:
                             peak_count = num_peaks
-                        #
-                        scan = str(curQueTag)
                         temp = [
                             expSpectraFile,  # fileName
                             scan,  # scan
@@ -277,26 +312,65 @@ class IdentificationSpectraMatcher:
                             lib[libKey]['ProteinName'],  # protein
                             libKey[0],  # MzLIB
                             lib[libKey]['PrecursorCharge'],  # zLIB
-                            curScore / (count ** (1 / 5)),  # cosine ; use full peak count for scoring
+                            curScore / (total_peak_count ** (1 / 5)),  # cosine ; use full peak count for scoring
                             lib[libKey]['transition_group_id'],  # name
                             queValDict[scan]['peaksCount'],  # Peaks(Query)
                             len(lib[libKey]['Peaks']),  # Peaks(Library)
-                            peak_count,  # shared
+                            count,  # shared
                             curIonCount,  # ionCount
                             queValDict[scan]['CV'],  # compensationVoltage
                             # totalWindowWidth
                             queValDict[scan]['windowWideness'],
-                            curScore
+                            curScore,
+                            excluded_count
                         ]
                         writer.writerow(temp)
+                        peptide_writer(outFile,
+                                       libKey[1],
+                                       lib[libKey]['ProteinName'],
+                                       peak_mz_list,
+                                       peak_list)
+
+
                     curLibTag = self.libraryTags[i]
                     curQueTag = self.queryTags[i]
-                    curIonCount = self.queryIntensities[i]
-                    count = 1
+                    libKey = idToKeyDict[curLibTag]
+                    peak_list = [self.queryIntensities[i]]
+                    scan = str(curQueTag)
+                    precursor_mz = queValDict[scan]['precursorMz']
+                    query_mz = lib[libKey]['Peaks'][0][0]  # move to before count is incremented?
+
+                    peak_mz_list = [query_mz]
+                    # Check whether query m/z below precursor
+                    excluded_count = 0
+                    if not only_use_peak_above_precursor_mz or query_mz >= precursor_mz:
+                        # curIonCount = self.queryIntensities[0]
+                        curIonCount = self.queryIntensities[i] ** 2  # Query intensities are initially square rooted
+                        count = 1
+                    else:
+                        curIonCount = 0
+                        excluded_count += 1
+                        count = 0
+                    total_peak_count = 1
+
                 else:  # if the tag is the same, accumulate intensities
-                    count += 1
+                    if total_peak_count >= len(lib[libKey]['Peaks']):
+                        continue
+                    libKey = idToKeyDict[curLibTag]
+                    scan = str(curQueTag)
+                    precursor_mz = queValDict[scan]['precursorMz']
+                    query_mz = lib[libKey]['Peaks'][total_peak_count][0]  # move to before count is incremented?
+                    peak_mz_list.append(query_mz)
+                    total_peak_count += 1
+                    # count += 1
+                    peak_list.append(self.queryIntensities[i])
                     if count <= num_peaks:
-                        curIonCount += self.queryIntensities[i]
+                        # Check whether query m/z below precursor
+                        if not only_use_peak_above_precursor_mz or query_mz >= precursor_mz:
+                            curIonCount += self.queryIntensities[i] ** 2  # Query intensities are initially square rooted
+                            count += 1
+                        elif only_use_peak_above_precursor_mz:
+                            excluded_count += 1
 
             curScore = self.scores[-1]
             if curScore >= scoreCutoff:
@@ -314,7 +388,7 @@ class IdentificationSpectraMatcher:
                     lib[libKey]['ProteinName'],  # protein
                     libKey[0],  # MzLIB
                     lib[libKey]['PrecursorCharge'],  # zLIB
-                    curScore/(count**(1/5)),  # cosine
+                    curScore/(total_peak_count**(1/5)),  # cosine
                     lib[libKey]['transition_group_id'],  # name
                     queValDict[scan]['peaksCount'],  # Peaks(Query)
                     len(lib[libKey]['Peaks']),  # Peaks(Library)
@@ -322,6 +396,96 @@ class IdentificationSpectraMatcher:
                     curIonCount,  # ionCount
                     queValDict[scan]['CV'],  # compensationVoltage
                     queValDict[scan]['windowWideness'],  # totalWindowWidth
-                    curScore
+                    curScore,
+                    excluded_count
                 ]
                 writer.writerow(temp)
+
+
+def peptide_writer(output_filename_prefix: str,
+                   peptide_sequence: str,
+                   protein_name: str,
+                   fragment_mz: list,
+                   fragment_intensities: list) -> None:
+    """
+    Writes out query spectrum to the specified file.
+    Parameters
+    ----------
+    output_filename_prefix : str
+        Filename to which to write data
+    peptide_sequence : str
+        Sequence of the peptide being written.
+    protein_name : str
+        Name of the associated protein.
+    fragment_mz : list
+        List of fragment m/z values
+    fragment_intensities : list
+        List of fragment intensities, in the same order as fragment_mz.
+
+    Returns
+    -------
+    None
+    """
+    fname = f"{output_filename_prefix}.pep"
+    # Check that mz matches intensities
+    if len(fragment_mz) != len(fragment_intensities):
+        raise ValueError('length of fragment_mz must match fragment_intensities')
+    # write out data
+    f = open(fname, 'a')
+    f.write(f"{peptide_sequence},")
+    f.write(f"{protein_name}")
+    for mz, intensity in zip(fragment_mz, fragment_intensities):
+        f.write(',')
+        f.write(f"{mz},{intensity}")
+    f.write('\n')
+    f.close()
+    return
+
+
+def peptide_reader(filename: str) -> dict:
+    """
+    Reads a peptide file as written by peptide_writer.
+    Parameters
+    ----------
+    filename : str
+        Name of the file to load
+
+    Returns
+    -------
+    list
+        List containing the peptide name, associated protein, and fragment intensities
+    """
+    # Read contents
+    f = open(filename, 'r')
+    file_contents = f.read().splitlines()
+    f.close()
+    pep_list = []
+    for line in file_contents:
+        pep_dict = {}
+        line_split = line.split(',')
+        pep_dict['peptide'] = line_split[0]
+        pep_dict['protein'] = line_split[1]
+        pep_dict['mz_list'] = line_split[2::2]
+        pep_dict['intensities'] = line_split[3::2]
+        pep_list.append(pep_dict)
+    return pep_list
+
+
+def query_writer(output_file_prefix: str,
+                 query: list) -> None:
+    """
+    Writes out queries
+    Parameters
+    ----------
+    output_file_prefix : str
+        Prefix to use for the output filename.
+    query : list
+        List of the query to print out.
+
+    Returns
+    -------
+    None
+    """
+    # fname =
+    # check m/
+    return

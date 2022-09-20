@@ -2,6 +2,7 @@
 import sys
 import csv
 import argparse
+import os
 from os import path
 from os.path import join
 from . import csodiaq_gui as gui
@@ -10,7 +11,7 @@ import numpy as np
 from . import csodiaq_identification_functions as cif
 from . import csodiaq_quantification_functions as cqf
 from . import csodiaq_mgf_cleaning_functions as cmf
-
+from . import peptide_quantification
 
 def main():
     fragMassTol, corrStDev, hist, protTarg = 20, 0, 0, 1
@@ -72,6 +73,21 @@ def main():
             cif.write_targeted_reanalysis_outputs(
                 reanalysisHeader, fdrDf, args['heavyMz'])
 
+        # Post-processing
+        # Check whether we should do anything
+        if args['commonpeptide']:
+            peptide_quantification.get_peptide_quantities(file_list=args['files'],
+                                                          library_file=args['library'],
+                                                          csodiaq_output_dir=args['outDirectory'],
+                                                          num_library_fragments=args['peaks'],
+                                                          save_file=os.path.join(args['outDirectory'], 'common_peptides.csv'))
+        if args['commonprotein']:
+            peptide_quantification.get_protein_quantities(file_list=args['files'],
+                                                          library_file=args['library'],
+                                                          csodiaq_output_dir=args['outDirectory'],
+                                                          num_library_fragments=args['peaks'],
+                                                          save_file=os.path.join(args['outDirectory'], 'common_proteins.csv'))
+
     if args['command'] == 'quant':
         scanToCsodiaqDict, scanToLibPeaksDict = cqf.connect_mzxml_to_csodiaq_and_library(
             args['idFile'], args['library'], args['files'], args['libraryPeaks'])
@@ -128,6 +144,8 @@ def set_command_line_settings():
                            help='Heavy Mz - Files for targetted re-analysis include heavy fragment isotopes for SILAC quantification.')
     id_parser.add_argument('--peaks', type=int, default=0,
                            help='Number of peaks from the query spectrum to use for quantification of ions.')
+    id_parser.add_argument('--commonpeptide', default=False, action='store_true')
+    id_parser.add_argument('--commonprotein', default=False, action='store_true')
 
     quant_parser.add_argument('-i', '--idFile', type=str, required=True,
                               help='Protein/Identification File - Output from the identification portion of QsoDIAq. The file ending will have "all_CVs.csv"')

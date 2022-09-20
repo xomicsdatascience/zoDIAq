@@ -199,6 +199,17 @@ class csodiaqWindow(QWidget):
             self.num_peaks_for_quantification.text(), self.num_peaks_text)
         if(tempDict['num_peaks'] == 0):
             tempDict['num_peaks'] = np.inf
+
+            # Check for common peptide/protein
+        if self.do_common_peptide_quantification.isChecked():
+            tempDict['do_common_peptide_quantification'] = True
+        else:
+            tempDict['do_common_peptide_quantification'] = False
+        if self.do_common_protein_quantification.isChecked():
+            tempDict['do_common_protein_quantification'] = True
+        else:
+            tempDict['do_common_protein_quantification'] = False
+
         if self.corrCheckBox.isChecked():
             tempDict['corr'] = self.return_float_between_P5_2(
                 self.corr.text(), self.corrText)
@@ -326,6 +337,10 @@ class csodiaqWindow(QWidget):
             args += ['-hist']
         if self.dict['num_peaks']:
             args += ['--peaks', self.dict['num_peaks']]
+        if self.dict['do_common_peptide_quantification']:
+            args += ['--commonpeptide']
+        if self.dict['do_common_protein_quantification']:
+            args += ['--commonprotein']
 
     def set_args_child(self, args):
         pass
@@ -369,12 +384,25 @@ class IdWindow(csodiaqWindow):
         self.num_peaks_for_quantification.setPlaceholderText('0')
         self.num_peaks_text = QLabel('# peaks for quantification:')
 
+        self.do_common_peptide_quantification = QCheckBox()
+        self.do_common_peptide_quantification_text = QLabel("Get shared peptides across input files")
+        self.do_common_protein_quantification = QCheckBox()
+        self.do_common_protein_quantification_text = QLabel("Get shared protein across input files")
+
         settingLayout.addRow(self.protTargText, self.protTarg)
         settingLayout.addRow('Protein Inference:', self.protCheckBox)
         settingLayout.addRow(self.queryText, self.query)
         settingLayout.addRow(
             'Permit Heavy Targets in Re-Analysis File:', self.heavyCheckBox)
+
+        # Number of fragments/peaks
         settingLayout.addRow(self.num_peaks_text, self.num_peaks_for_quantification)
+
+        # Checkboxes for post-analysis quantification
+        settingLayout.addRow(self.do_common_peptide_quantification_text, self.do_common_peptide_quantification)
+        settingLayout.addRow(self.do_common_protein_quantification_text, self.do_common_protein_quantification)
+        self.do_common_protein_quantification.setCheckState(2)
+        self.do_common_peptide_quantification.setCheckState(2)
 
         self.protCheckBox.stateChanged.connect(lambda: self.check_grey(
             self.protCheckBox, self.protTarg, filledText='1'))
