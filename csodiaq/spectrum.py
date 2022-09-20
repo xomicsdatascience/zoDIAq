@@ -51,7 +51,12 @@ class Spectrum():
         # Sort fragments
         arg_idx = np.argsort(self.intensity)
         # Reverse list; take only top num_fragments
-        arg_idx = arg_idx[-1:-(num_fragments + 1):-1]
+        # Check against np.inf
+        if num_fragments == np.inf:
+            # Take all fragments
+            arg_idx = arg_idx[::-1]
+        else:
+            arg_idx = arg_idx[-1:-(num_fragments + 1):-1]
         self.extracted_mz = self.mz[arg_idx]
         self.extracted_intensity = self.intensity[arg_idx]
         return
