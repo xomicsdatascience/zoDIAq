@@ -50,7 +50,7 @@ def get_peptide_quantities(file_list: list,
     # Get peptides predicted by CsoDIAq
     common_dataframe = extract_common_entries(csodiaq_output_dir,
                                               input_file_list=file_list,
-                                              common_col=['peptide'],
+                                              common_col=['peptide', 'MzLIB'],
                                               load_columns=[csodiaq_query_scan_name,
                                                             csodiaq_mz_lib_name, 'peptide', 'ionCount'],
                                               normalize=False)
@@ -271,7 +271,6 @@ def get_library_spectrum_for_peptide(library_dataframe: pd.DataFrame,
     # There is some bug where (UniMod:x) tags result in a small numerical error in the CsoDIAq library Mz value.
     # We'll check the library again, but with small bounds on the precursor_mz value
     if peptide_df.shape[0] == 0:  # If there are no matches, get
-        print(peptide)
         df_condition = library_dataframe[library_precursormz_column_name] >= precursor_mz - 1e-5
         peptide_df = library_dataframe[df_condition]
 
