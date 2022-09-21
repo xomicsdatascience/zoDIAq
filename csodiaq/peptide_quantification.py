@@ -356,14 +356,16 @@ def _is_proteinfdr_match(input_file: str, protein_fdr_file: str):
     if '_' not in protein_fdr_file:
         return False
     fdr_basename = os.path.basename(protein_fdr_file)
-    fdr_split = fdr_basename.split('_')[1]
+    fdr_split = fdr_basename.split('_')[1:]
+    fdr_split = '_'.join(fdr_split)  # Allows filename to have multiple underscores
+
     input_basename = os.path.basename(input_file)
     last_extension_sep_idx = input_basename.rfind(os.path.extsep)
     if last_extension_sep_idx == -1:
         last_extension_sep_idx = len(input_basename)  # file may not have extension; rfind returns -1; fix it
     input_ref_name = input_basename[:last_extension_sep_idx]  # remove .mzxml (or whatever format)
     # Check that input filename is in potential match
-    return (input_ref_name == fdr_split) and (fdr_basename.endswith('_proteinFDR.csv'))
+    return (fdr_split.startswith(input_ref_name)) and (fdr_basename.endswith('_proteinFDR.csv'))
 
 
 def gather_proteinfdr_files(output_dir: str) -> list:
@@ -410,34 +412,19 @@ def load_multi_dataframe(csv_list: list,
     """
 
     merged_df = None
-    print(f"index_col: {index_col}")
     for file_idx, file in enumerate(csv_list):
-        # load_columns == None results in default behaviour (load all)
-        # loaded_df = pd.read_csv(file, usecols=load_columns, index_col=index_col[0])  # PATCH
-        print(file)
         loaded_df = pd.read_csv(file, usecols=load_columns, index_col=index_col)
-        # loaded_df.reset_index(inplace=True)
-        # loaded_df.set_index(list(index_col), inplace=True)
         # Rename columns so they'll be unique after merge (since we're looping, merge alterations will get messy
         rename_cols = {}
         for col in loaded_df.columns:
             rename_cols[col] = f"{col}_{file_idx}"
         loaded_df.rename(columns=rename_cols, inplace=True)
 
-        # rename peptides with (Unimod: x)
-
-
         # Merge current file with previous one
         if merged_df is None:
             merged_df = loaded_df
         else:
-            # merged_df = merged_df.merge(loaded_df, on=index_col, how=merge_how).drop_duplicates()
             merged_df = merged_df.merge(loaded_df, left_index=True, right_index=True, how=merge_how).drop_duplicates()
-        # if 'peptide' in load_columns or 'peptide' in index_col:
-        #     pattern='\(UniMod:[0-9]*\)'
-        #     merged_df.reset_index(inplace=True)
-        #     merged_df['peptide'] = merged_df['peptide'].apply(lambda x: re.sub(pattern, '', x))
-        #     merged_df.set_index(index_col, inplace=True)
     return merged_df
 
 def normalize_columns(df: pd.DataFrame,
