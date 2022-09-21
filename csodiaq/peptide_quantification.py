@@ -356,14 +356,16 @@ def _is_proteinfdr_match(input_file: str, protein_fdr_file: str):
     if '_' not in protein_fdr_file:
         return False
     fdr_basename = os.path.basename(protein_fdr_file)
-    fdr_split = fdr_basename.split('_')[1]
+    fdr_split = fdr_basename.split('_')[1:]
+    fdr_split = '_'.join(fdr_split)  # Allows filename to have multiple underscores
+
     input_basename = os.path.basename(input_file)
     last_extension_sep_idx = input_basename.rfind(os.path.extsep)
     if last_extension_sep_idx == -1:
         last_extension_sep_idx = len(input_basename)  # file may not have extension; rfind returns -1; fix it
     input_ref_name = input_basename[:last_extension_sep_idx]  # remove .mzxml (or whatever format)
     # Check that input filename is in potential match
-    return (input_ref_name == fdr_split) and (fdr_basename.endswith('_proteinFDR.csv'))
+    return (fdr_split.startswith(input_ref_name)) and (fdr_basename.endswith('_proteinFDR.csv'))
 
 
 def gather_proteinfdr_files(output_dir: str) -> list:
