@@ -212,22 +212,28 @@ class IdentificationSpectraMatcher:
         self.scores = np.append(self.scores, spectraMatch.scores)
         self.decoys = np.append(self.decoys, spectraMatch.decoys)
 
-    def write_output(self, outFile, expSpectraFile, scoreCutoff, queValDict, idToKeyDict, lib,
-                     num_peaks: int = 3, only_use_peak_above_precursor_mz: bool = True):
+    def write_output(self, outFile: str, expSpectraFile: str, scoreCutoff: float, queValDict: dict, idToKeyDict: dict,
+                     lib: dict, num_peaks: int = 3, only_use_peak_above_precursor_mz: bool = False):
         """
         Compute quantification of matched library and query spectra, then write out to .csv file.
         Parameters
         ----------
-        outFile
-        expSpectraFile
-        scoreCutoff
-        queValDict
-        idToKeyDict
-        lib
+        outFile : str
+            Filepath to the file where the data should be saved.
+        expSpectraFile : str
+            Filepath of the file that CsoDIAq is processing.
+        scoreCutoff : float
+            Minimum MaCC score for peptide to be considered.
+        queValDict : dict
+            Dictionary containing the query/scan data.
+        idToKeyDict : dict
+            Mapping between library tag and library dictionary key.
+        lib : dict
+            Dictionary containing library entries.
         num_peaks : int
-            Max peaks to use for quantification
+            Max peaks to use for quantification.
         only_use_peak_above_precursor_mz : bool
-            If True, only consider peaks that are above the precursor m/z. Otherwise, use all peaks.
+            Affects only the single-file quantification. If True, only consider fragments whose m/z are above the precursor m/z. Otherwise, use all fragments.
 
         Returns
         -------
@@ -262,14 +268,14 @@ class IdentificationSpectraMatcher:
             'totalWindowWidth',
             # score unique to CsoDIAq, the fifth root of the number of matches ('shared') multiplied by the cosine score ('cosine')
             'MaCC_Score',
-            'num_exclude', # number of fragments excluded due to < precursorMz
+            'num_exclude',  # number of fragments excluded due to < precursorMz
         ]
+
         with open(outFile, 'w', newline='') as csvFile:
             writer = csv.writer(csvFile)
             writer.writerow(columns)
             if len(self.libraryTags) == 0:
                 return None
-
             # Looping format is similar to functions such as reduce_final_df(). I'd consolidate them, but it was getting tricky to use numba.
             curLibTag = self.libraryTags[0]
             curQueTag = self.queryTags[0]
@@ -300,10 +306,6 @@ class IdentificationSpectraMatcher:
                     if curScore >= scoreCutoff:
                         libKey = idToKeyDict[curLibTag]
                         scan = str(curQueTag)
-                        if total_peak_count <= num_peaks:
-                            peak_count = total_peak_count
-                        else:
-                            peak_count = num_peaks
                         temp = [
                             expSpectraFile,  # fileName
                             scan,  # scan
@@ -325,13 +327,6 @@ class IdentificationSpectraMatcher:
                             excluded_count
                         ]
                         writer.writerow(temp)
-                        peptide_writer(outFile,
-                                       libKey[1],
-                                       lib[libKey]['ProteinName'],
-                                       peak_mz_list,
-                                       peak_list)
-
-
                     curLibTag = self.libraryTags[i]
                     curQueTag = self.queryTags[i]
                     libKey = idToKeyDict[curLibTag]
@@ -362,7 +357,6 @@ class IdentificationSpectraMatcher:
                     query_mz = lib[libKey]['Peaks'][total_peak_count][0]  # move to before count is incremented?
                     peak_mz_list.append(query_mz)
                     total_peak_count += 1
-                    # count += 1
                     peak_list.append(self.queryIntensities[i])
                     if count <= num_peaks:
                         # Check whether query m/z below precursor
@@ -376,10 +370,6 @@ class IdentificationSpectraMatcher:
             if curScore >= scoreCutoff:
                 libKey = idToKeyDict[self.libraryTags[-1]]
                 scan = str(self.queryTags[-1])
-                if count <= num_peaks:
-                    peak_count = count
-                else:
-                    peak_count = num_peaks
                 temp = [
                     expSpectraFile,  # fileName
                     scan,  # scan
@@ -388,14 +378,15 @@ class IdentificationSpectraMatcher:
                     lib[libKey]['ProteinName'],  # protein
                     libKey[0],  # MzLIB
                     lib[libKey]['PrecursorCharge'],  # zLIB
-                    curScore/(total_peak_count**(1/5)),  # cosine
+                    curScore / (total_peak_count ** (1 / 5)),  # cosine ; use full peak count for scoring
                     lib[libKey]['transition_group_id'],  # name
                     queValDict[scan]['peaksCount'],  # Peaks(Query)
                     len(lib[libKey]['Peaks']),  # Peaks(Library)
-                    peak_count,  # shared
+                    count,  # shared
                     curIonCount,  # ionCount
                     queValDict[scan]['CV'],  # compensationVoltage
-                    queValDict[scan]['windowWideness'],  # totalWindowWidth
+                    # totalWindowWidth
+                    queValDict[scan]['windowWideness'],
                     curScore,
                     excluded_count
                 ]
