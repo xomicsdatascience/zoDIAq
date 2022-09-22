@@ -213,7 +213,7 @@ class IdentificationSpectraMatcher:
         self.decoys = np.append(self.decoys, spectraMatch.decoys)
 
     def write_output(self, outFile: str, expSpectraFile: str, scoreCutoff: float, queValDict: dict, idToKeyDict: dict,
-                     lib: dict, num_peaks: int = 3, only_use_peak_above_precursor_mz: bool = True):
+                     lib: dict, num_peaks: int = 3, only_use_peak_above_precursor_mz: bool = False):
         """
         Compute quantification of matched library and query spectra, then write out to .csv file.
         Parameters

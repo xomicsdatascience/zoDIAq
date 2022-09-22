@@ -351,6 +351,7 @@ def gather_matching_proteinfdr_files(csodiaq_output_dir: str,
                 break
     return matched_file_list
 
+
 def _is_proteinfdr_match(input_file: str, protein_fdr_file: str):
     """Checks whether the two files match"""
     if '_' not in protein_fdr_file:
@@ -364,8 +365,7 @@ def _is_proteinfdr_match(input_file: str, protein_fdr_file: str):
     if last_extension_sep_idx == -1:
         last_extension_sep_idx = len(input_basename)  # file may not have extension; rfind returns -1; fix it
     input_ref_name = input_basename[:last_extension_sep_idx]  # remove .mzxml (or whatever format)
-    # Check that input filename is in potential match
-    return (fdr_split.startswith(input_ref_name)) and (fdr_basename.endswith('_proteinFDR.csv'))
+    return fdr_split == f"{input_ref_name}_corrected_proteinFDR.csv" or fdr_split == f"{input_ref_name}_proteinFDR.csv"
 
 
 def gather_proteinfdr_files(output_dir: str) -> list:
