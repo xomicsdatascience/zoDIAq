@@ -4,8 +4,7 @@ import pandas as pd
 from numba import njit
 import csv
 from . import spectra_matcher_functions as smf
-
-import tempfile
+import warnings
 
 @njit
 def cosine_similarity(AB, A, B):
@@ -145,6 +144,8 @@ class IdentificationSpectraMatcher:
             map(list, zip(*pooledLibSpectra)))
         queMzs, queIntensities, queTags = list(
             map(list, zip(*pooledQueSpectra)))
+        # find_matching_peaks raises a warning because of Numba inferring a deprecated type; suppress it
+        warnings.simplefilter('ignore')
         libraryTags, libraryIntensities, queryTags, queryIntensities, ppmMatches = smf.find_matching_peaks(
             libMzs, libIntensities, libTags, queMzs, queIntensities, queTags, tolerance)
         if len(libraryTags) == 0:
