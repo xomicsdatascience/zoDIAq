@@ -53,6 +53,7 @@ def get_peptide_quantities(file_list: list,
                                               common_col=['peptide', 'MzLIB'],
                                               load_columns=[csodiaq_query_scan_name,
                                                             csodiaq_mz_lib_name, 'peptide', 'ionCount'],
+                                              fdr_matcher=_is_peptidefdr_match,
                                               normalize=False)
     if common_dataframe.shape[0] == 0:
         return
@@ -138,6 +139,7 @@ def get_protein_quantities(file_list: list,
                                               common_col=['peptide', 'MzLIB', 'protein'],
                                               load_columns=[csodiaq_query_scan_name,
                                                             csodiaq_mz_lib_name, 'protein', 'ionCount', 'peptide'],
+                                              fdr_matcher=_is_proteinfdr_match,
                                               normalize=False)
     common_dataframe.reset_index(inplace=True)
     common_dataframe.set_index(['peptide','MzLIB'], inplace=True)
@@ -290,6 +292,7 @@ def extract_common_entries(csodiaq_output_dir: str,
                            input_file_list: list,
                            common_col: list = ('peptide', 'MzLIB'),
                            load_columns: list = None,
+                           fdr_matcher: callable = None,
                            normalize: bool = True) -> pd.DataFrame:
     """
     Looks at the specified column across multiple files and reduces to the values that are common
@@ -311,8 +314,11 @@ def extract_common_entries(csodiaq_output_dir: str,
     None
     """
     # Get the output files
-    fdr_files = gather_matching_proteinfdr_files(csodiaq_output_dir=csodiaq_output_dir,
-                                                 file_list=input_file_list)
+    if fdr_matcher is None:
+        fdr_matcher = _is_proteinfdr_match
+    fdr_files = gather_matching_fdr_files(csodiaq_output_dir=csodiaq_output_dir,
+                                          file_list=input_file_list,
+                                          matcher_function=fdr_matcher)
     if len(fdr_files) == 0:
         return pd.DataFrame()
     # Load and combine DataFrames
@@ -324,36 +330,38 @@ def extract_common_entries(csodiaq_output_dir: str,
     return common_dataframe
 
 
-def gather_matching_proteinfdr_files(csodiaq_output_dir: str,
-                                     file_list: list) -> list:
+def gather_matching_fdr_files(csodiaq_output_dir: str,
+                              file_list: list,
+                              matcher_function: callable = None) -> list:
     """
-    Gathers the _proteinFDR files matching the input list. The order in which the files are returned matches the order
-    in file_list.
+    Gather files in the specified directory that match the input function (default proteinFDR).
     Parameters
     ----------
     csodiaq_output_dir : str
-        Path to CsoDIAq's output directory.
+        Path to CsoDIAq's output directory
     file_list : list
-        List of files used as input to CsoDIAq.
+        List of files used as input to CsoDIAq
+    matcher_function : callable
+        Function that returns True when a file matches the input file.
 
     Returns
     -------
     list
-        List of matched _proteinFDR.csv files
+        List of matched fdr files.
     """
+    if matcher_function is None:
+        matcher_function = _is_proteinfdr_match
     matched_file_list = [None for _ in file_list]
-    # start_idx = 0
     for output in os.listdir(csodiaq_output_dir):
         for file_idx, file in enumerate(file_list):
-            if _is_proteinfdr_match(file, output):
+            if matcher_function(file, output):
                 matched_file_list[file_idx] = os.path.join(csodiaq_output_dir, output)
-                # start_idx = file_idx
                 break
     return matched_file_list
 
 
 def _is_proteinfdr_match(input_file: str, protein_fdr_file: str):
-    """Checks whether the two files match"""
+    """Checks whether the two files match and that the input is a proteinFDR file"""
     if '_' not in protein_fdr_file:
         return False
     fdr_basename = os.path.basename(protein_fdr_file)
@@ -366,6 +374,22 @@ def _is_proteinfdr_match(input_file: str, protein_fdr_file: str):
         last_extension_sep_idx = len(input_basename)  # file may not have extension; rfind returns -1; fix it
     input_ref_name = input_basename[:last_extension_sep_idx]  # remove .mzxml (or whatever format)
     return fdr_split == f"{input_ref_name}_corrected_proteinFDR.csv" or fdr_split == f"{input_ref_name}_proteinFDR.csv"
+
+
+def _is_peptidefdr_match(input_file: str, peptide_fdr_file: str):
+    """Checks whether the two files match and that the input is a peptideFDR file"""
+    if '_' not in peptide_fdr_file:
+        return False
+    fdr_basename = os.path.basename(peptide_fdr_file)
+    fdr_split = fdr_basename.split('_')[1:]
+    fdr_split = '_'.join(fdr_split)  # Allows filename to have multiple underscores
+
+    input_basename = os.path.basename(input_file)
+    last_extension_sep_idx = input_basename.rfind(os.path.extsep)
+    if last_extension_sep_idx == -1:
+        last_extension_sep_idx = len(input_basename)  # file may not have extension; rfind returns -1; fix it
+    input_ref_name = input_basename[:last_extension_sep_idx]  # remove .mzxml (or whatever format)
+    return fdr_split == f"{input_ref_name}_corrected_peptideFDR.csv" or fdr_split == f"{input_ref_name}_peptideFDR.csv"
 
 
 def gather_proteinfdr_files(output_dir: str) -> list:
