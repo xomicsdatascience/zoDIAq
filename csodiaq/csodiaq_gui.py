@@ -385,11 +385,12 @@ class IdWindow(csodiaqWindow):
         self.num_peaks_text = QLabel('# peaks for quantification:')
 
         self.do_common_peptide_quantification = QCheckBox()
-        self.do_common_peptide_quantification_text = QLabel("Get shared peptides across input files")
+        self.do_common_peptide_quantification_text = QLabel("Quantify shared peptides across input files")
         self.do_common_protein_quantification = QCheckBox()
-        self.do_common_protein_quantification_text = QLabel("Get shared protein across input files")
+        self.do_common_protein_quantification_text = QLabel("Quantify shared protein across input files")
 
         settingLayout.addRow(self.protTargText, self.protTarg)
+        self.protCheckBox.setCheckState(2)
         settingLayout.addRow('Protein Inference:', self.protCheckBox)
         settingLayout.addRow(self.queryText, self.query)
         settingLayout.addRow(
