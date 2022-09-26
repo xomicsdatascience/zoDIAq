@@ -76,7 +76,7 @@ def main():
         # Post-processing
         # Check whether we should do anything
         if args['commonpeptide']:
-            print('Extracting peptides common across output files...')
+            print('Extracting peptides common across output files...', flush=True)
             peptide_quantification.get_peptide_quantities(file_list=args['files'],
                                                           library_file=args['library'],
                                                           csodiaq_output_dir=args['outDirectory'],
@@ -84,7 +84,7 @@ def main():
                                                           save_file=os.path.join(args['outDirectory'], 'common_peptides.csv'))
             print('Done.')
         if args['commonprotein']:
-            print('Extracting proteins common across output files...')
+            print('Extracting proteins common across output files...', flush=True)
             peptide_quantification.get_protein_quantities(file_list=args['files'],
                                                           library_file=args['library'],
                                                           csodiaq_output_dir=args['outDirectory'],
