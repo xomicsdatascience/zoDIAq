@@ -402,20 +402,41 @@ def add_fdr_to_csodiaq_output(df, filterType='spectral', bestMatchNum=0):
     return finalDf
 
 
-def add_leading_protein_column(df, verifiedProteinDict):
-    finalDf = pd.DataFrame(columns=df.columns)
+def add_leading_protein_column(df: pd.DataFrame, verifiedProteinDict: dict) -> pd.DataFrame:
+    """
+    Extracts the protein group from the input dataframe, checks if the group is in verifiedProteinDict, and if it is
+    the row is padded with the result from the dict, combined with others, and returned.
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame to evaluate.
+    verifiedProteinDict : dict
+        Dict containing verified protein groups that should be retained.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame containing protein groups that have been verified.
+    """
     leadingProteins = []
+    verified_protein_rows = []
+    # Check every row
     for i in range(len(df)):
         proteinGroup = df['protein'].loc[i]
         proteins = proteinGroup.split('/')[1:]
         for protein in proteins:
             if protein in verifiedProteinDict:
-                finalDf = finalDf.append(df.loc[i])
+                # Collect rows; merge into df later
+                verified_protein_rows.append(df.loc[i])
+                # NOTE: verifiedProteinDict gives a different ordering of proteins across runs, but the particular
+                # proteins are consistent.
                 leadingProteins.append(verifiedProteinDict[protein])
-    finalDf['leadingProtein'] = leadingProteins
-    finalDf = finalDf.reset_index(drop=True)
-    finalDf = finalDf.drop_duplicates(keep='first').reset_index(drop=True)
-    return finalDf
+    # Create dataframe and combine
+    verified_protein_df = pd.DataFrame(verified_protein_rows)
+    verified_protein_df['leadingProtein'] = leadingProteins
+    verified_protein_df = verified_protein_df.reset_index(drop=True)
+    verified_protein_df = verified_protein_df.drop_duplicates(keep='first').reset_index(drop=True)
+    return verified_protein_df
 
 
 def fdr_calculation(df):  # ***NOTE***make return type

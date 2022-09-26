@@ -134,9 +134,9 @@ def find_offset_tolerance(data, histFile, stdev, mean=True):
 
 
 def print_milestone(text):
-    print(text)
-    print(str(timedelta(seconds=timer())), flush=True)
-
+    print(text, flush=True)
+    # print(str(timedelta(seconds=timer())), flush=True)
+    return
 
 def format_spectra_for_pooling(spectrum, scanNumber, sqrt=True):
     scanNumber = int(scanNumber)
