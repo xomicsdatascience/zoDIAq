@@ -390,6 +390,8 @@ class IdWindow(csodiaqWindow):
         self.do_common_protein_quantification_text = QLabel("Quantify shared protein across input files")
 
         settingLayout.addRow(self.protTargText, self.protTarg)
+        self.protCheckBox.stateChanged.connect(lambda: self.check_grey(
+            self.protCheckBox, self.protTarg, filledText='1'))
         self.protCheckBox.setCheckState(2)
         settingLayout.addRow('Protein Inference:', self.protCheckBox)
         settingLayout.addRow(self.queryText, self.query)
@@ -405,8 +407,7 @@ class IdWindow(csodiaqWindow):
         self.do_common_protein_quantification.setCheckState(2)
         self.do_common_peptide_quantification.setCheckState(2)
 
-        self.protCheckBox.stateChanged.connect(lambda: self.check_grey(
-            self.protCheckBox, self.protTarg, filledText='1'))
+
         self.protTarg.setPlaceholderText('untargeted peptide analysis')
         self.protTarg.setEnabled(False)
         self.query.setPlaceholderText('pool all matching query spectra')
