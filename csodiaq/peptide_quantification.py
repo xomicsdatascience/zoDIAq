@@ -237,7 +237,14 @@ def format_filenames(file_list: list) -> list:
     """
     common_prefix = os.path.commonprefix(file_list)
     len_pre = len(common_prefix)
-    return [f[len_pre:] for f in file_list]
+    # Find the previous file separator; use everything after that
+    column_names = []
+    for f in file_list:
+        prev_sep = f.rfind(os.path.sep, 0, len_pre-1)  # Get evertyhing from the highest path that differentiates files
+        if prev_sep == -1:
+            prev_sep = 0  # in case there is no filesep in filename
+        column_names.append(f[prev_sep+1:])
+    return column_names
 
 
 def get_library_spectrum_for_peptide(library_dataframe: pd.DataFrame,
