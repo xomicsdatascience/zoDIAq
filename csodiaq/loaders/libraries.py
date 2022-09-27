@@ -3,6 +3,7 @@ import os
 from pyteomics import mgf
 import re
 from csodiaq.loaders.library_format_columns import naming_list, data_extraction
+import numpy as np
 
 """
 This file consists of the loaders for the different types of library files.
@@ -37,6 +38,7 @@ def load_library(library_file: os.PathLike,
             data = pd.read_csv(library_file)
         elif(library_file_str.endswith('.tsv')):
             data = pd.read_csv(library_file, sep='\t')
+        data['LibraryIntensity'] = data['LibraryIntensity'].apply(np.sqrt, axis=1)
         _remap_table_columns(data)  # Renames columns to CsoDIAq standard
 
     # data table now has expected columns
@@ -113,75 +115,6 @@ def mgf_library_upload(file_name: str,
             'Decoy': decoy,
         }
         lib[key] = tempDict
-    return lib
-
-
-def traml_library_upload(file_name, max_peaks=10):
-    if file_name.endswith('.tsv'):
-        lib_df = pd.read_csv(file_name, sep='\t')
-    else:
-        lib_df = pd.read_csv(file_name)
-    # smf.print_milestone('Enter library dictionary upload: ')
-
-    # Pan human and spectraST libraries have different column names. This normalizes the columns.
-    headings = _traml_column_headings(lib_df.columns)
-    lib_df = lib_df.loc[:, lib_df.columns.intersection([headings['PrecursorMz'], headings['FullUniModPeptideName'], headings['PrecursorCharge'],
-                                                        headings['ProductMz'], headings['LibraryIntensity'], headings['transition_group_id'], headings['ProteinName']])]
-
-    lib_df = lib_df[[headings['PrecursorMz'], headings['FullUniModPeptideName'], headings['PrecursorCharge'],
-                     headings['ProductMz'], headings['LibraryIntensity'], headings['transition_group_id'], headings['ProteinName']]]
-    lib_df.columns = ['PrecursorMz', 'FullUniModPeptideName', 'PrecursorCharge',
-                      'ProductMz', 'LibraryIntensity', 'transition_group_id', 'ProteinName']
-
-    lib_df['LibraryIntensity'] = [
-        x**0.5 for x in list(lib_df['LibraryIntensity'])]
-    lib_df['ID'] = list(zip(lib_df['PrecursorMz'].tolist(),
-                            lib_df['FullUniModPeptideName'].tolist()))
-
-    mz_dict = lib_df.groupby("ID")['ProductMz'].apply(list).to_dict()
-    intensity_dict = lib_df.groupby(
-        "ID")['LibraryIntensity'].apply(list).to_dict()
-    lib_df.drop_duplicates(subset="ID", inplace=True)
-    lib_df = lib_df.loc[:, lib_df.columns.intersection(
-        ['ID', 'PrecursorCharge', 'transition_group_id', 'ProteinName'])]
-    lib_df.set_index("ID", drop=True, inplace=True)
-    lib = lib_df.to_dict(orient="index")
-
-    # pan human library formats are different, including how the peptides are matched to proteins (esp. decoys). This section of code adjusts for this discrepancy.
-    if headings['type'] == 'PanHuman':
-        for key, value in lib.items():
-            proteins = lib[key]['ProteinName'].split('/')
-            num = proteins.pop(0)
-            newProteins = [x for x in proteins if 'DECOY' not in x]
-            proteinStr = str(len(newProteins))
-            for x in newProteins:
-                if 'DECOY' in num:
-                    proteinStr += ('/DECOY_'+x)
-                else:
-                    proteinStr += ('/'+x)
-            lib[key]['ProteinName'] = proteinStr
-
-    id = 0
-    for key in lib:
-        id += 1
-        mz, intensity = (list(t) for t in zip(
-            *sorted(zip(mz_dict[key], intensity_dict[key]))))
-        keyList = [id for _ in range(len(mz))]
-
-        # Get most intense peaks
-        peaks = list(tuple(zip(mz, intensity, keyList)))
-        peaks.sort(key=lambda x: x[1], reverse=True)
-        peaks = peaks[:max_peaks]
-        peaks.sort(key=lambda x: x[0])  # order by m/z
-
-        lib[key]['Peaks'] = peaks
-        lib[key]['ID'] = id
-
-        # Chcek for decoy
-        if 'DECOY' in lib[key]['ProteinName']:
-            lib[key]['Decoy'] = 1
-        else:
-            lib[key]['Decoy'] = 0
     return lib
 
 
