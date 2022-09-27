@@ -14,7 +14,6 @@ from . import csodiaq_mgf_cleaning_functions as cmf
 from . import peptide_quantification
 
 def main():
-    fragMassTol, corrStDev, hist, protTarg = 20, 0, 0, 1
     arg_parser = set_command_line_settings()
     args = vars(arg_parser.parse_args())
     check_for_invalid_input(arg_parser, args)

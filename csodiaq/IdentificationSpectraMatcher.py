@@ -461,23 +461,3 @@ def peptide_reader(filename: str) -> dict:
         pep_dict['intensities'] = line_split[3::2]
         pep_list.append(pep_dict)
     return pep_list
-
-
-def query_writer(output_file_prefix: str,
-                 query: list) -> None:
-    """
-    Writes out queries
-    Parameters
-    ----------
-    output_file_prefix : str
-        Prefix to use for the output filename.
-    query : list
-        List of the query to print out.
-
-    Returns
-    -------
-    None
-    """
-    # fname =
-    # check m/
-    return
