@@ -53,7 +53,7 @@ def get_peptide_quantities(file_list: list,
                                               common_col=['peptide', 'MzLIB'],
                                               load_columns=[csodiaq_query_scan_name,
                                                             csodiaq_mz_lib_name, 'peptide', 'ionCount'],
-                                              fdr_matcher=_is_peptidefdr_match,
+                                              fdr_matcher=_is_proteinfdr_match,
                                               normalize=False)
     if common_dataframe.shape[0] == 0:
         return
@@ -67,11 +67,9 @@ def get_peptide_quantities(file_list: list,
 
     # initialize new dataframe
     file_names_for_dataframe = format_filenames(file_list)
-    # peptide_quant_df = pd.DataFrame(columns=[output_peptide_format.format(x=i) for i in range(len(exp_data))])
-    peptide_quant_df = pd.DataFrame(columns=file_names_for_dataframe)
+    peptide_quant_df = pd.DataFrame(columns=file_names_for_dataframe + ['PrecursorMz'])
 
     # Go through each peptide common across files; quantify
-    len_frame = common_dataframe.shape[0]
     for peptide_idx, peptide_dat in common_dataframe.iterrows():
         peptide = peptide_idx[0]
         precursor_mz = peptide_idx[1]
@@ -94,13 +92,12 @@ def get_peptide_quantities(file_list: list,
             scan_idx, library_idx = scan_spectrum.get_matching_mz_indices(spectrum_to_match=peptide_library_spectrum,
                                                                           match_tolerance_ppm=30)
             peptide_intensity_data.append(sum(scan_spectrum.intensity[scan_idx]))
-        peptide_quant_df.loc[peptide] = peptide_intensity_data
+        peptide_quant_df.loc[peptide] = peptide_intensity_data + [precursor_mz]
+        peptide_quant_df.loc[peptide]['PrecursorMz'] = precursor_mz
 
     # Get mean + std across files
     peptide_quant_df['mean'] = peptide_quant_df.apply(np.mean, axis=1)
     peptide_quant_df['std'] = peptide_quant_df.apply(np.std, axis=1)
-    # peptide_quant_df = peptide_quant_df[peptide_quant_df['mean'] > 0]
-    # peptide_quant_df.drop(peptide_quant_df)
     if save_file is not None:
         peptide_quant_df.to_csv(save_file, index=True, header=True)
     else:
