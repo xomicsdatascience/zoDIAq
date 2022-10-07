@@ -30,7 +30,9 @@ def spectrum_lineplot(spectrum: Spectrum,
     if not positive:
         intensity = [-i for i in intensity]
     plt.vlines(spectrum.mz, [0]*len(intensity), intensity, colors=color, label=label)
-    plt.hlines(0, min(spectrum.mz), max(spectrum.mz), colors='black')
+    x_min, x_max = plt.xlim()
+    plt.hlines(0, x_min, x_max, colors='black')
+    plt.xlim(x_min, x_max)
     return
 
 

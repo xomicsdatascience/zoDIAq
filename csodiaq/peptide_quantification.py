@@ -21,13 +21,92 @@ experimental_query_mz_name = 'm/z array'  # mz name for the input to CsoDIAq
 experimental_query_intensity_name = 'intensity array'  # intensity name for the input to CsoDIAq
 output_peptide_format = 'peptide_quantity_{x}'  # format for output column
 
+
+def get_all_peptide_quantities(file_list: list,
+                               library_file: str,
+                               csodiaq_output_dir: str,
+                               num_library_fragments: int = 10,
+                               save_file: str = None):
+    """
+    Quantifies the peptides identified by CsoDIAq and updates the ionCount column in the _peptideFDR files. Optionally
+     extracts the set of proteins that are common across all input files.
+    files.
+    Parameters
+    ----------
+    file_list : list
+        List of .mzxml files containing the raw MS2 data.
+    library_file : str
+        Path to the library file to use.
+    csodiaq_output_dir : str
+        Path to the output directory of CsoDIAq.
+    num_library_fragments : int
+        Number of fragments to use for quantification. Fragments are ordered by their intensity in the library.
+    save_file : str
+        Optional. If defined, saves the common peptides to the specified path.
+
+    Returns
+    -------
+    None
+    """
+    if library_file.endswith('.csv'):
+        sep = ','
+    elif library_file.endswith('.tsv'):
+        sep = '\t'
+    else:
+        raise ValueError('library must be either .csv or .tsv')
+    for file_idx, exp_file in enumerate(file_list):
+        # Get "common"
+        common_intensity = get_peptide_quantities([exp_file],
+                                                  library_file=library_file,
+                                                  csodiaq_output_dir=csodiaq_output_dir,
+                                                  num_library_fragments=num_library_fragments)
+        common_intensity.index.name = 'peptide'
+        common_intensity.drop(['mean','std'], axis=1, inplace=True)
+        common_intensity.reset_index(inplace=True)
+        common_intensity.set_index(['peptide','PrecursorMz'], inplace=True)
+        # Load csodiaq file
+        csod = gather_matching_fdr_files(csodiaq_output_dir,
+                                         [exp_file],
+                                         matcher_function=_is_peptidefdr_match)[0]
+        csod_data = pd.read_csv(csod, index_col=['peptide', 'MzLIB'])
+
+        csod_data.to_csv('second.csv')
+        merged = pd.merge(common_intensity, csod_data, how='inner', left_index=True, right_index=True)
+        merged['ionCount'] = merged[os.path.basename(exp_file)]
+        merged.drop(os.path.basename(exp_file), axis=1, inplace=True)
+        merged.reset_index(inplace=True)
+        merged.set_index('fileName', inplace=True)
+        merged.drop('PrecursorMz', inplace=True, axis=1)
+        # Overwrite csodiaq file
+        merged.to_csv(csod)
+
+    # Load newly-overwritten files
+    common_peptides = extract_common_entries(csodiaq_output_dir=csodiaq_output_dir,
+                                             input_file_list=file_list,
+                                             common_col=('peptide', 'MzLIB'),
+                                             load_columns=(csodiaq_mz_lib_name, 'peptide', 'ionCount'),
+                                             fdr_matcher=_is_peptidefdr_match,
+                                             normalize=False)
+    # Combine them; rename columns to files that were quantified
+    col_names = common_peptides.columns
+    new_names = format_filenames(file_list)
+    renamer = {}
+    for col, new in zip(col_names, new_names):
+        renamer[col] = new
+    common_peptides.rename(columns=renamer, inplace=True)
+    common_peptides.to_csv(save_file)
+    return
+
+
+
+
 def get_peptide_quantities(file_list: list,
                            library_file: str,
                            csodiaq_output_dir: str,
                            num_library_fragments: int = 10,
-                           save_file: str = None):
+                           save_file: str = None) -> pd.DataFrame:
     """
-    Calculates the quantities of peptides that returned by CsoDIAq.
+    Calculates the quantities of peptides that returned by CsoDIAq and common across all files in the input list..
     Parameters
     ----------
     file_list : list
@@ -53,7 +132,7 @@ def get_peptide_quantities(file_list: list,
                                               common_col=['peptide', 'MzLIB'],
                                               load_columns=[csodiaq_query_scan_name,
                                                             csodiaq_mz_lib_name, 'peptide', 'ionCount'],
-                                              fdr_matcher=_is_proteinfdr_match,
+                                              fdr_matcher=_is_peptidefdr_match,
                                               normalize=False)
     if common_dataframe.shape[0] == 0:
         return
