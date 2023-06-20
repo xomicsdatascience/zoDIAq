@@ -1,5 +1,5 @@
 """
-This file specifies how to map the columns of different
+This file specifies how to map the columns of different standards onto the internal one used by CsoDIAq.
 """
 import pandas as pd
 
