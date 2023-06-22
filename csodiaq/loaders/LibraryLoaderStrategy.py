@@ -1,13 +1,14 @@
 from abc import ABC, abstractmethod
+import os
 
 class LibraryLoaderStrategy(ABC):
 
     @abstractmethod
-    def load_raw_library_file(self, libraryFilePath) -> None: pass
+    def load_raw_library_object_from_file(self, libraryFilePath: os.PathLike) -> None: pass
 
     @abstractmethod
-    def format_raw_library_file() -> dict: pass
+    def format_raw_library_object_into_csodiaq_dict() -> dict: pass
 
-    def load_library_file(self, libraryFilePath) -> dict:
-        self.load_raw_library_file(libraryFilePath)
-        return self.format_raw_library_file()
+    def load_csodiaq_library_dict_from_file(self, libraryFilePath) -> dict:
+        self.load_raw_library_object_from_file(libraryFilePath)
+        return self.format_raw_library_object_into_csodiaq_dict()
