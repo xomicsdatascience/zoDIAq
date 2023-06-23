@@ -20,18 +20,30 @@ class LibraryLoaderStrategyTraml(LibraryLoaderStrategy):
         assert_there_are_no_missing_columns(self.oldToNewColumnDict.keys(), self.rawLibDf.columns)
 
     def _format_raw_library_object_into_csodiaq_library_dict(self) -> dict:
+        maxPeakNum = 10
         self.rawLibDf = self.rawLibDf[self.oldToNewColumnDict.keys()]
         remap_table_columns(self.rawLibDf, self.oldToNewColumnDict)
-        tupleToListMzDict, tupleToListIntensityDict, tupleToDictDataDict = create_data_dicts_that_correspond_to_csodiaq_library_dict_keys(
-            self.rawLibDf)
-        sortedCsodiaqKeys = sorted(tupleToDictDataDict.keys())
+        tupleToListMzDict, tupleToListIntensityDict, tupleToDictMetadataDict = create_data_dicts_that_correspond_to_csodiaq_library_dict_keys(
+            self.rawLibDf) # NOTE: make single dictionary, each value is a dictionary with three keys (mz, intensity, metadata)
+        sortedCsodiaqKeys = sorted(tupleToDictMetadataDict.keys())
+        csodiaqLibraryDict = {}
         for csodiaqKeyIdx in range(len(sortedCsodiaqKeys)):
             csodiaqKey = sortedCsodiaqKeys[csodiaqKeyIdx]
             mzList = tupleToListMzDict[csodiaqKey]
             intensityList = tupleToListIntensityDict[csodiaqKey]
             peaks = create_peaks_from_mz_intensity_lists_and_csodiaq_key_id(mzList, intensityList, csodiaqKeyIdx)
-        pass
-
+            reducedPeaks = remove_low_intensity_peaks_below_max_peak_num(peaks, maxPeakNum)
+            metadataDict = tupleToDictMetadataDict[csodiaqKey]
+            isDecoy = int('decoy' in metadataDict['ProteinName'].lower())
+            csodiaqLibraryDict[csodiaqKey] = {
+                'precursorCharge': metadataDict['PrecursorCharge'],
+                'transitionGroupId': metadataDict['transitionGroupId'],
+                'proteinName': metadataDict['ProteinName'],
+                'peaks': sorted(reducedPeaks), # sort needed for later?
+                'csodiaqKeyIdx': csodiaqKeyIdx,
+                'isDecoy': isDecoy,
+            }
+        return csodiaqLibraryDict
 def assert_there_are_no_missing_columns(requiredColumns: list, presentColumns: list):
     missingColumnValues = set(requiredColumns) - set(presentColumns)
     if len(missingColumnValues):
@@ -58,3 +70,7 @@ def create_data_dicts_that_correspond_to_csodiaq_library_dict_keys(df: pd.DataFr
 def create_peaks_from_mz_intensity_lists_and_csodiaq_key_id(mzList, intensityList, id):
     idList = [id for i in range(len(mzList))]
     return list(zip(mzList, intensityList, idList))
+
+def remove_low_intensity_peaks_below_max_peak_num(peaks, maxPeakNum):
+    peaks.sort(key=lambda x: x[1], reverse=True)
+    return peaks[:maxPeakNum]

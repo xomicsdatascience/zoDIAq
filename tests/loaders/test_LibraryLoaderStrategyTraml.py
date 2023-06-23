@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import re
 from tempfile import TemporaryDirectory, NamedTemporaryFile
-from csodiaq.loaders.LibraryLoaderStrategyTraml import LibraryLoaderStrategyTraml, remap_table_columns, create_csodiaq_library_dict_keys_as_new_column, create_data_dicts_that_correspond_to_csodiaq_library_dict_keys, create_peaks_from_mz_intensity_lists_and_csodiaq_key_id
+from csodiaq.loaders.LibraryLoaderStrategyTraml import LibraryLoaderStrategyTraml, remap_table_columns, create_csodiaq_library_dict_keys_as_new_column, create_data_dicts_that_correspond_to_csodiaq_library_dict_keys, create_peaks_from_mz_intensity_lists_and_csodiaq_key_id, remove_low_intensity_peaks_below_max_peak_num
 
 @pytest.fixture
 def loader():
@@ -66,8 +66,15 @@ def test__library_loader_strategy_traml__load_raw_library_object_from_file__fail
 def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_library_dict__spectrast_library(loader, tramlTestLibFilePath):
     loader._load_raw_library_object_from_file(tramlTestLibFilePath)
     outputDict = loader._format_raw_library_object_into_csodiaq_library_dict()
-    expectedOutputDict = {(375.87322429333335, 'FANYIDKVR'): {'transition_group_id': '1_FANYIDKVR_3', 'proteinName': '1/sp|P08670|VIME_HUMAN', 'precursorCharge': 3, 'peaks': [(517.3092722, 10000.0, 1), (630.393336182, 8235.6, 1), (793.4566647199999, 5098.5, 1), (402.2823291699999, 4930.4, 1), (397.23197061, 2082.7, 1), (489.771991231, 1398.4, 1), (454.253434336, 1301.3, 1), (333.15573166, 1072.6, 1), (500.2792722, 863.7, 1), (445.738434336, 746.7, 1)], 'csodiaqKeyID': 1, 'isDecoy': 0}}
-
+    expectedOutputDict = {
+        (375.87322429333335, 'FANYIDKVR'): {
+            'precursorCharge': 3,
+            'transitionGroupId': '1_FANYIDKVR_3',
+            'proteinName': '1/sp|P08670|VIME_HUMAN',
+            'peaks': [(333.15573166, 1072.6, 0), (397.23197061, 2082.7, 0), (402.2823291699999, 4930.4, 0), (445.738434336, 746.7, 0), (454.253434336, 1301.3, 0), (489.771991231, 1398.4, 0), (500.2792722, 863.7, 0), (517.3092722, 10000.0, 0), (630.393336182, 8235.6, 0), (793.4566647199999, 5098.5, 0)],
+            'csodiaqKeyIdx': 0,
+            'isDecoy': 0}}
+    assert outputDict == expectedOutputDict
 
 def test__library_loader_strategy_traml__remap_table_columns():
     numColumns = 10
@@ -98,29 +105,65 @@ def test__library_loader_strategy_traml__create_data_dicts_that_correspond_to_cs
     assert tupleToListIntensityDict == expectedTupleToListIntensityDict
     assert tupleToDictMetadataDict == expectedTupleToDictMetadataDict
 
-def test__library_loader_strategy_traml__create_peaks_from_mz_intensity_lists_and_csodiaq_key_id():
-    numPeaks = 15
-    mzList = [i for i in range(numPeaks-1,-1,-1)]
-    intensityList = [i for i in range(numPeaks)]
-    id = 0
-    expectedPeaks = [
-        (14, 0, 0),
-        (13, 1, 0),
-        (12, 2, 0),
-        (11, 3, 0),
-        (10, 4, 0),
-        (9, 5, 0),
-        (8, 6, 0),
-        (7, 7, 0),
-        (6, 8, 0),
-        (5, 9, 0),
-        (4, 10, 0),
-        (3, 11, 0),
-        (2, 12, 0),
-        (1, 13, 0),
-        (0, 14, 0),
+@pytest.fixture
+def testPeaks():
+    return [
+        (0, 0, 0),
+        (2, 1, 0),
+        (4, 2, 0),
+        (6, 3, 0),
+        (8, 4, 0),
+        (10, 5, 0),
+        (12, 6, 0),
+        (14, 7, 0),
+        (1, 8, 0),
+        (3, 9, 0),
+        (5, 10, 0),
+        (7, 11, 0),
+        (9, 12, 0),
+        (11, 13, 0),
+        (13, 14, 0),
     ]
 
+def test__library_loader_strategy_traml__create_peaks_from_mz_intensity_lists_and_csodiaq_key_id(testPeaks):
+    numPeaks = 15
+    mzList = [i for i in range(0, numPeaks, 2)] + [i for i in range(1, numPeaks-1, 2)]
+    intensityList = [i for i in range(numPeaks)]
+    id = 0
     peaks = create_peaks_from_mz_intensity_lists_and_csodiaq_key_id(mzList, intensityList, id)
-    assert peaks == expectedPeaks
+    assert peaks == testPeaks
+
+def test__library_loader_strategy_traml__remove_low_intensity_peaks_below_max_peak_num(testPeaks):
+    maxPeakNum = 10
+    expectedReducedTestPeaks = [
+        (13, 14, 0),
+        (11, 13, 0),
+        (9, 12, 0),
+        (7, 11, 0),
+        (5, 10, 0),
+        (3, 9, 0),
+        (1, 8, 0),
+        (14, 7, 0),
+        (12, 6, 0),
+        (10, 5, 0),
+    ]
+    reducedTestPeaks = remove_low_intensity_peaks_below_max_peak_num(testPeaks, maxPeakNum)
+    assert reducedTestPeaks == expectedReducedTestPeaks
+
+def test__library_loader_strategy_traml__remove_low_intensity_peaks_below_max_peak_num__all_peaks_returned_when_length_fewer_than_max_peak_num(testPeaks):
+    maxPeakNum = 10
+    expectedReducedShortTestPeaks = [
+        (1, 8, 0),
+        (14, 7, 0),
+        (12, 6, 0),
+        (10, 5, 0),
+        (8, 4, 0),
+        (6, 3, 0),
+        (4, 2, 0),
+        (2, 1, 0),
+        (0, 0, 0),
+    ]
+    shortTestPeaks = testPeaks[:maxPeakNum-1]
+    reducedShortTestPeaks = remove_low_intensity_peaks_below_max_peak_num(shortTestPeaks, maxPeakNum)
+    assert reducedShortTestPeaks == expectedReducedShortTestPeaks
 
