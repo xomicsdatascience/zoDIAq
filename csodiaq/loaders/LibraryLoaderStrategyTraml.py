@@ -21,3 +21,4 @@ class LibraryLoaderStrategyTraml(LibraryLoaderStrategy):
         self.rawLibDf = self.rawLibDf[requiredSpectrastColumnNames]
 
     def format_raw_library_object_into_csodiaq_dict() -> dict: pass
+
