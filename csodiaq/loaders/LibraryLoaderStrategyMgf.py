@@ -25,13 +25,20 @@ def create_csodiaq_library_entry(librarySpectrum: dict, maxPeakNum: int, csodiaq
                                                                     librarySpectrum['intensity array'],
                                                                     csodiaqKeyIdx)
     reducedPeaks = remove_low_intensity_peaks_below_max_peak_num(peaks, maxPeakNum)
+    # NOTE: some of these names are not intuitive (commented versions better). Switch when working on future dependencies.
     return csodiaqKey, {
-        'precursorCharge': precursorCharge,
-        'identifier': identifier,
-        'proteinName': proteinName,
-        'peaks': sorted(reducedPeaks),
-        'csodiaqKeyIdx': csodiaqKeyIdx,
-        'isDecoy': isDecoy,
+        #'precursorCharge': precursorCharge,
+        'PrecursorCharge': precursorCharge,
+        #'identifier': identifier,
+        'transition_group_id': identifier,
+        #'proteinName': proteinName,
+        'ProteinName': proteinName,
+        #'peaks': sorted(reducedPeaks),
+        'Peaks': sorted(reducedPeaks),
+        #'csodiaqKeyIdx': csodiaqKeyIdx,
+        'ID': csodiaqKeyIdx,
+        #'isDecoy': isDecoy,
+        'Decoy': isDecoy,
     }
 
 def extract_variables_from_spectrum_metadata(metadata):
