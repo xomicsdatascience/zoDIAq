@@ -4,16 +4,8 @@ import os
 
 class LibraryLoaderStrategyTraml(LibraryLoaderStrategy):
 
-    def __init__(self):
-        self.oldToNewColumnDict = {
-            'PrecursorMz': 'precursorMz',
-            'FullUniModPeptideName': 'fullUniModPeptideName',
-            'PrecursorCharge': 'precursorCharge',
-            'ProductMz': 'productMz',
-            'LibraryIntensity': 'libraryIntensity',
-            'transition_group_id': 'transitionGroupId',
-            'ProteinName': 'proteinName'
-        }
+    def __init__(self, librarySource: str):
+        self.oldToNewColumnDict = set_old_to_new_column_dict(librarySource)
 
     def _load_raw_library_object_from_file(self, libraryFilePath: os.PathLike) -> None:
         self.rawLibDf = pd.read_csv(libraryFilePath, sep='\t')
@@ -40,16 +32,16 @@ def reformat_raw_library_object_columns(df: pd.DataFrame, oldToNewColumnDict: di
     reformattedDf = df[oldToNewColumnDict.keys()]
     reformattedDf = reformattedDf.rename(columns=oldToNewColumnDict)
     reformattedDf['csodiaqLibKey'] = list(zip(reformattedDf['precursorMz'].tolist(),
-                          reformattedDf['fullUniModPeptideName'].tolist()))
+                          reformattedDf['peptideName'].tolist()))
     return reformattedDf
 
 def organize_data_by_csodiaq_library_dict_keys(df: pd.DataFrame) -> dict:
     keys = sorted(set(df['csodiaqLibKey']))
-    mz = df.groupby('csodiaqLibKey')['productMz'].apply(list).to_dict()
-    intensities = df.groupby('csodiaqLibKey')['libraryIntensity'].apply(list).to_dict()
+    mz = df.groupby('csodiaqLibKey')['peakMz'].apply(list).to_dict()
+    intensities = df.groupby('csodiaqLibKey')['peakIntensity'].apply(list).to_dict()
     df.drop_duplicates(subset='csodiaqLibKey', inplace=True)
     df.set_index('csodiaqLibKey', drop=True, inplace=True)
-    df.drop(['productMz','fullUniModPeptideName','libraryIntensity'], axis=1, inplace=True)
+    df.drop(['precursorMz','peakMz','peptideName','peakIntensity'], axis=1, inplace=True)
     metadata = df.to_dict(orient='index')
     return {
         'csodiaqKeys': keys,
@@ -67,7 +59,7 @@ def create_csodiaq_library_entry(organizedDataDict: dict, maxPeakNum: int, csodi
     isDecoy = int('decoy' in organizedDataDict['metadata'][csodiaqKey]['proteinName'].lower())
     return {
                 'precursorCharge': organizedDataDict['metadata'][csodiaqKey]['precursorCharge'],
-                'transitionGroupId': organizedDataDict['metadata'][csodiaqKey]['transitionGroupId'],
+                'identifier': organizedDataDict['metadata'][csodiaqKey]['identifier'],
                 'proteinName': organizedDataDict['metadata'][csodiaqKey]['proteinName'],
                 'peaks': sorted(reducedPeaks),
                 'csodiaqKeyIdx': csodiaqKeyIdx,
@@ -81,3 +73,36 @@ def create_peaks_from_mz_intensity_lists_and_csodiaq_key_id(mz: list, intensitie
 def remove_low_intensity_peaks_below_max_peak_num(peaks: list, maxPeakNum: int) -> list:
     peaks.sort(key=lambda x: x[1], reverse=True)
     return peaks[:maxPeakNum]
+
+def set_old_to_new_column_dict(librarySource):
+    newColumns = [
+        'precursorMz',
+        'peptideName',
+        'peakMz',
+        'peakIntensity',
+        'precursorCharge',
+        'identifier',
+        'proteinName',
+    ]
+    if librarySource == 'fragpipe':
+        oldColumns = [
+            'PrecursorMz',
+            'ModifiedPeptideSequence',
+            'ProductMz',
+            'LibraryIntensity',
+            'PrecursorCharge',
+            'PeptideSequence',
+            'ProteinId',
+        ]
+        return dict(zip(oldColumns, newColumns))
+    else:
+        oldColumns = [
+            'PrecursorMz',
+            'FullUniModPeptideName',
+            'ProductMz',
+            'LibraryIntensity',
+            'PrecursorCharge',
+            'transition_group_id',
+            'ProteinName',
+        ]
+        return dict(zip(oldColumns, newColumns))
