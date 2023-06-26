@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import re
 from tempfile import TemporaryDirectory, NamedTemporaryFile
-from csodiaq.loaders.LibraryLoaderStrategyTraml import LibraryLoaderStrategyTraml, remap_table_columns, create_csodiaq_library_dict_keys_as_new_column, create_data_dicts_that_correspond_to_csodiaq_library_dict_keys, create_peaks_from_mz_intensity_lists_and_csodiaq_key_id, remove_low_intensity_peaks_below_max_peak_num
+from csodiaq.loaders.LibraryLoaderStrategyTraml import LibraryLoaderStrategyTraml, reformat_raw_library_object_columns, organize_data_by_csodiaq_library_dict_keys, create_peaks_from_mz_intensity_lists_and_csodiaq_key_id, remove_low_intensity_peaks_below_max_peak_num
 
 @pytest.fixture
 def loader():
@@ -76,34 +76,36 @@ def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_
             'isDecoy': 0}}
     assert outputDict == expectedOutputDict
 
-def test__library_loader_strategy_traml__remap_table_columns():
+def test__library_loader_strategy_traml__reformat_raw_library_object_columns():
     numColumns = 10
-    oldColumns = [str(i) for i in range(numColumns)]
-    newColumns = [columnName + '_new' for columnName in oldColumns]
+    csodiaqKeyColumns = ['precursorMz', 'fullUniModPeptideName']
+    oldMappedColumns = [str(i) for i in range(numColumns)]
+    newMappedColumns = [columnName + '_new' for columnName in oldMappedColumns]
+    oldMappedColumns += csodiaqKeyColumns
+    newMappedColumns += csodiaqKeyColumns
+    oldToNewColumnDict = dict(zip(oldMappedColumns, newMappedColumns))
+    superfluousColumns = ['random', 'superfluous', 'columns']
+    oldColumns = oldMappedColumns + superfluousColumns
+    newColumns = newMappedColumns + ['csodiaqLibKey']
     data = [
-        [0 for i in range(numColumns)]
+        [0 for i in range(len(oldColumns))]
     ]
     df = pd.DataFrame(data, columns = oldColumns)
-    oldToNewColumnDict = dict(zip(oldColumns, newColumns))
-    remap_table_columns(df, oldToNewColumnDict)
-    assert set(df.columns) == set(newColumns)
+    newDf = reformat_raw_library_object_columns(df, oldToNewColumnDict)
+    assert set(newDf.columns) == set(newColumns)
 
-def test__library_loader_strategy_traml__create_csodiaq_library_dict_keys_as_new_column(loader, tramlTestLibFilePath):
+def test__library_loader_strategy_traml__organize_data_by_csodiaq_library_dict_keys(loader, tramlTestLibFilePath):
     loader._load_raw_library_object_from_file(tramlTestLibFilePath)
-    create_csodiaq_library_dict_keys_as_new_column(loader.rawLibDf)
-    expectedNewColumn = [(375.87322429333335, 'FANYIDKVR') for i in range(len(loader.rawLibDf))]
-    assert list(loader.rawLibDf['precursorMzAndPeptide']) == expectedNewColumn
-
-def test__library_loader_strategy_traml__create_data_dicts_that_correspond_to_csodiaq_library_dict_keys(loader, tramlTestLibFilePath):
-    loader._load_raw_library_object_from_file(tramlTestLibFilePath)
-    create_csodiaq_library_dict_keys_as_new_column(loader.rawLibDf)
+    reformattedDf = reformat_raw_library_object_columns(loader.rawLibDf, loader.oldToNewColumnDict)
+    expectedKeys = [(375.87322429333335, 'FANYIDKVR')]
     expectedTupleToListMzDict = {(375.87322429333335, 'FANYIDKVR'): [517.3092722, 630.393336182, 793.4566647199999, 402.2823291699999, 397.23197061, 489.771991231, 454.253434336, 333.15573166, 500.2792722, 445.738434336]}
     expectedTupleToListIntensityDict = {(375.87322429333335, 'FANYIDKVR'): [10000.0, 8235.6, 5098.5, 4930.4, 2082.7, 1398.4, 1301.3, 1072.6, 863.7, 746.7]}
-    expectedTupleToDictMetadataDict = {(375.87322429333335, 'FANYIDKVR'): {'PrecursorMz': 375.87322429333335, 'ProductMz': 517.3092722, 'Tr_recalibrated': 1107.8, 'transition_name': '18_y4_1_FANYIDKVR_3', 'CE': -1, 'LibraryIntensity': 10000.0, 'transition_group_id': '1_FANYIDKVR_3', 'decoy': 0, 'PeptideSequence': 'FANYIDKVR', 'ProteinName': '1/sp|P08670|VIME_HUMAN', 'Annotation': 'y4/-0.000', 'FullUniModPeptideName': 'FANYIDKVR', 'PrecursorCharge': 3, 'PeptideGroupLabel': '1_FANYIDKVR_3', 'UniprotID': '1/sp|P08670|VIME_HUMAN', 'FragmentType': 'y', 'FragmentCharge': 1, 'FragmentSeriesNumber': 4, 'LabelType': 'light'}}
-    tupleToListMzDict, tupleToListIntensityDict, tupleToDictMetadataDict = create_data_dicts_that_correspond_to_csodiaq_library_dict_keys(loader.rawLibDf)
-    assert tupleToListMzDict == expectedTupleToListMzDict
-    assert tupleToListIntensityDict == expectedTupleToListIntensityDict
-    assert tupleToDictMetadataDict == expectedTupleToDictMetadataDict
+    expectedTupleToDictMetadataDict = {(375.87322429333335, 'FANYIDKVR'): {'precursorMz': 375.87322429333335, 'transitionGroupId': '1_FANYIDKVR_3', 'proteinName': '1/sp|P08670|VIME_HUMAN', 'precursorCharge': 3}}
+    dataDict = organize_data_by_csodiaq_library_dict_keys(reformattedDf)
+    assert dataDict['csodiaqKeys'] == expectedKeys
+    assert dataDict['mz'] == expectedTupleToListMzDict
+    assert dataDict['intensities'] == expectedTupleToListIntensityDict
+    assert dataDict['metadata'] == expectedTupleToDictMetadataDict
 
 @pytest.fixture
 def testPeaks():
