@@ -12,7 +12,7 @@ class LibraryLoaderStrategy(ABC):
     #NOTE: test with each of your test files?
     def load_csodiaq_library_dict_from_file(self, libraryFilePath: os.PathLike) -> dict:
         self._load_raw_library_object_from_file(libraryFilePath)
-        return self._format_raw_library_object_into_csodiaq_dict()
+        return self._format_raw_library_object_into_csodiaq_library_dict()
 
 def create_peaks_from_mz_intensity_lists_and_csodiaq_key_id(mz: list, intensities: list, id: int) -> list:
     idList = [id for i in range(len(mz))]
