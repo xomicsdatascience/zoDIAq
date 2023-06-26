@@ -1,4 +1,4 @@
-from csodiaq.loaders.LibraryLoaderStrategy import LibraryLoaderStrategy
+from csodiaq.loaders.LibraryLoaderStrategy import LibraryLoaderStrategy, create_peaks_from_mz_intensity_lists_and_csodiaq_key_id, remove_low_intensity_peaks_below_max_peak_num
 import pandas as pd
 import os
 
@@ -17,8 +17,8 @@ class LibraryLoaderStrategyTraml(LibraryLoaderStrategy):
         organizedDataDict = organize_data_by_csodiaq_library_dict_keys(reformattedLibDf)
         csodiaqLibraryDict = {}
         for csodiaqKeyIdx in range(len(organizedDataDict['csodiaqKeys'])):
-            csodiaqKey = organizedDataDict['csodiaqKeys'][csodiaqKeyIdx]
-            csodiaqLibraryDict[csodiaqKey] = create_csodiaq_library_entry(organizedDataDict, maxPeakNum, csodiaqKeyIdx)
+            csodiaqKey, csodiaqValue = create_csodiaq_library_entry(organizedDataDict, maxPeakNum, csodiaqKeyIdx)
+            csodiaqLibraryDict[csodiaqKey] = csodiaqValue
         return csodiaqLibraryDict
 
 def assert_there_are_no_missing_columns(requiredColumns: list, presentColumns: list) -> None:
@@ -57,7 +57,7 @@ def create_csodiaq_library_entry(organizedDataDict: dict, maxPeakNum: int, csodi
                                                                     csodiaqKeyIdx)
     reducedPeaks = remove_low_intensity_peaks_below_max_peak_num(peaks, maxPeakNum)
     isDecoy = int('decoy' in organizedDataDict['metadata'][csodiaqKey]['proteinName'].lower())
-    return {
+    return csodiaqKey, {
                 'precursorCharge': organizedDataDict['metadata'][csodiaqKey]['precursorCharge'],
                 'identifier': organizedDataDict['metadata'][csodiaqKey]['identifier'],
                 'proteinName': organizedDataDict['metadata'][csodiaqKey]['proteinName'],
@@ -65,14 +65,6 @@ def create_csodiaq_library_entry(organizedDataDict: dict, maxPeakNum: int, csodi
                 'csodiaqKeyIdx': csodiaqKeyIdx,
                 'isDecoy': isDecoy,
             }
-
-def create_peaks_from_mz_intensity_lists_and_csodiaq_key_id(mz: list, intensities: list, id: int) -> list:
-    idList = [id for i in range(len(mz))]
-    return list(zip(mz, intensities, idList))
-
-def remove_low_intensity_peaks_below_max_peak_num(peaks: list, maxPeakNum: int) -> list:
-    peaks.sort(key=lambda x: x[1], reverse=True)
-    return peaks[:maxPeakNum]
 
 def set_old_to_new_column_dict(librarySource):
     newColumns = [
