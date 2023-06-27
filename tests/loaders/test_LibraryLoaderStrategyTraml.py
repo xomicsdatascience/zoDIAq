@@ -11,11 +11,11 @@ def loader():
 
 def test__library_loader_strategy_traml__initialization(loader): pass
 
+def get_parent_dir(): return os.path.dirname(os.getcwd())
+
 @pytest.fixture
 def libFilePath():
-    cwd = os.getcwd()
-    parent = os.path.dirname(cwd)
-    return os.path.join(parent,  'test_files', 'sample_lib_traml_spectrast.tsv')
+    return os.path.join(get_parent_dir(),  'test_files', 'sample_lib_traml_spectrast.tsv')
 
 def test__library_loader_strategy_traml__load_raw_library_object_from_file__spectrast_library(loader, libFilePath):
     loader._load_raw_library_object_from_file(libFilePath)
@@ -67,6 +67,13 @@ def test__library_loader_strategy_traml__load_raw_library_object_from_file__fail
     missingColumnValues = ['ProteinName', 'LibraryIntensity']
     check_value_error_thrown_when_missing_columns(loader, libFilePath, missingColumnValues)
 
+def assert_final_dict_output_matches_expected(outputDict, expectedOutputDict):
+    for csodiaqLibKey in expectedOutputDict:
+        assert csodiaqLibKey in outputDict
+        for libEntryKey in expectedOutputDict[csodiaqLibKey]:
+            assert libEntryKey in outputDict[csodiaqLibKey]
+            assert outputDict[csodiaqLibKey][libEntryKey] == expectedOutputDict[csodiaqLibKey][libEntryKey]
+
 def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_library_dict__spectrast_library(loader, libFilePath):
     loader._load_raw_library_object_from_file(libFilePath)
     outputDict = loader._format_raw_library_object_into_csodiaq_library_dict()
@@ -80,7 +87,32 @@ def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_
             'isDecoy': 0
         }
     }
-    assert outputDict == expectedOutputDict
+    assert_final_dict_output_matches_expected(outputDict, expectedOutputDict)
+
+def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_library_dict__multi_peptide_spectrast_library(loader):
+    libFilePath = os.path.join(get_parent_dir(),  'test_files', 'sample_lib_traml_spectrast_multiple.tsv')
+    loader._load_raw_library_object_from_file(libFilePath)
+    outputDict = loader._format_raw_library_object_into_csodiaq_library_dict()
+    expectedOutputDict = {
+        (300.83985497, 'FVVGSHVR'): {
+             'precursorCharge': 3,
+             'identifier': '1_FVVGSHVR_3',
+             'proteinName': '1/sp|P49736|MCM2_HUMAN',
+             'peaks': [(411.24627802, 1499.7, 0), (490.26601039, 107.9, 0), (498.27830643, 1696.3, 0), (555.299770156, 10000.0, 0), (654.368184074, 1368.4, 0)],
+             'csodiaqKeyIdx': 0,
+             'isDecoy': 0
+        },
+        (300.83985497, 'SVHGVVFR'): {
+             'precursorCharge': 3,
+             'identifier': '2_SVHGVVFR_3',
+             'proteinName': '1/DECOY_0_sp|P49736|MCM2_HUMAN',
+             'peaks': [(421.255780064, 1499.7, 1), (480.2565083459999, 107.9, 1), (520.324193982, 1696.3, 1), (577.345657708, 10000.0, 1), (714.404569582, 1368.4, 1)],
+             'csodiaqKeyIdx': 1,
+             'isDecoy': 1
+        }
+    }
+    assert_final_dict_output_matches_expected(outputDict, expectedOutputDict)
+
 
 def test__library_loader_strategy_traml__reformat_raw_library_object_columns():
     numColumns = 10
@@ -113,15 +145,15 @@ def test__library_loader_strategy_traml__organize_data_by_csodiaq_library_dict_k
     assert dataDict['intensities'] == expectedTupleToListIntensityDict
     assert dataDict['metadata'] == expectedTupleToDictMetadataDict
 
+
+
 @pytest.fixture
 def fragpipeLoader():
     return LibraryLoaderStrategyTraml('fragpipe')
 
 @pytest.fixture
 def fragpipeLibFilePath():
-    cwd = os.getcwd()
-    parent = os.path.dirname(cwd)
-    return os.path.join(parent,  'test_files', 'sample_lib_traml_fragpipe.tsv')
+    return os.path.join(get_parent_dir(),  'test_files', 'sample_lib_traml_fragpipe.tsv')
 
 
 def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__fragpipe_library__PrecursorMz(
@@ -172,7 +204,30 @@ def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_
             'isDecoy': 0
         }
     }
-    assert outputDict == expectedOutputDict
+    assert_final_dict_output_matches_expected(outputDict, expectedOutputDict)
+
+def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_library_dict__multi_peptides_fragpipe_library(fragpipeLoader, fragpipeLibFilePath):
+    fragpipeLoader._load_raw_library_object_from_file(os.path.join(get_parent_dir(),  'test_files', 'sample_lib_traml_fragpipe_multiple.tsv'))
+    outputDict = fragpipeLoader._format_raw_library_object_into_csodiaq_library_dict()
+    expectedOutputDict = {
+        (375.873226, 'FANYIDKVR'): {
+            'precursorCharge': 3,
+             'identifier': 'FANYIDKVR',
+             'proteinName': 'P08670',
+             'peaks': [(175.118953, 2926.18, 0), (274.187367, 1647.689, 0), (333.155733, 1071.177, 0), (397.231972, 2078.822, 0), (402.282331, 4932.288, 0), (454.253437, 1301.4617, 0), (489.771994, 1395.553, 0), (517.309275, 10000.0, 0), (630.393339, 8233.006, 0), (793.456668, 5096.472, 0)],
+             'csodiaqKeyIdx': 0,
+             'isDecoy': 0
+        },
+        (375.885354, 'FGTINIVHPK'): {
+            'precursorCharge': 3,
+            'identifier': 'FGTINIVHPK',
+            'proteinName': 'Q9Y617',
+            'peaks': [(205.097155, 1987.8866, 1), (244.165569, 10000.0, 1), (306.144834, 1832.419, 1), (381.224481, 3466.5054, 1), (480.292896, 3109.8425, 1), (490.271629, 801.70935, 1), (533.271827, 358.89835, 1), (593.37696, 2114.4893, 1), (707.419888, 5087.7124, 1), (820.503953, 865.17474, 1)],
+            'csodiaqKeyIdx': 1,
+            'isDecoy': 0
+        }
+    }
+    assert_final_dict_output_matches_expected(outputDict, expectedOutputDict)
 
 @pytest.fixture
 def prositLoader():
@@ -180,9 +235,7 @@ def prositLoader():
 
 @pytest.fixture
 def prositLibFilePath():
-    cwd = os.getcwd()
-    parent = os.path.dirname(cwd)
-    return os.path.join(parent,  'test_files', 'sample_lib_spectronaut_prosit.csv')
+    return os.path.join(get_parent_dir(),  'test_files', 'sample_lib_spectronaut_prosit.csv')
 
 
 def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__prosit_library__PrecursorMz(
@@ -233,4 +286,33 @@ def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_
             'isDecoy': 0
         }
     }
-    assert outputDict == expectedOutputDict
+    assert_final_dict_output_matches_expected(outputDict, expectedOutputDict)
+
+def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_library_dict__multi_peptide_prosit_library(prositLoader, prositLibFilePath):
+    prositLoader._load_raw_library_object_from_file(os.path.join(get_parent_dir(),  'test_files', 'sample_lib_spectronaut_prosit_multiple.csv'))
+    outputDict = prositLoader._format_raw_library_object_into_csodiaq_library_dict()
+    expectedOutputDict = {
+        (254.3121828783333, '_MRALLLIPPPPM[Oxidation (O)]R_'): {
+            'precursorCharge': 6,
+            'identifier': 'MRALLLIPPPPMR',
+            'proteinName': 'noloss',
+            'peaks': [(175.11895751953125, 0.6478143930435181, 0), (258.6335754394531, 0.3157764971256256, 0), (288.1488647460937, 0.985026240348816, 0), (307.15997314453125, 0.6946653723716736, 0), (355.68634033203125, 0.4260823428630829, 0), (359.1859741210937, 0.4684059023857116, 0), (419.2071228027344, 0.7623715996742249, 0), (516.2598876953125, 1.0, 0), (585.3541259765625, 0.5721365809440613, 0), (613.3126220703125, 0.7858051657676697, 0)],
+            'csodiaqKeyIdx': 0,
+            'isDecoy': 0
+        }, (374.1867597566666, '_MMPAAALIM[Oxidation (O)]R_'): {
+            'precursorCharge': 3,
+            'identifier': 'MMPAAALIMR',
+            'proteinName': 'noloss',
+            'peaks': [(175.11895751953125, 1.0, 1), (263.0882568359375, 0.1923068910837173, 1), (322.15435791015625, 0.412596195936203, 1), (360.1410217285156, 0.085973247885704, 1), (431.1781311035156, 0.1523399353027343, 1), (435.2384033203125, 0.7306222915649414, 1), (502.2152404785156, 0.0825881585478782, 1), (548.322509765625, 0.3042449355125427, 1), (619.359619140625, 0.1164016127586364, 1), (690.396728515625, 0.0937163606286048, 1)],
+            'csodiaqKeyIdx': 1,
+            'isDecoy': 0
+        }, (507.272473135, '_MLAPPPIM[Oxidation (O)]K_'): {
+            'precursorCharge': 2,
+            'identifier': 'MLAPPPIMK',
+            'proteinName': 'noloss',
+            'peaks': [(245.1318206787109, 0.8553705215454102, 2), (294.148193359375, 0.0534038245677948, 2), (301.17254638671875, 0.1253907978534698, 2), (316.1689453125, 0.1860230714082718, 2), (349.69891357421875, 0.6669084429740906, 2), (385.2174682617188, 0.0563227161765098, 2), (504.2850341796875, 0.1659155339002609, 2), (601.3377685546875, 0.6199196577072144, 2), (698.3905639648438, 1.0, 2), (769.4276733398438, 0.3755797147750854, 2)],
+            'csodiaqKeyIdx': 2,
+            'isDecoy': 0
+        }
+    }
+    assert_final_dict_output_matches_expected(outputDict, expectedOutputDict)
