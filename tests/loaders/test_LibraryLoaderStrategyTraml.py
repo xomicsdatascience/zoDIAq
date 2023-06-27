@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import re
 from tempfile import TemporaryDirectory, NamedTemporaryFile
-from csodiaq.loaders.LibraryLoaderStrategyTraml import LibraryLoaderStrategyTraml, reformat_raw_library_object_columns, organize_data_by_csodiaq_library_dict_keys
+from csodiaq.loaders.LibraryLoaderStrategyTraml import LibraryLoaderStrategyTraml, _reformat_raw_library_object_columns, _organize_data_by_csodiaq_library_dict_keys
 
 @pytest.fixture
 def loader():
@@ -97,17 +97,17 @@ def test__library_loader_strategy_traml__reformat_raw_library_object_columns():
         [0 for i in range(len(oldColumns))]
     ]
     df = pd.DataFrame(data, columns = oldColumns)
-    newDf = reformat_raw_library_object_columns(df, oldToNewColumnDict)
+    newDf = _reformat_raw_library_object_columns(df, oldToNewColumnDict)
     assert set(newDf.columns) == set(newColumns)
 
 def test__library_loader_strategy_traml__organize_data_by_csodiaq_library_dict_keys(loader, libFilePath):
     loader._load_raw_library_object_from_file(libFilePath)
-    reformattedDf = reformat_raw_library_object_columns(loader.rawLibDf, loader.oldToNewColumnDict)
+    reformattedDf = _reformat_raw_library_object_columns(loader.rawLibDf, loader.oldToNewColumnDict)
     expectedKeys = [(375.87322429333335, 'FANYIDKVR')]
     expectedTupleToListMzDict = {(375.87322429333335, 'FANYIDKVR'): [517.3092722, 630.393336182, 793.4566647199999, 402.2823291699999, 397.23197061, 489.771991231, 454.253434336, 333.15573166, 500.2792722, 445.738434336]}
     expectedTupleToListIntensityDict = {(375.87322429333335, 'FANYIDKVR'): [10000.0, 8235.6, 5098.5, 4930.4, 2082.7, 1398.4, 1301.3, 1072.6, 863.7, 746.7]}
     expectedTupleToDictMetadataDict = {(375.87322429333335, 'FANYIDKVR'): {'identifier': '1_FANYIDKVR_3', 'proteinName': '1/sp|P08670|VIME_HUMAN', 'precursorCharge': 3}}
-    dataDict = organize_data_by_csodiaq_library_dict_keys(reformattedDf)
+    dataDict = _organize_data_by_csodiaq_library_dict_keys(reformattedDf)
     assert dataDict['csodiaqKeys'] == expectedKeys
     assert dataDict['mz'] == expectedTupleToListMzDict
     assert dataDict['intensities'] == expectedTupleToListIntensityDict

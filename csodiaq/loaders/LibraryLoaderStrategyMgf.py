@@ -15,12 +15,12 @@ class LibraryLoaderStrategyMgf(LibraryLoaderStrategy):
         csodiaqLibDict = {}
         for csodiaqKeyIdx in range(len(self.rawLibMgf)):
             librarySpectrum = self.rawLibMgf[csodiaqKeyIdx]
-            csodiaqKey, csodiaqValue = create_csodiaq_library_entry(librarySpectrum, maxPeakNum, csodiaqKeyIdx)
+            csodiaqKey, csodiaqValue = _create_csodiaq_library_entry(librarySpectrum, maxPeakNum, csodiaqKeyIdx)
             csodiaqLibDict[csodiaqKey] = csodiaqValue
         return csodiaqLibDict
 
-def create_csodiaq_library_entry(librarySpectrum: dict, maxPeakNum: int, csodiaqKeyIdx: int) -> dict:
-    csodiaqKey, precursorCharge, identifier, proteinName, isDecoy = extract_variables_from_spectrum_metadata(librarySpectrum['params'])
+def _create_csodiaq_library_entry(librarySpectrum: dict, maxPeakNum: int, csodiaqKeyIdx: int) -> dict:
+    csodiaqKey, precursorCharge, identifier, proteinName, isDecoy = _extract_variables_from_spectrum_metadata(librarySpectrum['params'])
     peaks = create_peaks_from_mz_intensity_lists_and_csodiaq_key_id(librarySpectrum['m/z array'],
                                                                     librarySpectrum['intensity array'],
                                                                     csodiaqKeyIdx)
@@ -35,7 +35,7 @@ def create_csodiaq_library_entry(librarySpectrum: dict, maxPeakNum: int, csodiaq
         finalVariableNames['isDecoy']: isDecoy,
     }
 
-def extract_variables_from_spectrum_metadata(metadata):
+def _extract_variables_from_spectrum_metadata(metadata):
     csodiaqKey = (metadata['pepmass'][0], metadata['seq'])
     charge = int(re.sub('[+-]', '', str(metadata['charge'][0])))
     name = metadata['title']

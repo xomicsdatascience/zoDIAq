@@ -5,39 +5,39 @@ import os
 class LibraryLoaderStrategyTraml(LibraryLoaderStrategy):
 
     def __init__(self, librarySource: str):
-        self.oldToNewColumnDict = set_old_to_new_column_dict(librarySource)
+        self.oldToNewColumnDict = _set_old_to_new_column_dict(librarySource)
 
     def _load_raw_library_object_from_file(self, libraryFilePath: os.PathLike) -> None:
         if libraryFilePath.endswith('.tsv'): separator='\t'
         else: separator=','
         self.rawLibDf = pd.read_csv(libraryFilePath, sep=separator)
-        assert_there_are_no_missing_columns(self.oldToNewColumnDict.keys(), self.rawLibDf.columns)
+        _assert_there_are_no_missing_columns(self.oldToNewColumnDict.keys(), self.rawLibDf.columns)
 
     def _format_raw_library_object_into_csodiaq_library_dict(self) -> dict:
         maxPeakNum = 10
-        reformattedLibDf = reformat_raw_library_object_columns(self.rawLibDf, self.oldToNewColumnDict)
-        organizedDataDict = organize_data_by_csodiaq_library_dict_keys(reformattedLibDf)
+        reformattedLibDf = _reformat_raw_library_object_columns(self.rawLibDf, self.oldToNewColumnDict)
+        organizedDataDict = _organize_data_by_csodiaq_library_dict_keys(reformattedLibDf)
         csodiaqLibraryDict = {}
         for csodiaqKeyIdx in range(len(organizedDataDict['csodiaqKeys'])):
-            csodiaqKey, csodiaqValue = create_csodiaq_library_entry(organizedDataDict, maxPeakNum, csodiaqKeyIdx)
+            csodiaqKey, csodiaqValue = _create_csodiaq_library_entry(organizedDataDict, maxPeakNum, csodiaqKeyIdx)
             csodiaqLibraryDict[csodiaqKey] = csodiaqValue
         return csodiaqLibraryDict
 
-def assert_there_are_no_missing_columns(requiredColumns: list, presentColumns: list) -> None:
+def _assert_there_are_no_missing_columns(requiredColumns: list, presentColumns: list) -> None:
     missingColumnValues = set(requiredColumns) - set(presentColumns)
     if len(missingColumnValues):
         raise ValueError(
             f'traml spectrast library file is missing expected column(s). Missing values: [{", ".join(sorted(missingColumnValues))}])'
         )
 
-def reformat_raw_library_object_columns(df: pd.DataFrame, oldToNewColumnDict: dict) -> pd.DataFrame:
+def _reformat_raw_library_object_columns(df: pd.DataFrame, oldToNewColumnDict: dict) -> pd.DataFrame:
     reformattedDf = df[oldToNewColumnDict.keys()]
     reformattedDf = reformattedDf.rename(columns=oldToNewColumnDict)
     reformattedDf['csodiaqLibKey'] = list(zip(reformattedDf['precursorMz'].tolist(),
                           reformattedDf['peptideName'].tolist()))
     return reformattedDf
 
-def organize_data_by_csodiaq_library_dict_keys(df: pd.DataFrame) -> dict:
+def _organize_data_by_csodiaq_library_dict_keys(df: pd.DataFrame) -> dict:
     keys = sorted(set(df['csodiaqLibKey']))
     mz = df.groupby('csodiaqLibKey')['peakMz'].apply(list).to_dict()
     intensities = df.groupby('csodiaqLibKey')['peakIntensity'].apply(list).to_dict()
@@ -52,7 +52,7 @@ def organize_data_by_csodiaq_library_dict_keys(df: pd.DataFrame) -> dict:
         'metadata':metadata
     }
 
-def create_csodiaq_library_entry(organizedDataDict: dict, maxPeakNum: int, csodiaqKeyIdx: int) -> dict:
+def _create_csodiaq_library_entry(organizedDataDict: dict, maxPeakNum: int, csodiaqKeyIdx: int) -> dict:
     csodiaqKey = organizedDataDict['csodiaqKeys'][csodiaqKeyIdx]
     peaks = create_peaks_from_mz_intensity_lists_and_csodiaq_key_id(organizedDataDict['mz'][csodiaqKey],
                                                                     organizedDataDict['intensities'][csodiaqKey],
@@ -69,7 +69,7 @@ def create_csodiaq_library_entry(organizedDataDict: dict, maxPeakNum: int, csodi
                 finalVariableNames['isDecoy']: isDecoy,
     }
 
-def set_old_to_new_column_dict(librarySource):
+def _set_old_to_new_column_dict(librarySource):
     newColumns = [
         'precursorMz',
         'peptideName',
