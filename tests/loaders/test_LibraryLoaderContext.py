@@ -29,6 +29,13 @@ def test__library_loader_context__table__load_csodiaq_library_dict(tableContext)
     csodiaqLibDict = tableContext.load_csodiaq_library_dict()
     assert csodiaqLibDict == expectedCsodiaqLibDict
 
+def test__library_loader_context__table__initialization_csv():
+    parentDir = os.path.dirname(os.getcwd())
+    tableLibPath = os.path.join(parentDir,  'test_files', 'sample_lib_table_prosit.csv')
+    context = LibraryLoaderContext(tableLibPath)
+    assert isinstance(context._strategy, LibraryLoaderStrategyTable)
+
+
 @pytest.fixture
 def mgfContext():
     parentDir = os.path.dirname(os.getcwd())

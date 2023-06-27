@@ -6,7 +6,7 @@ import os
 class LibraryLoaderContext:
     def __init__(self, libraryFilePath: os.PathLike):
         self._libraryFilePath = libraryFilePath
-        if libraryFilePath.endswith('.tsv'):
+        if libraryFilePath.endswith('.tsv') or libraryFilePath.endswith('.csv'):
             self._strategy = Table()
         if libraryFilePath.endswith('.mgf'):
             self._strategy = Mgf()
