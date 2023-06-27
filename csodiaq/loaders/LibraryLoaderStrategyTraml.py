@@ -1,4 +1,4 @@
-from csodiaq.loaders.LibraryLoaderStrategy import LibraryLoaderStrategy, create_peaks_from_mz_intensity_lists_and_csodiaq_key_id, remove_low_intensity_peaks_below_max_peak_num
+from csodiaq.loaders.LibraryLoaderStrategy import LibraryLoaderStrategy, create_peaks_from_mz_intensity_lists_and_csodiaq_key_id, remove_low_intensity_peaks_below_max_peak_num, finalVariableNames
 import pandas as pd
 import os
 
@@ -61,18 +61,12 @@ def create_csodiaq_library_entry(organizedDataDict: dict, maxPeakNum: int, csodi
     isDecoy = int('decoy' in organizedDataDict['metadata'][csodiaqKey]['proteinName'].lower())
     # NOTE: some of these names are not intuitive (commented versions better). Switch when working on future dependencies.
     return csodiaqKey, {
-                #'precursorCharge': organizedDataDict['metadata'][csodiaqKey]['precursorCharge'],
-                'PrecursorCharge': organizedDataDict['metadata'][csodiaqKey]['precursorCharge'],
-                #'identifier': organizedDataDict['metadata'][csodiaqKey]['identifier'],
-                'transition_group_id': organizedDataDict['metadata'][csodiaqKey]['identifier'],
-                #'proteinName': organizedDataDict['metadata'][csodiaqKey]['proteinName'],
-                'ProteinName': organizedDataDict['metadata'][csodiaqKey]['proteinName'],
-                #'peaks': sorted(reducedPeaks),
-                'Peaks': sorted(reducedPeaks),
-                #'csodiaqKeyIdx': csodiaqKeyIdx,
-                'ID': csodiaqKeyIdx,
-                #'isDecoy': isDecoy,
-                'Decoy': isDecoy,
+                finalVariableNames['precursorCharge']: organizedDataDict['metadata'][csodiaqKey]['precursorCharge'],
+                finalVariableNames['identifier']: organizedDataDict['metadata'][csodiaqKey]['identifier'],
+                finalVariableNames['proteinName']: organizedDataDict['metadata'][csodiaqKey]['proteinName'],
+                finalVariableNames['peaks']: sorted(reducedPeaks),
+                finalVariableNames['csodiaqKeyIdx']: csodiaqKeyIdx,
+                finalVariableNames['isDecoy']: isDecoy,
     }
 
 def set_old_to_new_column_dict(librarySource):

@@ -21,3 +21,27 @@ def create_peaks_from_mz_intensity_lists_and_csodiaq_key_id(mz: list, intensitie
 def remove_low_intensity_peaks_below_max_peak_num(peaks: list, maxPeakNum: int) -> list:
     peaks.sort(key=lambda x: x[1], reverse=True)
     return peaks[:maxPeakNum]
+
+'''
+# NOTE: These variables are used ONLY for testing compatibility with previous
+#     versions of CsoDIAq. Testing relies on the the next variable.
+#       These dictionaries should be phased out before publishing csodiaq 2.0.
+finalVariableNames = {
+    'precursorCharge': 'PrecursorCharge',
+    'identifier': 'transition_group_id',
+    'proteinName': 'ProteinName',
+    'peaks': 'Peaks',
+    'csodiaqKeyIdx': 'ID',
+    'isDecoy': 'Decoy',
+}
+#'''
+#'''
+finalVariableNames = {
+    'precursorCharge': 'precursorCharge',
+    'identifier': 'identifier',
+    'proteinName': 'proteinName',
+    'peaks': 'peaks',
+    'csodiaqKeyIdx': 'csodiaqKeyIdx',
+    'isDecoy': 'isDecoy',
+}
+#'''

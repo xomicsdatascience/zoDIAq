@@ -26,12 +26,12 @@ def test__library_loader_strategy_mgf__format_raw_library_object_into_csodiaq_li
     outputDict = loader._format_raw_library_object_into_csodiaq_library_dict()
     expectedOutputDict = {
         (798.93, 'AAAAAAAAAAAAAAAGAGAGAK'): {
-            'PrecursorCharge': 2,
-            'transition_group_id': 'human.faims.1.1. File:"", NativeID:"scan=1" Retention Time: 1910.238',
-            'ProteinName': '1/sp|P55011|S12A2_HUMAN',
-            'Peaks': [(356.193, 498.5, 0), (427.23, 356.3, 0), (498.267, 380.3, 0), (569.304, 415.2, 0), (640.341, 324.3, 0), (798.43, 475.3, 0), (799.414, 2485.1, 0), (815.437, 274.3, 0), (886.474, 448.2, 0), (1099.585, 366.1, 0)],
-            'ID': 0,
-            'Decoy': 0
+            'precursorCharge': 2,
+            'identifier': 'human.faims.1.1. File:"", NativeID:"scan=1" Retention Time: 1910.238',
+            'proteinName': '1/sp|P55011|S12A2_HUMAN',
+            'peaks': [(356.193, 498.5, 0), (427.23, 356.3, 0), (498.267, 380.3, 0), (569.304, 415.2, 0), (640.341, 324.3, 0), (798.43, 475.3, 0), (799.414, 2485.1, 0), (815.437, 274.3, 0), (886.474, 448.2, 0), (1099.585, 366.1, 0)],
+            'csodiaqKeyIdx': 0,
+            'isDecoy': 0
         }
     }
 
