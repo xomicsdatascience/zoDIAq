@@ -68,12 +68,12 @@ def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_
     outputDict = loader._format_raw_library_object_into_csodiaq_library_dict()
     expectedOutputDict = {
         (375.87322429333335, 'FANYIDKVR'): {
-            'precursorCharge': 3,
-            'identifier': '1_FANYIDKVR_3',
-            'proteinName': '1/sp|P08670|VIME_HUMAN',
-            'peaks': [(333.15573166, 1072.6, 0), (397.23197061, 2082.7, 0), (402.2823291699999, 4930.4, 0), (445.738434336, 746.7, 0), (454.253434336, 1301.3, 0), (489.771991231, 1398.4, 0), (500.2792722, 863.7, 0), (517.3092722, 10000.0, 0), (630.393336182, 8235.6, 0), (793.4566647199999, 5098.5, 0)],
-            'csodiaqKeyIdx': 0,
-            'isDecoy': 0
+            'PrecursorCharge': 3,
+            'transition_group_id': '1_FANYIDKVR_3',
+            'ProteinName': '1/sp|P08670|VIME_HUMAN',
+            'Peaks': [(333.15573166, 1072.6, 0), (397.23197061, 2082.7, 0), (402.2823291699999, 4930.4, 0), (445.738434336, 746.7, 0), (454.253434336, 1301.3, 0), (489.771991231, 1398.4, 0), (500.2792722, 863.7, 0), (517.3092722, 10000.0, 0), (630.393336182, 8235.6, 0), (793.4566647199999, 5098.5, 0)],
+            'ID': 0,
+            'Decoy': 0
         }
     }
     assert outputDict == expectedOutputDict
@@ -160,12 +160,12 @@ def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_
     outputDict = fragpipeLoader._format_raw_library_object_into_csodiaq_library_dict()
     expectedOutputDict = {
         (375.873226, 'FANYIDKVR'): {
-            'precursorCharge': 3,
-            'identifier': 'FANYIDKVR',
-            'proteinName': 'P08670',
-            'peaks': [(175.118953, 2926.18, 0), (274.187367, 1647.689, 0), (333.155733, 1071.177, 0), (397.231972, 2078.822, 0), (402.282331, 4932.288, 0), (454.253437, 1301.4617, 0), (489.771994, 1395.553, 0), (517.309275, 10000.0, 0), (630.393339, 8233.006, 0), (793.456668, 5096.472, 0)],
-            'csodiaqKeyIdx': 0,
-            'isDecoy': 0
+            'PrecursorCharge': 3,
+            'transition_group_id': 'FANYIDKVR',
+            'ProteinName': 'P08670',
+            'Peaks': [(175.118953, 2926.18, 0), (274.187367, 1647.689, 0), (333.155733, 1071.177, 0), (397.231972, 2078.822, 0), (402.282331, 4932.288, 0), (454.253437, 1301.4617, 0), (489.771994, 1395.553, 0), (517.309275, 10000.0, 0), (630.393339, 8233.006, 0), (793.456668, 5096.472, 0)],
+            'ID': 0,
+            'Decoy': 0
         }
     }
     assert outputDict == expectedOutputDict

@@ -12,6 +12,7 @@ class LibraryLoaderContext:
             self._strategy = Mgf()
 
     def load_csodiaq_library_dict(self):
+        #NOTE: include max peaks variable?
         return self._strategy.load_csodiaq_library_dict_from_file(self._libraryFilePath)
 
 
