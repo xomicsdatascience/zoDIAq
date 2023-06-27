@@ -8,8 +8,10 @@ class LibraryLoaderContext:
         self._libraryFilePath = libraryFilePath
         if libraryFilePath.endswith('.tsv') or libraryFilePath.endswith('.csv'):
             self._strategy = Table()
-        if libraryFilePath.endswith('.mgf'):
+        elif libraryFilePath.endswith('.mgf'):
             self._strategy = Mgf()
+        elif libraryFilePath.endswith('.msp'):
+            raise ValueError('The .msp library format is not currently supported. If the library file was generated via prosit, please reset the output into a tab-delimited (.tsv) format.')
 
     def load_csodiaq_library_dict(self):
         #NOTE: include max peaks variable?

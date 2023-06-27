@@ -4,7 +4,7 @@ from csodiaq.loaders.LibraryLoaderStrategyMgf import LibraryLoaderStrategyMgf
 
 import pytest
 import os
-
+import re
 
 @pytest.fixture
 def tableContext():
@@ -58,3 +58,10 @@ def test__library_loader_context__mgf__load_csodiaq_library_dict(mgfContext):
     }
     csodiaqLibDict = mgfContext.load_csodiaq_library_dict()
     assert csodiaqLibDict == expectedCsodiaqLibDict
+
+def test__library_loader_context__initialization_msp_raises_specific_error():
+    parentDir = os.path.dirname(os.getcwd())
+    mspLibPath = os.path.join(parentDir,  'test_files', 'sample_lib_msp_prosit.msp')
+    errorOutput = 'The .msp library format is not currently supported. If the library file was generated via prosit, please reset the output into a tab-delimited (.tsv) format.'
+    with pytest.raises(ValueError, match=re.escape(errorOutput)):
+        context = LibraryLoaderContext(mspLibPath)
