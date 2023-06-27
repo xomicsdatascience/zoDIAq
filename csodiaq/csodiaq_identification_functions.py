@@ -11,10 +11,15 @@ from numba import njit
 from . import IdentificationSpectraMatcher
 from . import spectra_matcher_functions as smf
 import csodiaq
+from csodiaq.loaders.LibraryLoaderContext import LibraryLoaderContext
+
 
 def library_file_to_dict(inFile):
-    fileType = inFile.split('.')[-1]
-    lib = csodiaq.loaders.libraries.load_library(inFile)
+    #fileType = inFile.split('.')[-1]
+    #lib = csodiaq.loaders.libraries.load_library(inFile)
+    context = LibraryLoaderContext(inFile)
+    lib = context.load_csodiaq_library_dict()
+
     # if fileType == 'mgf':
     #     lib = loaders.libraries.mgf_library_upload(inFile)
     # else:
