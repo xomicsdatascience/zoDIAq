@@ -4,13 +4,11 @@ import os
 
 class LibraryLoaderStrategyTraml(LibraryLoaderStrategy):
 
-    def __init__(self, librarySource: str):
-        self.oldToNewColumnDict = _set_old_to_new_column_dict(librarySource)
-
     def _load_raw_library_object_from_file(self, libraryFilePath: os.PathLike) -> None:
         if libraryFilePath.endswith('.tsv'): separator='\t'
         else: separator=','
         self.rawLibDf = pd.read_csv(libraryFilePath, sep=separator)
+        self.oldToNewColumnDict = _set_old_to_new_column_dict(libraryFilePath)
         _assert_there_are_no_missing_columns(self.oldToNewColumnDict.keys(), self.rawLibDf.columns)
 
     def _format_raw_library_object_into_csodiaq_library_dict(self) -> dict:
@@ -69,7 +67,8 @@ def _create_csodiaq_library_entry(organizedDataDict: dict, maxPeakNum: int, csod
                 finalVariableNames['isDecoy']: isDecoy,
     }
 
-def _set_old_to_new_column_dict(librarySource):
+def _set_old_to_new_column_dict(filePath):
+    librarySource = _determine_library_source_from_file(filePath)
     newColumns = [
         'precursorMz',
         'peptideName',
@@ -79,17 +78,6 @@ def _set_old_to_new_column_dict(librarySource):
         'identifier',
         'proteinName',
     ]
-    if librarySource == 'fragpipe':
-        oldColumns = [
-            'PrecursorMz',
-            'ModifiedPeptideSequence',
-            'ProductMz',
-            'LibraryIntensity',
-            'PrecursorCharge',
-            'PeptideSequence',
-            'ProteinId',
-        ]
-        return dict(zip(oldColumns, newColumns))
     if librarySource == 'spectrast':
         oldColumns = [
             'PrecursorMz',
@@ -101,7 +89,18 @@ def _set_old_to_new_column_dict(librarySource):
             'ProteinName',
         ]
         return dict(zip(oldColumns, newColumns))
-    if librarySource == 'prosit':
+    elif librarySource == 'fragpipe':
+        oldColumns = [
+            'PrecursorMz',
+            'ModifiedPeptideSequence',
+            'ProductMz',
+            'LibraryIntensity',
+            'PrecursorCharge',
+            'PeptideSequence',
+            'ProteinId',
+        ]
+        return dict(zip(oldColumns, newColumns))
+    elif librarySource == 'prosit':
         oldColumns = [
             'PrecursorMz',
             'ModifiedPeptide',
@@ -112,3 +111,11 @@ def _set_old_to_new_column_dict(librarySource):
             'FragmentLossType',
         ]
         return dict(zip(oldColumns, newColumns))
+
+def _determine_library_source_from_file(filePath):
+    with open(filePath) as f:
+        columns = f.readline()
+        if 'transition_group_id' in columns: return 'spectrast'
+        elif 'ProteinId' in columns: return 'fragpipe'
+        elif 'RelativeIntensity' in columns: return 'prosit'
+        else: raise ValueError('The library table file provided does not match spectrast, fragpipe, or prosit formats.')

@@ -3,11 +3,11 @@ import os
 import pandas as pd
 import re
 from tempfile import TemporaryDirectory, NamedTemporaryFile
-from csodiaq.loaders.LibraryLoaderStrategyTraml import LibraryLoaderStrategyTraml, _reformat_raw_library_object_columns, _organize_data_by_csodiaq_library_dict_keys
+from csodiaq.loaders.LibraryLoaderStrategyTraml import LibraryLoaderStrategyTraml, _reformat_raw_library_object_columns, _organize_data_by_csodiaq_library_dict_keys, _determine_library_source_from_file
 
 @pytest.fixture
 def loader():
-    return LibraryLoaderStrategyTraml('spectrast')
+    return LibraryLoaderStrategyTraml()
 
 def test__library_loader_strategy_traml__initialization(loader): pass
 
@@ -53,10 +53,6 @@ def test__library_loader_strategy_traml__load_raw_library_object_from_file__fail
 
 def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__spectrast_library__LibraryIntensity(loader, libFilePath):
     missingColumnValues = ['LibraryIntensity']
-    check_value_error_thrown_when_missing_columns(loader, libFilePath, missingColumnValues)
-
-def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__spectrast_library__transition_group_id(loader, libFilePath):
-    missingColumnValues = ['transition_group_id']
     check_value_error_thrown_when_missing_columns(loader, libFilePath, missingColumnValues)
 
 def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__spectrast_library__ProteinName(loader, libFilePath):
@@ -145,55 +141,44 @@ def test__library_loader_strategy_traml__organize_data_by_csodiaq_library_dict_k
     assert dataDict['intensities'] == expectedTupleToListIntensityDict
     assert dataDict['metadata'] == expectedTupleToDictMetadataDict
 
-
-
-@pytest.fixture
-def fragpipeLoader():
-    return LibraryLoaderStrategyTraml('fragpipe')
-
 @pytest.fixture
 def fragpipeLibFilePath():
     return os.path.join(get_parent_dir(),  'test_files', 'sample_lib_traml_fragpipe.tsv')
 
 
 def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__fragpipe_library__PrecursorMz(
-        fragpipeLoader, fragpipeLibFilePath):
+        loader, fragpipeLibFilePath):
     missingColumnValues = ['PrecursorMz']
-    check_value_error_thrown_when_missing_columns(fragpipeLoader, fragpipeLibFilePath, missingColumnValues)
+    check_value_error_thrown_when_missing_columns(loader, fragpipeLibFilePath, missingColumnValues)
 
 def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__fragpipe_library__ModifiedPeptideSequence(
-        fragpipeLoader, fragpipeLibFilePath):
+        loader, fragpipeLibFilePath):
     missingColumnValues = ['ModifiedPeptideSequence']
-    check_value_error_thrown_when_missing_columns(fragpipeLoader, fragpipeLibFilePath, missingColumnValues)
+    check_value_error_thrown_when_missing_columns(loader, fragpipeLibFilePath, missingColumnValues)
 
 def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__fragpipe_library__PrecursorCharge(
-        fragpipeLoader, fragpipeLibFilePath):
+        loader, fragpipeLibFilePath):
     missingColumnValues = ['PrecursorCharge']
-    check_value_error_thrown_when_missing_columns(fragpipeLoader, fragpipeLibFilePath, missingColumnValues)
+    check_value_error_thrown_when_missing_columns(loader, fragpipeLibFilePath, missingColumnValues)
 
 def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__fragpipe_library__ProductMz(
-        fragpipeLoader, fragpipeLibFilePath):
+        loader, fragpipeLibFilePath):
     missingColumnValues = ['ProductMz']
-    check_value_error_thrown_when_missing_columns(fragpipeLoader, fragpipeLibFilePath, missingColumnValues)
+    check_value_error_thrown_when_missing_columns(loader, fragpipeLibFilePath, missingColumnValues)
 
 def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__fragpipe_library__LibraryIntensity(
-        fragpipeLoader, fragpipeLibFilePath):
+        loader, fragpipeLibFilePath):
     missingColumnValues = ['LibraryIntensity']
-    check_value_error_thrown_when_missing_columns(fragpipeLoader, fragpipeLibFilePath, missingColumnValues)
+    check_value_error_thrown_when_missing_columns(loader, fragpipeLibFilePath, missingColumnValues)
 
 def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__fragpipe_library__PeptideSequence(
-        fragpipeLoader, fragpipeLibFilePath):
+        loader, fragpipeLibFilePath):
     missingColumnValues = ['PeptideSequence']
-    check_value_error_thrown_when_missing_columns(fragpipeLoader, fragpipeLibFilePath, missingColumnValues)
+    check_value_error_thrown_when_missing_columns(loader, fragpipeLibFilePath, missingColumnValues)
 
-def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__fragpipe_library__ProteinId(
-        fragpipeLoader, fragpipeLibFilePath):
-    missingColumnValues = ['ProteinId']
-    check_value_error_thrown_when_missing_columns(fragpipeLoader, fragpipeLibFilePath, missingColumnValues)
-
-def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_library_dict__fragpipe_library(fragpipeLoader, fragpipeLibFilePath):
-    fragpipeLoader._load_raw_library_object_from_file(fragpipeLibFilePath)
-    outputDict = fragpipeLoader._format_raw_library_object_into_csodiaq_library_dict()
+def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_library_dict__fragpipe_library(loader, fragpipeLibFilePath):
+    loader._load_raw_library_object_from_file(fragpipeLibFilePath)
+    outputDict = loader._format_raw_library_object_into_csodiaq_library_dict()
     expectedOutputDict = {
         (375.873226, 'FANYIDKVR'): {
             'precursorCharge': 3,
@@ -206,9 +191,9 @@ def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_
     }
     assert_final_dict_output_matches_expected(outputDict, expectedOutputDict)
 
-def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_library_dict__multi_peptides_fragpipe_library(fragpipeLoader, fragpipeLibFilePath):
-    fragpipeLoader._load_raw_library_object_from_file(os.path.join(get_parent_dir(),  'test_files', 'sample_lib_traml_fragpipe_multiple.tsv'))
-    outputDict = fragpipeLoader._format_raw_library_object_into_csodiaq_library_dict()
+def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_library_dict__multi_peptides_fragpipe_library(loader, fragpipeLibFilePath):
+    loader._load_raw_library_object_from_file(os.path.join(get_parent_dir(),  'test_files', 'sample_lib_traml_fragpipe_multiple.tsv'))
+    outputDict = loader._format_raw_library_object_into_csodiaq_library_dict()
     expectedOutputDict = {
         (375.873226, 'FANYIDKVR'): {
             'precursorCharge': 3,
@@ -230,52 +215,43 @@ def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_
     assert_final_dict_output_matches_expected(outputDict, expectedOutputDict)
 
 @pytest.fixture
-def prositLoader():
-    return LibraryLoaderStrategyTraml('prosit')
-
-@pytest.fixture
 def prositLibFilePath():
     return os.path.join(get_parent_dir(),  'test_files', 'sample_lib_spectronaut_prosit.csv')
 
-
 def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__prosit_library__PrecursorMz(
-        prositLoader, prositLibFilePath):
+        loader, prositLibFilePath):
     missingColumnValues = ['PrecursorMz']
-    check_value_error_thrown_when_missing_columns(prositLoader, prositLibFilePath, missingColumnValues)
+    check_value_error_thrown_when_missing_columns(loader, prositLibFilePath, missingColumnValues)
 
-def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__prosit_library__ModifiedPeptideSequence(
-        prositLoader, prositLibFilePath):
+def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__prosit_library__ModifiedPeptide(
+        loader, prositLibFilePath):
     missingColumnValues = ['ModifiedPeptide']
-    check_value_error_thrown_when_missing_columns(prositLoader, prositLibFilePath, missingColumnValues)
+    check_value_error_thrown_when_missing_columns(loader, prositLibFilePath, missingColumnValues)
 
 def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__prosit_library__PrecursorCharge(
-        prositLoader, prositLibFilePath):
+        loader, prositLibFilePath):
     missingColumnValues = ['PrecursorCharge']
-    check_value_error_thrown_when_missing_columns(prositLoader, prositLibFilePath, missingColumnValues)
+    check_value_error_thrown_when_missing_columns(loader, prositLibFilePath, missingColumnValues)
 
-def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__prosit_library__ProductMz(
-        prositLoader, prositLibFilePath):
+def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__prosit_library__FragmentMz(
+        loader, prositLibFilePath):
     missingColumnValues = ['FragmentMz']
-    check_value_error_thrown_when_missing_columns(prositLoader, prositLibFilePath, missingColumnValues)
+    check_value_error_thrown_when_missing_columns(loader, prositLibFilePath, missingColumnValues)
 
-def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__prosit_library__LibraryIntensity(
-        prositLoader, prositLibFilePath):
-    missingColumnValues = ['RelativeIntensity']
-    check_value_error_thrown_when_missing_columns(prositLoader, prositLibFilePath, missingColumnValues)
+def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__prosit_library__StrippedPeptide(
+        loader, prositLibFilePath):
+    missingColumnValues = ['StrippedPeptide']
+    check_value_error_thrown_when_missing_columns(loader, prositLibFilePath, missingColumnValues)
 
-def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__prosit_library__PeptideSequence(
-        prositLoader, prositLibFilePath):
-    missingColumnValues = ['ModifiedPeptide']
-    check_value_error_thrown_when_missing_columns(prositLoader, prositLibFilePath, missingColumnValues)
+# NOTE: Make protein optional? This is just a placeholder
+def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__prosit_library__FragmentLossType(
+        loader, prositLibFilePath):
+    missingColumnValues = ['FragmentLossType']
+    check_value_error_thrown_when_missing_columns(loader, prositLibFilePath, missingColumnValues)
 
-def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__prosit_library__ProteinId(
-        prositLoader, prositLibFilePath):
-    missingColumnValues = ['FragmentLossType'] # NOTE: Make protein optional? This is just a placeholder
-    check_value_error_thrown_when_missing_columns(prositLoader, prositLibFilePath, missingColumnValues)
-
-def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_library_dict__prosit_library(prositLoader, prositLibFilePath):
-    prositLoader._load_raw_library_object_from_file(prositLibFilePath)
-    outputDict = prositLoader._format_raw_library_object_into_csodiaq_library_dict()
+def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_library_dict__prosit_library(loader, prositLibFilePath):
+    loader._load_raw_library_object_from_file(prositLibFilePath)
+    outputDict = loader._format_raw_library_object_into_csodiaq_library_dict()
     expectedOutputDict = {
         (374.1867597566666, '_MMPAAALIM[Oxidation (O)]R_'): {
             'precursorCharge': 3,
@@ -288,9 +264,9 @@ def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_
     }
     assert_final_dict_output_matches_expected(outputDict, expectedOutputDict)
 
-def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_library_dict__multi_peptide_prosit_library(prositLoader, prositLibFilePath):
-    prositLoader._load_raw_library_object_from_file(os.path.join(get_parent_dir(),  'test_files', 'sample_lib_spectronaut_prosit_multiple.csv'))
-    outputDict = prositLoader._format_raw_library_object_into_csodiaq_library_dict()
+def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_library_dict__multi_peptide_prosit_library(loader, prositLibFilePath):
+    loader._load_raw_library_object_from_file(os.path.join(get_parent_dir(),  'test_files', 'sample_lib_spectronaut_prosit_multiple.csv'))
+    outputDict = loader._format_raw_library_object_into_csodiaq_library_dict()
     expectedOutputDict = {
         (254.3121828783333, '_MRALLLIPPPPM[Oxidation (O)]R_'): {
             'precursorCharge': 6,
@@ -316,3 +292,12 @@ def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_
         }
     }
     assert_final_dict_output_matches_expected(outputDict, expectedOutputDict)
+
+def test__library_loader_strategy_traml__determine_library_source_from_file(libFilePath, fragpipeLibFilePath, prositLibFilePath):
+    assert _determine_library_source_from_file(libFilePath) == 'spectrast'
+    assert _determine_library_source_from_file(fragpipeLibFilePath) == 'fragpipe'
+    assert _determine_library_source_from_file(prositLibFilePath) == 'prosit'
+    errorOutput = 'The library table file provided does not match spectrast, fragpipe, or prosit formats.'
+    with pytest.raises(ValueError, match=re.escape(errorOutput)):
+        _determine_library_source_from_file(os.path.join(get_parent_dir(),  'test_files', 'sample_lib_mgf.mgf'))
+

@@ -7,7 +7,7 @@ class LibraryLoaderContext:
     def __init__(self, libraryFilePath: os.PathLike):
         self._libraryFilePath = libraryFilePath
         if libraryFilePath.endswith('.tsv'):
-            self._strategy = Traml('spectrast')
+            self._strategy = Traml()
         if libraryFilePath.endswith('.mgf'):
             self._strategy = Mgf()
 
