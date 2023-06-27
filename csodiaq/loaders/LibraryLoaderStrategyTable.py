@@ -2,7 +2,7 @@ from csodiaq.loaders.LibraryLoaderStrategy import LibraryLoaderStrategy, create_
 import pandas as pd
 import os
 
-class LibraryLoaderStrategyTraml(LibraryLoaderStrategy):
+class LibraryLoaderStrategyTable(LibraryLoaderStrategy):
 
     def _load_raw_library_object_from_file(self, libraryFilePath: os.PathLike) -> None:
         if libraryFilePath.endswith('.tsv'): separator='\t'
@@ -25,7 +25,7 @@ def _assert_there_are_no_missing_columns(requiredColumns: list, presentColumns: 
     missingColumnValues = set(requiredColumns) - set(presentColumns)
     if len(missingColumnValues):
         raise ValueError(
-            f'traml spectrast library file is missing expected column(s). Missing values: [{", ".join(sorted(missingColumnValues))}])'
+            f'table library file is missing expected column(s). Missing values: [{", ".join(sorted(missingColumnValues))}])'
         )
 
 def _reformat_raw_library_object_columns(df: pd.DataFrame, oldToNewColumnDict: dict) -> pd.DataFrame:

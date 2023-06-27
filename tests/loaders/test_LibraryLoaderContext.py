@@ -1,5 +1,5 @@
 from csodiaq.loaders.LibraryLoaderContext import LibraryLoaderContext
-from csodiaq.loaders.LibraryLoaderStrategyTraml import LibraryLoaderStrategyTraml
+from csodiaq.loaders.LibraryLoaderStrategyTable import LibraryLoaderStrategyTable
 from csodiaq.loaders.LibraryLoaderStrategyMgf import LibraryLoaderStrategyMgf
 
 import pytest
@@ -7,15 +7,15 @@ import os
 
 
 @pytest.fixture
-def tramlContext():
+def tableContext():
     parentDir = os.path.dirname(os.getcwd())
-    tramlLibPath = os.path.join(parentDir,  'test_files', 'sample_lib_traml_spectrast.tsv')
-    return LibraryLoaderContext(tramlLibPath)
+    tableLibPath = os.path.join(parentDir,  'test_files', 'sample_lib_table_spectrast.tsv')
+    return LibraryLoaderContext(tableLibPath)
 
-def test__library_loader_context__traml__initialization(tramlContext):
-    assert isinstance(tramlContext._strategy, LibraryLoaderStrategyTraml)
+def test__library_loader_context__table__initialization(tableContext):
+    assert isinstance(tableContext._strategy, LibraryLoaderStrategyTable)
 
-def test__library_loader_context__traml__load_csodiaq_library_dict(tramlContext):
+def test__library_loader_context__table__load_csodiaq_library_dict(tableContext):
     expectedCsodiaqLibDict = {
         (375.87322429333335, 'FANYIDKVR'): {
             'precursorCharge': 3,
@@ -26,7 +26,7 @@ def test__library_loader_context__traml__load_csodiaq_library_dict(tramlContext)
             'isDecoy': 0
         }
     }
-    csodiaqLibDict = tramlContext.load_csodiaq_library_dict()
+    csodiaqLibDict = tableContext.load_csodiaq_library_dict()
     assert csodiaqLibDict == expectedCsodiaqLibDict
 
 @pytest.fixture
