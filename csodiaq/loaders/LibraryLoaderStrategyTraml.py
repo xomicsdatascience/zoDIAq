@@ -8,7 +8,9 @@ class LibraryLoaderStrategyTraml(LibraryLoaderStrategy):
         self.oldToNewColumnDict = set_old_to_new_column_dict(librarySource)
 
     def _load_raw_library_object_from_file(self, libraryFilePath: os.PathLike) -> None:
-        self.rawLibDf = pd.read_csv(libraryFilePath, sep='\t')
+        if libraryFilePath.endswith('.tsv'): separator='\t'
+        else: separator=','
+        self.rawLibDf = pd.read_csv(libraryFilePath, sep=separator)
         assert_there_are_no_missing_columns(self.oldToNewColumnDict.keys(), self.rawLibDf.columns)
 
     def _format_raw_library_object_into_csodiaq_library_dict(self) -> dict:
@@ -94,7 +96,7 @@ def set_old_to_new_column_dict(librarySource):
             'ProteinId',
         ]
         return dict(zip(oldColumns, newColumns))
-    else:
+    if librarySource == 'spectrast':
         oldColumns = [
             'PrecursorMz',
             'FullUniModPeptideName',
@@ -103,5 +105,16 @@ def set_old_to_new_column_dict(librarySource):
             'PrecursorCharge',
             'transition_group_id',
             'ProteinName',
+        ]
+        return dict(zip(oldColumns, newColumns))
+    if librarySource == 'prosit':
+        oldColumns = [
+            'PrecursorMz',
+            'ModifiedPeptide',
+            'FragmentMz',
+            'RelativeIntensity',
+            'PrecursorCharge',
+            'StrippedPeptide',
+            'FragmentLossType',
         ]
         return dict(zip(oldColumns, newColumns))

@@ -23,7 +23,11 @@ def test__library_loader_strategy_traml__load_raw_library_object_from_file__spec
     assert isinstance(loader.rawLibDf, pd.DataFrame)
 
 def check_value_error_thrown_when_missing_columns(loader, dfPath, missingColumnValues):
-    libDf = pd.read_csv(dfPath, sep='\t')
+    if dfPath.endswith('.tsv'):
+        separator = '\t'
+    else:
+        separator = ','
+    libDf = pd.read_csv(dfPath, sep=separator)
     libDf.drop(missingColumnValues, axis=1, inplace=True)
     invalidLibFile = NamedTemporaryFile(prefix=f'csodiaq_traml_loader_missing_column_{"_".join(missingColumnValues)}_', suffix=".tsv")
     libDf.to_csv(invalidLibFile.name, sep='\t', index=False)
@@ -164,6 +168,67 @@ def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_
             'transition_group_id': 'FANYIDKVR',
             'ProteinName': 'P08670',
             'Peaks': [(175.118953, 2926.18, 0), (274.187367, 1647.689, 0), (333.155733, 1071.177, 0), (397.231972, 2078.822, 0), (402.282331, 4932.288, 0), (454.253437, 1301.4617, 0), (489.771994, 1395.553, 0), (517.309275, 10000.0, 0), (630.393339, 8233.006, 0), (793.456668, 5096.472, 0)],
+            'ID': 0,
+            'Decoy': 0
+        }
+    }
+    assert outputDict == expectedOutputDict
+
+@pytest.fixture
+def prositLoader():
+    return LibraryLoaderStrategyTraml('prosit')
+
+@pytest.fixture
+def prositLibFilePath():
+    cwd = os.getcwd()
+    parent = os.path.dirname(cwd)
+    return os.path.join(parent,  'test_files', 'sample_lib_spectronaut_prosit.csv')
+
+
+def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__prosit_library__PrecursorMz(
+        prositLoader, prositLibFilePath):
+    missingColumnValues = ['PrecursorMz']
+    check_value_error_thrown_when_missing_columns(prositLoader, prositLibFilePath, missingColumnValues)
+
+def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__prosit_library__ModifiedPeptideSequence(
+        prositLoader, prositLibFilePath):
+    missingColumnValues = ['ModifiedPeptide']
+    check_value_error_thrown_when_missing_columns(prositLoader, prositLibFilePath, missingColumnValues)
+
+def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__prosit_library__PrecursorCharge(
+        prositLoader, prositLibFilePath):
+    missingColumnValues = ['PrecursorCharge']
+    check_value_error_thrown_when_missing_columns(prositLoader, prositLibFilePath, missingColumnValues)
+
+def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__prosit_library__ProductMz(
+        prositLoader, prositLibFilePath):
+    missingColumnValues = ['FragmentMz']
+    check_value_error_thrown_when_missing_columns(prositLoader, prositLibFilePath, missingColumnValues)
+
+def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__prosit_library__LibraryIntensity(
+        prositLoader, prositLibFilePath):
+    missingColumnValues = ['RelativeIntensity']
+    check_value_error_thrown_when_missing_columns(prositLoader, prositLibFilePath, missingColumnValues)
+
+def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__prosit_library__PeptideSequence(
+        prositLoader, prositLibFilePath):
+    missingColumnValues = ['ModifiedPeptide']
+    check_value_error_thrown_when_missing_columns(prositLoader, prositLibFilePath, missingColumnValues)
+
+def test__library_loader_strategy_traml__load_raw_library_object_from_file__fails_when_missing_required_columns__prosit_library__ProteinId(
+        prositLoader, prositLibFilePath):
+    missingColumnValues = ['FragmentLossType'] # NOTE: Make protein optional? This is just a placeholder
+    check_value_error_thrown_when_missing_columns(prositLoader, prositLibFilePath, missingColumnValues)
+
+def test__library_loader_strategy_traml__format_raw_library_object_into_csodiaq_library_dict__prosit_library(prositLoader, prositLibFilePath):
+    prositLoader._load_raw_library_object_from_file(prositLibFilePath)
+    outputDict = prositLoader._format_raw_library_object_into_csodiaq_library_dict()
+    expectedOutputDict = {
+        (374.1867597566666, '_MMPAAALIM[Oxidation (O)]R_'): {
+            'PrecursorCharge': 3,
+            'transition_group_id': 'MMPAAALIMR',
+            'ProteinName': 'noloss',
+            'Peaks': [(175.11895751953125, 1.0, 0), (263.0882568359375, 0.1923068910837173, 0), (322.15435791015625, 0.412596195936203, 0), (360.1410217285156, 0.085973247885704, 0), (431.1781311035156, 0.1523399353027343, 0), (435.2384033203125, 0.7306222915649414, 0), (502.2152404785156, 0.0825881585478782, 0), (548.322509765625, 0.3042449355125427, 0), (619.359619140625, 0.1164016127586364, 0), (690.396728515625, 0.0937163606286048, 0)],
             'ID': 0,
             'Decoy': 0
         }
