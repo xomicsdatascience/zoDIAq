@@ -3,7 +3,29 @@ import pandas as pd
 import os
 
 class LibraryLoaderStrategyTable(LibraryLoaderStrategy):
+    """
+    Concrete strategy implementation of the LibraryLoaderStrategy strategy class specific for
+        loading comma- or tab-delimited library files (tables) into a standardized dictionary
+        for use in CsoDIAq.
 
+    Extended Summary
+    ----------------
+    While table-based libraries can all be read into a pandas dataframe, the column names can differ.
+        This class accounts for THREE variations of library column titles (as derived from
+        SpectraST/PanHuman, FragPipe, and Prosit outputs).
+        The 'old' column name list of any of these three formats is converted into a single standard
+        of 'new' column name list to avoid needing to switch back and forth through the code.
+
+    Attributes
+    ----------
+    rawLibDf : pd.DataFrame
+        The original table as loaded from the .tsv or .csv library file. The relevant columns of this
+        table are renamed ('old' -> 'new') and irrelevant columns are removed during the reformatting.
+    oldToNewColumnDict : dict
+        A dictionary for mapping old column names to standardized new column names. This dictionary
+        will differ between different library types (titled 'spectrast', 'fragpipe' and 'prosit'),
+        as the library types have different 'old' column names.
+    """
     def _load_raw_library_object_from_file(self, libraryFilePath: os.PathLike) -> None:
         if libraryFilePath.endswith('.tsv'): separator='\t'
         else: separator=','
@@ -12,6 +34,7 @@ class LibraryLoaderStrategyTable(LibraryLoaderStrategy):
         _assert_there_are_no_missing_columns(self.oldToNewColumnDict.keys(), self.rawLibDf.columns)
 
     def _format_raw_library_object_into_csodiaq_library_dict(self) -> dict:
+        """abstract class implementation - see 'LibraryLoaderStrategy.py' for details"""
         maxPeakNum = 10
         reformattedLibDf = _reformat_raw_library_object_columns(self.rawLibDf, self.oldToNewColumnDict)
         organizedDataDict = _organize_data_by_csodiaq_library_dict_keys(reformattedLibDf)
@@ -57,7 +80,6 @@ def _create_csodiaq_library_entry(organizedDataDict: dict, maxPeakNum: int, csod
                                                                     csodiaqKeyIdx)
     reducedPeaks = remove_low_intensity_peaks_below_max_peak_num(peaks, maxPeakNum)
     isDecoy = int('decoy' in organizedDataDict['metadata'][csodiaqKey]['proteinName'].lower())
-    # NOTE: some of these names are not intuitive (commented versions better). Switch when working on future dependencies.
     return csodiaqKey, {
                 finalVariableNames['precursorCharge']: organizedDataDict['metadata'][csodiaqKey]['precursorCharge'],
                 finalVariableNames['identifier']: organizedDataDict['metadata'][csodiaqKey]['identifier'],
@@ -67,7 +89,7 @@ def _create_csodiaq_library_entry(organizedDataDict: dict, maxPeakNum: int, csod
                 finalVariableNames['isDecoy']: isDecoy,
     }
 
-def _set_old_to_new_column_dict(filePath):
+def _set_old_to_new_column_dict(filePath) -> None:
     librarySource = _determine_library_source_from_file(filePath)
     newColumns = [
         'precursorMz',
@@ -112,7 +134,7 @@ def _set_old_to_new_column_dict(filePath):
         ]
         return dict(zip(oldColumns, newColumns))
 
-def _determine_library_source_from_file(filePath):
+def _determine_library_source_from_file(filePath) -> str:
     with open(filePath) as f:
         columns = f.readline()
         if 'transition_group_id' in columns: return 'spectrast'

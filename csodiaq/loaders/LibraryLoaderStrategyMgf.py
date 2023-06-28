@@ -5,7 +5,15 @@ from pyteomics import mgf
 import re
 
 class LibraryLoaderStrategyMgf(LibraryLoaderStrategy):
+    """
+    Concrete strategy implementation of the LibraryLoaderStrategy strategy class specific for
+        loading mgf library files into a standardized dictionary for use in CsoDIAq.
 
+    Attributes
+    ----------
+    rawLibMgf : pyteomics.mgf.IndexedMGF
+        The original mgf library as loaded using the pyteomics mgf class.
+    """
     def _load_raw_library_object_from_file(self, libraryFilePath: os.PathLike) -> None:
         self.rawLibMgf = mgf.read(libraryFilePath)
         # NOTE: check if required values exist??
@@ -25,7 +33,6 @@ def _create_csodiaq_library_entry(librarySpectrum: dict, maxPeakNum: int, csodia
                                                                     librarySpectrum['intensity array'],
                                                                     csodiaqKeyIdx)
     reducedPeaks = remove_low_intensity_peaks_below_max_peak_num(peaks, maxPeakNum)
-    # NOTE: some of these names are not intuitive (commented versions better). Switch when working on future dependencies.
     return csodiaqKey, {
         finalVariableNames['precursorCharge']: precursorCharge,
         finalVariableNames['identifier']: identifier,

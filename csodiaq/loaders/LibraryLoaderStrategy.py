@@ -12,7 +12,7 @@ class LibraryLoaderStrategy(ABC):
 
         Parameters
         ----------
-        libraryFilePath : os.PathLike
+        libraryFilePath : string (os.PathLike format)
             Path to the library file.
 
         Returns
@@ -33,10 +33,10 @@ class LibraryLoaderStrategy(ABC):
             Relies on a raw library object created as a class variable in the
                 _load_raw_library_object_from_file function.
             This is an abstract method and must be implemented in child classes.
+
         Parameters
         ----------
-        libraryFilePath : os.PathLike
-            Path to the library file.
+        None.
 
         Returns
         -------
@@ -66,7 +66,7 @@ class LibraryLoaderStrategy(ABC):
 
         Parameters
         ----------
-        libraryFilePath : os.PathLike
+        libraryFilePath : string (os.PathLike format)
             Path to the library file.
 
         Returns
