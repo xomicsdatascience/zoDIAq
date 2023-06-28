@@ -4,5 +4,5 @@ from . import (
     LibraryLoaderContext,
     LibraryLoaderStrategy,
     LibraryLoaderStrategyMgf,
-    LibraryLoaderStrategyTraml
+    LibraryLoaderStrategyTable,
 )
