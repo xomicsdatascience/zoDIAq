@@ -16,7 +16,6 @@ class LibraryLoaderStrategyMgf(LibraryLoaderStrategy):
     """
     def _load_raw_library_object_from_file(self, libraryFilePath: os.PathLike) -> None:
         self.rawLibMgf = mgf.read(libraryFilePath)
-        # NOTE: check if required values exist??
 
     def _format_raw_library_object_into_csodiaq_library_dict(self) -> dict:
         maxPeakNum = 10
