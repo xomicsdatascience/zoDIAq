@@ -5,4 +5,5 @@ from . import (
     LibraryLoaderStrategy,
     LibraryLoaderStrategyMgf,
     LibraryLoaderStrategyTable,
+    mappings
 )

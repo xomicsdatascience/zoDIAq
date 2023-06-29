@@ -7,7 +7,7 @@ class LibraryLoaderStrategy(ABC):
     def _load_raw_library_object_from_file(self, libraryFilePath: os.PathLike) -> None:
         """
         Loads the library file in a format appropriate for the concrete strategy implementation.
-            The object is saved as a class attribute for use by other class functions.
+            The object is saved as an attribute (rawLib__) for use by other class functions.
             This is an abstract method and must be implemented in child classes.
 
         Parameters
@@ -30,7 +30,7 @@ class LibraryLoaderStrategy(ABC):
     def _format_raw_library_object_into_csodiaq_library_dict(self) -> dict:
         """
         Creates a standardized dictionary object comprised of library spectra.
-            Relies on a raw library object created as a class variable in the
+            Relies on a raw library object created as an attribute 'rawLib__' in the
                 _load_raw_library_object_from_file function.
             This is an abstract method and must be implemented in child classes.
 
@@ -102,7 +102,7 @@ def create_peaks_from_mz_intensity_lists_and_csodiaq_key_id(
     peaks : list
         see _format_raw_library_object_into_csodiaq_library_dict return value for 'peak'.
     """
-    idList = [id for i in range(len(mz))]
+    idList = [id] * len(mz)
     return list(zip(mz, intensities, idList))
 
 

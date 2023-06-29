@@ -4,6 +4,7 @@ from csodiaq.loaders.LibraryLoaderStrategy import (
     remove_low_intensity_peaks_below_max_peak_num,
     finalVariableNames,
 )
+from csodiaq.loaders.mappings import newColumns, oldColumnsSpectrast, oldColumnsFragpipe, oldColumnsProsit
 import pandas as pd
 import os
 
@@ -134,47 +135,14 @@ def _create_csodiaq_library_entry(
 
 def _set_old_to_new_column_dict(filePath) -> None:
     librarySource = _determine_library_source_from_file(filePath)
-    newColumns = [
-        "precursorMz",
-        "peptideName",
-        "peakMz",
-        "peakIntensity",
-        "precursorCharge",
-        "identifier",
-        "proteinName",
-    ]
     if librarySource == "spectrast":
-        oldColumns = [
-            "PrecursorMz",
-            "FullUniModPeptideName",
-            "ProductMz",
-            "LibraryIntensity",
-            "PrecursorCharge",
-            "transition_group_id",
-            "ProteinName",
-        ]
+        oldColumns = oldColumnsSpectrast
         return dict(zip(oldColumns, newColumns))
     elif librarySource == "fragpipe":
-        oldColumns = [
-            "PrecursorMz",
-            "ModifiedPeptideSequence",
-            "ProductMz",
-            "LibraryIntensity",
-            "PrecursorCharge",
-            "PeptideSequence",
-            "ProteinId",
-        ]
+        oldColumns = oldColumnsFragpipe
         return dict(zip(oldColumns, newColumns))
     elif librarySource == "prosit":
-        oldColumns = [
-            "PrecursorMz",
-            "ModifiedPeptide",
-            "FragmentMz",
-            "RelativeIntensity",
-            "PrecursorCharge",
-            "StrippedPeptide",
-            "FragmentLossType",
-        ]
+        oldColumns = oldColumnsProsit
         return dict(zip(oldColumns, newColumns))
 
 
