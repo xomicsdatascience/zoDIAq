@@ -11,7 +11,7 @@ from numba import njit
 from . import IdentificationSpectraMatcher
 from . import spectra_matcher_functions as smf
 import csodiaq
-from csodiaq.loaders.LibraryLoaderContext import LibraryLoaderContext
+from csodiaq.loaders.library.LibraryLoaderContext import LibraryLoaderContext
 
 
 def library_file_to_dict(inFile):
@@ -32,6 +32,8 @@ def perform_spectra_pooling_and_analysis(
 ):
     smf.print_milestone("Begin Grouping Scans by m/z Windows:")
     queWindowDict, queScanValuesDict = pool_scans_by_mz_windows(querySpectraFile)
+    print()
+    print(queWindowDict[(781.400024414063, 2.0)])
 
     print("Number of Unpooled MS/MS Query Spectra: " + str(len(queScanValuesDict)))
     print(
@@ -205,7 +207,7 @@ def traml_library_upload(fileName):
         lib_df = pd.read_csv(fileName)
     smf.print_milestone("Enter library dictionary upload: ")
 
-    # Pan human and spectraST libraries have different column names. This normalizes the columns.
+    # Pan human and spectraST library have different column names. This normalizes the columns.
     headings = traml_column_headings(lib_df.columns)
     lib_df = lib_df.loc[
         :,

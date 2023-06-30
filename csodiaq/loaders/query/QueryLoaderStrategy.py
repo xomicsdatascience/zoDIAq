@@ -1,0 +1,1 @@
+class QueryLoaderStrategy: pass

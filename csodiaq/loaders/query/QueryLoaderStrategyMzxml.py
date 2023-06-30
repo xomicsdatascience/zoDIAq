@@ -1,0 +1,3 @@
+from csodiaq.loaders.query.QueryLoaderStrategy import QueryLoaderStrategy
+
+class QueryLoaderStrategyMzxml(QueryLoaderStrategy): pass

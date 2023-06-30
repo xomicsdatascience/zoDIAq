@@ -1,4 +1,4 @@
-from csodiaq.loaders import libraries
+from csodiaq.loaders import library
 import unittest
 from io import StringIO
 import os
@@ -15,7 +15,7 @@ class TestMGFLoader(unittest.TestCase):
     def test_default_load(self):
         file = os.path.join(pwd, 'test_files', 'sample_mgf.mgf')
         # Load file
-        data = libraries.mgf_library_upload(file_name=file, max_peaks=10)
+        data = library.mgf_library_upload(file_name=file, max_peaks=10)
 
         # Assert file properties
         self.assertEqual(len(data), 3)
@@ -31,7 +31,7 @@ class TestMGFLoader(unittest.TestCase):
 
         # Load file
         for max_peaks in [5,10,20,50]:
-            data = libraries.mgf_library_upload(file_name=file, max_peaks=max_peaks)
+            data = library.mgf_library_upload(file_name=file, max_peaks=max_peaks)
             k2 = (532.95, 'AAAAAAAAAAAAAAAGAGAGAK')  # expected entry from .mgf
             spec_dat = data[k2]
             self.assertEqual(len(spec_dat['Peaks']), max_peaks)
@@ -41,7 +41,7 @@ class TestMGFLoader(unittest.TestCase):
 class TestFragpipeLoader(unittest.TestCase):
     def test_default_load(self):
         print(join(pwd, 'test_files', 'fragpipe.tsv'))
-        fragpipe = libraries.load_library(join(pwd, 'test_files', 'fragpipe.tsv'))
+        fragpipe = library.load_library(join(pwd, 'test_files', 'fragpipe.tsv'))
         # Confirm expected columns
         frag_cols = fragpipe.columns
         for col in expected_cols:

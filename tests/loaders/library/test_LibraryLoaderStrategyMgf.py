@@ -2,7 +2,7 @@ import pytest
 import os
 from pyteomics import mgf
 
-from csodiaq.loaders.LibraryLoaderStrategyMgf import LibraryLoaderStrategyMgf
+from csodiaq.loaders.library.LibraryLoaderStrategyMgf import LibraryLoaderStrategyMgf
 
 
 @pytest.fixture
