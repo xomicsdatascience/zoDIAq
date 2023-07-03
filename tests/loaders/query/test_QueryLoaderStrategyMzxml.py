@@ -42,19 +42,19 @@ def test__query_loader_strategy_mzxml__extract_metadata_from_query_scans(loader)
     expectedOutputDict = {
         "1": {
             "precursorMz": 781.400024414063,
-            "windowWideness": 2.0,
+            "windowWidth": 2.0,
             "peaksCount": 266,
             "CV": -30.0,
         },
         "2": {
             "precursorMz": 816.419982910156,
-            "windowWideness": 2.0,
+            "windowWidth": 2.0,
             "peaksCount": 217,
             "CV": -30.0,
         },
         "119": {
             "precursorMz": 781.400024414063,
-            "windowWideness": 2.0,
+            "windowWidth": 2.0,
             "peaksCount": 660,
             "CV": -40.0,
         },

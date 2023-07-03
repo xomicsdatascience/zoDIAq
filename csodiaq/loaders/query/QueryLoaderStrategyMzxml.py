@@ -7,6 +7,11 @@ from pyteomics import mzxml
 
 
 class QueryLoaderStrategyMzxml(QueryLoaderStrategy):
+    """
+    Concrete strategy implementation of the QueryLoaderStrategy strategy class specific for
+        loading mzXML query files.
+    """
+
     def map_query_scan_ids_to_dia_mz_windows(self) -> dict:
         mzWindowToScanIdDict = defaultdict(list)
         with mzxml.read(self.filePath) as spectra:
@@ -27,9 +32,7 @@ class QueryLoaderStrategyMzxml(QueryLoaderStrategy):
                     continue
                 metadataDict = {}
                 metadataDict["precursorMz"] = spec["precursorMz"][0]["precursorMz"]
-                metadataDict["windowWideness"] = spec["precursorMz"][0][
-                    "windowWideness"
-                ]
+                metadataDict["windowWidth"] = spec["precursorMz"][0]["windowWideness"]
                 metadataDict["peaksCount"] = spec["peaksCount"]
                 if "compensationVoltage" in spec:
                     CV = spec["compensationVoltage"]
