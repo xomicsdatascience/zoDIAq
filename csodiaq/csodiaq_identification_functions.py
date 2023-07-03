@@ -32,8 +32,7 @@ def perform_spectra_pooling_and_analysis(
 ):
     smf.print_milestone("Begin Grouping Scans by m/z Windows:")
     queWindowDict, queScanValuesDict = pool_scans_by_mz_windows(querySpectraFile)
-    print()
-    print(queWindowDict[(781.400024414063, 2.0)])
+
 
     print("Number of Unpooled MS/MS Query Spectra: " + str(len(queScanValuesDict)))
     print(
@@ -48,7 +47,6 @@ def perform_spectra_pooling_and_analysis(
     while printFriendlyCounter < len(queWindowDict):
         printFriendlyCounter *= 10
     printFriendlyCounter /= 100
-
     allLibKeys, libIdToKeyDict, libIdToDecoyDict = gather_library_metadata(lib)
     allSpectraMatches = IdentificationSpectraMatcher.IdentificationSpectraMatcher()
     numWindowsAnalyzed = 0
@@ -59,9 +57,12 @@ def perform_spectra_pooling_and_analysis(
         for precMz_win, scans in queWindowDict.items():
             top_mz = precMz_win[0] + precMz_win[1] / 2
             bottom_mz = precMz_win[0] - precMz_win[1] / 2
+
             libKeys = identify_lib_spectra_in_window(top_mz, bottom_mz, allLibKeys)
             if len(libKeys) == 0:
                 continue
+            print('hi there _____')
+
             pooledLibSpectra = pool_lib_spectra(lib, libKeys)
             pooledQueSpectra = []
 
@@ -69,11 +70,17 @@ def perform_spectra_pooling_and_analysis(
                 scanNumber = scans[i]
                 queSpectrum = spectra.get_by_id(scanNumber)
                 pooledQueSpectra += smf.format_spectra_for_pooling(
-                    queSpectrum, scanNumber
+                    queSpectrum, scanNumber, sqrt=False
                 )
 
+
+
                 if (i % maxQuerySpectraToPool == 0 and i != 0) or i == len(scans) - 1:
+                    print()
+                    print(precMz_win)
                     pooledQueSpectra.sort()
+                    print(pooledQueSpectra)
+
                     windowSpectraMatches = (
                         IdentificationSpectraMatcher.IdentificationSpectraMatcher()
                     )
@@ -82,6 +89,7 @@ def perform_spectra_pooling_and_analysis(
                     )
                     allSpectraMatches.extend_all_spectra(windowSpectraMatches)
                     pooledQueSpectra.clear()
+
 
             numWindowsAnalyzed += 1
             if numWindowsAnalyzed % printFriendlyCounter == 0:
@@ -364,6 +372,7 @@ def pool_scans_by_mz_windows(querySpectraFile):
     queScanValuesDict = defaultdict(dict)
 
     with mzxml.read(querySpectraFile, use_index=True) as spectra:
+        count = 0
         for spec in spectra:
             if "precursorMz" not in spec:
                 continue
@@ -380,7 +389,7 @@ def pool_scans_by_mz_windows(querySpectraFile):
             else:
                 CV = ""
             queScanValuesDict[scan]["CV"] = CV
-
+            count += 1
     return queWindowDict, queScanValuesDict
 
 
