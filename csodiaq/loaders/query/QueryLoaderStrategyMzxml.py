@@ -1,7 +1,10 @@
 from csodiaq.loaders.query.QueryLoaderStrategy import QueryLoaderStrategy
-from csodiaq.loaders.library.LibraryLoaderStrategy import create_peaks_from_mz_intensity_lists_and_csodiaq_key_id
+from csodiaq.loaders.library.LibraryLoaderStrategy import (
+    create_peaks_from_mz_intensity_lists_and_csodiaq_key_id,
+)
 from collections import defaultdict
 from pyteomics import mzxml
+
 
 class QueryLoaderStrategyMzxml(QueryLoaderStrategy):
     def map_query_scan_ids_to_dia_mz_windows(self) -> dict:
@@ -24,7 +27,9 @@ class QueryLoaderStrategyMzxml(QueryLoaderStrategy):
                     continue
                 metadataDict = {}
                 metadataDict["precursorMz"] = spec["precursorMz"][0]["precursorMz"]
-                metadataDict["windowWideness"] = spec["precursorMz"][0]["windowWideness"]
+                metadataDict["windowWideness"] = spec["precursorMz"][0][
+                    "windowWideness"
+                ]
                 metadataDict["peaksCount"] = spec["peaksCount"]
                 if "compensationVoltage" in spec:
                     CV = spec["compensationVoltage"]
@@ -39,6 +44,9 @@ class QueryLoaderStrategyMzxml(QueryLoaderStrategy):
         with mzxml.read(self.filePath, use_index=True) as spectra:
             for scan in scans:
                 spectrum = spectra.get_by_id(scan)
-                pooledQueryPeaks += create_peaks_from_mz_intensity_lists_and_csodiaq_key_id(spectrum['m/z array'],spectrum['intensity array'],int(scan))
+                pooledQueryPeaks += (
+                    create_peaks_from_mz_intensity_lists_and_csodiaq_key_id(
+                        spectrum["m/z array"], spectrum["intensity array"], int(scan)
+                    )
+                )
         return sorted(pooledQueryPeaks)
-

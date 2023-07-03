@@ -1,1 +1,2 @@
-class QueryLoaderContext: pass
+class QueryLoaderContext:
+    pass

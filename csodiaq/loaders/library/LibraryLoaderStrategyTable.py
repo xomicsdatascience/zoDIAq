@@ -4,7 +4,12 @@ from csodiaq.loaders.library.LibraryLoaderStrategy import (
     remove_low_intensity_peaks_below_max_peak_num,
     finalVariableNames,
 )
-from csodiaq.loaders.library.mappings import newColumns, oldColumnsSpectrast, oldColumnsFragpipe, oldColumnsProsit
+from csodiaq.loaders.library.mappings import (
+    newColumns,
+    oldColumnsSpectrast,
+    oldColumnsFragpipe,
+    oldColumnsProsit,
+)
 import pandas as pd
 import os
 
