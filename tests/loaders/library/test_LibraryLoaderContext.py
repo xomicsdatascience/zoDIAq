@@ -1,17 +1,20 @@
-from csodiaq.loaders.LibraryLoaderContext import LibraryLoaderContext
-from csodiaq.loaders.LibraryLoaderStrategyTable import LibraryLoaderStrategyTable
-from csodiaq.loaders.LibraryLoaderStrategyMgf import LibraryLoaderStrategyMgf
+from csodiaq.loaders.library.LibraryLoaderContext import LibraryLoaderContext
+from csodiaq.loaders.library.LibraryLoaderStrategyTable import (
+    LibraryLoaderStrategyTable,
+)
+from csodiaq.loaders.library.LibraryLoaderStrategyMgf import LibraryLoaderStrategyMgf
 
 import pytest
 import os
 import re
 
+def get_parent_dir():
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 @pytest.fixture
 def tableContext():
-    parentDir = os.path.dirname(os.getcwd())
     tableLibPath = os.path.join(
-        parentDir, "test_files", "sample_lib_table_spectrast.tsv"
+        get_parent_dir(), "test_files", "sample_lib_table_spectrast.tsv"
     )
     return LibraryLoaderContext(tableLibPath)
 
@@ -47,16 +50,14 @@ def test__library_loader_context__table__load_csodiaq_library_dict(tableContext)
 
 
 def test__library_loader_context__table__initialization_csv():
-    parentDir = os.path.dirname(os.getcwd())
-    tableLibPath = os.path.join(parentDir, "test_files", "sample_lib_table_prosit.csv")
+    tableLibPath = os.path.join(get_parent_dir(), "test_files", "sample_lib_table_prosit.csv")
     context = LibraryLoaderContext(tableLibPath)
     assert isinstance(context._strategy, LibraryLoaderStrategyTable)
 
 
 @pytest.fixture
 def mgfContext():
-    parentDir = os.path.dirname(os.getcwd())
-    mgfLibPath = os.path.join(parentDir, "test_files", "sample_lib_mgf.mgf")
+    mgfLibPath = os.path.join(get_parent_dir(), "test_files", "sample_lib_mgf.mgf")
     return LibraryLoaderContext(mgfLibPath)
 
 

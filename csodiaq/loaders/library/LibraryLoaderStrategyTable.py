@@ -1,10 +1,15 @@
-from csodiaq.loaders.LibraryLoaderStrategy import (
+from csodiaq.loaders.library.LibraryLoaderStrategy import (
     LibraryLoaderStrategy,
     create_peaks_from_mz_intensity_lists_and_csodiaq_key_id,
     remove_low_intensity_peaks_below_max_peak_num,
     finalVariableNames,
 )
-from csodiaq.loaders.mappings import newColumns, oldColumnsSpectrast, oldColumnsFragpipe, oldColumnsProsit
+from csodiaq.loaders.library.mappings import (
+    newColumns,
+    oldColumnsSpectrast,
+    oldColumnsFragpipe,
+    oldColumnsProsit,
+)
 import pandas as pd
 import os
 
@@ -17,7 +22,7 @@ class LibraryLoaderStrategyTable(LibraryLoaderStrategy):
 
     Extended Summary
     ----------------
-    While table-based libraries can all be read into a pandas dataframe, the column names can differ.
+    While table-based library can all be read into a pandas dataframe, the column names can differ.
         This class accounts for THREE variations of library column titles (as derived from
         SpectraST/PanHuman, FragPipe, and Prosit outputs).
         The 'old' column name list of any of these three formats is converted into a single standard

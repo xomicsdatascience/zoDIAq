@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import re
 from tempfile import TemporaryDirectory, NamedTemporaryFile
-from csodiaq.loaders.LibraryLoaderStrategyTable import (
+from csodiaq.loaders.library.LibraryLoaderStrategyTable import (
     LibraryLoaderStrategyTable,
     _reformat_raw_library_object_columns,
     _organize_data_by_csodiaq_library_dict_keys,
@@ -21,7 +21,8 @@ def test__library_loader_strategy_table__initialization(loader):
 
 
 def get_parent_dir():
-    return os.path.dirname(os.getcwd())
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 
 @pytest.fixture

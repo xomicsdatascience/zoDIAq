@@ -11,7 +11,7 @@ from numba import njit
 from . import IdentificationSpectraMatcher
 from . import spectra_matcher_functions as smf
 import csodiaq
-from csodiaq.loaders.LibraryLoaderContext import LibraryLoaderContext
+from csodiaq.loaders.library.LibraryLoaderContext import LibraryLoaderContext
 
 
 def library_file_to_dict(inFile):
@@ -33,6 +33,7 @@ def perform_spectra_pooling_and_analysis(
     smf.print_milestone("Begin Grouping Scans by m/z Windows:")
     queWindowDict, queScanValuesDict = pool_scans_by_mz_windows(querySpectraFile)
 
+
     print("Number of Unpooled MS/MS Query Spectra: " + str(len(queScanValuesDict)))
     print(
         "Number of Pooled MS/MS Query Spectra/Mz Windows: " + str(len(queWindowDict)),
@@ -46,7 +47,6 @@ def perform_spectra_pooling_and_analysis(
     while printFriendlyCounter < len(queWindowDict):
         printFriendlyCounter *= 10
     printFriendlyCounter /= 100
-
     allLibKeys, libIdToKeyDict, libIdToDecoyDict = gather_library_metadata(lib)
     allSpectraMatches = IdentificationSpectraMatcher.IdentificationSpectraMatcher()
     numWindowsAnalyzed = 0
@@ -67,11 +67,17 @@ def perform_spectra_pooling_and_analysis(
                 scanNumber = scans[i]
                 queSpectrum = spectra.get_by_id(scanNumber)
                 pooledQueSpectra += smf.format_spectra_for_pooling(
-                    queSpectrum, scanNumber
+                    queSpectrum, scanNumber, sqrt=False
                 )
 
+
+
                 if (i % maxQuerySpectraToPool == 0 and i != 0) or i == len(scans) - 1:
+                    print()
+                    print(precMz_win)
                     pooledQueSpectra.sort()
+                    print(pooledQueSpectra)
+
                     windowSpectraMatches = (
                         IdentificationSpectraMatcher.IdentificationSpectraMatcher()
                     )
@@ -80,6 +86,7 @@ def perform_spectra_pooling_and_analysis(
                     )
                     allSpectraMatches.extend_all_spectra(windowSpectraMatches)
                     pooledQueSpectra.clear()
+
 
             numWindowsAnalyzed += 1
             if numWindowsAnalyzed % printFriendlyCounter == 0:
@@ -378,7 +385,6 @@ def pool_scans_by_mz_windows(querySpectraFile):
             else:
                 CV = ""
             queScanValuesDict[scan]["CV"] = CV
-
     return queWindowDict, queScanValuesDict
 
 
