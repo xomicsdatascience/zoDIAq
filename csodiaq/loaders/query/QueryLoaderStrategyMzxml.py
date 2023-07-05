@@ -1,4 +1,4 @@
-from csodiaq.loaders.query.QueryLoaderStrategy import QueryLoaderStrategy
+from csodiaq.loaders.query.QueryLoaderStrategy import QueryLoaderStrategy, precursor_mz_missing_warning_text
 from csodiaq.loaders.library.LibraryLoaderStrategy import (
     create_peaks_from_mz_intensity_lists_and_csodiaq_key_id,
 )
@@ -16,9 +16,10 @@ class QueryLoaderStrategyMzxml(QueryLoaderStrategy):
         mzWindowToScanIdDict = defaultdict(list)
         with mzxml.read(self.filePath) as spectra:
             for spec in spectra:
-                if "precursorMz" not in spec:
-                    continue
                 scan = spec["num"]
+                if "precursorMz" not in spec:
+                    raise SyntaxWarning(precursor_mz_missing_warning_text(scan))
+                    continue
                 precMz = spec["precursorMz"][0]["precursorMz"]
                 windowWidth = spec["precursorMz"][0]["windowWideness"]
                 mzWindowToScanIdDict[precMz, windowWidth].append(scan)
@@ -28,8 +29,6 @@ class QueryLoaderStrategyMzxml(QueryLoaderStrategy):
         scanMetadataDict = {}
         with mzxml.read(self.filePath) as spectra:
             for spec in spectra:
-                if "precursorMz" not in spec:
-                    continue
                 metadataDict = {}
                 metadataDict["precursorMz"] = spec["precursorMz"][0]["precursorMz"]
                 metadataDict["windowWidth"] = spec["precursorMz"][0]["windowWideness"]
