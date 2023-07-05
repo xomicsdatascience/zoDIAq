@@ -12,7 +12,7 @@ from . import IdentificationSpectraMatcher
 from . import spectra_matcher_functions as smf
 import csodiaq
 from csodiaq.loaders.library.LibraryLoaderContext import LibraryLoaderContext
-
+from csodiaq.loaders.query.QueryLoaderContext import QueryLoaderContext
 
 def library_file_to_dict(inFile):
     context = LibraryLoaderContext(inFile)
@@ -31,8 +31,9 @@ def perform_spectra_pooling_and_analysis(
     num_peaks: int = 3,
 ):
     smf.print_milestone("Begin Grouping Scans by m/z Windows:")
-    queWindowDict, queScanValuesDict = pool_scans_by_mz_windows(querySpectraFile)
-
+    queryContext = QueryLoaderContext(querySpectraFile)
+    queWindowDict = queryContext.map_query_scan_ids_to_dia_mz_windows()
+    queScanValuesDict = queryContext.extract_metadata_from_query_scans()
 
     print("Number of Unpooled MS/MS Query Spectra: " + str(len(queScanValuesDict)))
     print(
@@ -73,10 +74,7 @@ def perform_spectra_pooling_and_analysis(
 
 
                 if (i % maxQuerySpectraToPool == 0 and i != 0) or i == len(scans) - 1:
-                    print()
-                    print(precMz_win)
                     pooledQueSpectra.sort()
-                    print(pooledQueSpectra)
 
                     windowSpectraMatches = (
                         IdentificationSpectraMatcher.IdentificationSpectraMatcher()

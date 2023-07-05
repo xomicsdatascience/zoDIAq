@@ -323,7 +323,7 @@ class IdentificationSpectraMatcher:
                             curIonCount,  # ionCount
                             queValDict[scan]['CV'],  # compensationVoltage
                             # totalWindowWidth
-                            queValDict[scan]['windowWideness'],
+                            queValDict[scan]['windowWidth'],
                             curScore,
                             excluded_count
                         ]
@@ -387,7 +387,7 @@ class IdentificationSpectraMatcher:
                     curIonCount,  # ionCount
                     queValDict[scan]['CV'],  # compensationVoltage
                     # totalWindowWidth
-                    queValDict[scan]['windowWideness'],
+                    queValDict[scan]['windowWidth'],
                     curScore,
                     excluded_count
                 ]
