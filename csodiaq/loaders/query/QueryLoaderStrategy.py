@@ -96,5 +96,6 @@ class QueryLoaderStrategy(ABC):
         """
         pass
 
+
 def precursor_mz_missing_warning_text(scanNum):
-    return f'scan number {scanNum} has no precursorMz and will be ignored. This may be because it is from an ms1 scan.'
+    return f"scan number {scanNum} has no precursorMz and will be ignored. This may be because it is from an ms1 scan."
