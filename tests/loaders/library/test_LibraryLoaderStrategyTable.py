@@ -24,7 +24,6 @@ def get_parent_dir():
     return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-
 @pytest.fixture
 def libFilePath():
     return os.path.join(
@@ -36,8 +35,8 @@ def test__library_loader_strategy_table__load_raw_library_object_from_file__spec
     loader, libFilePath
 ):
     loader._load_raw_library_object_from_file(libFilePath)
-    assert hasattr(loader, "rawLibDf")
-    assert isinstance(loader.rawLibDf, pd.DataFrame)
+    assert hasattr(loader, "rawUploadedLibraryObject")
+    assert isinstance(loader.rawUploadedLibraryObject, pd.DataFrame)
 
 
 def check_value_error_thrown_when_missing_columns(loader, dfPath, missingColumnValues):
@@ -223,7 +222,7 @@ def test__library_loader_strategy_table__organize_data_by_csodiaq_library_dict_k
 ):
     loader._load_raw_library_object_from_file(libFilePath)
     reformattedDf = _reformat_raw_library_object_columns(
-        loader.rawLibDf, loader.oldToNewColumnDict
+        loader.rawUploadedLibraryObject, loader.oldToNewColumnDict
     )
     expectedKeys = [(375.87322429333335, "FANYIDKVR")]
     expectedTupleToListMzDict = {

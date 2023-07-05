@@ -30,7 +30,7 @@ class LibraryLoaderStrategyTable(LibraryLoaderStrategy):
 
     Attributes
     ----------
-    rawLibDf : pd.DataFrame
+    rawUploadedLibraryObject : pd.DataFrame
         The original table as loaded from the .tsv or .csv library file. The relevant columns of this
         table are renamed ('old' -> 'new') and irrelevant columns are removed during the reformatting.
     oldToNewColumnDict : dict
@@ -44,17 +44,17 @@ class LibraryLoaderStrategyTable(LibraryLoaderStrategy):
             separator = "\t"
         else:
             separator = ","
-        self.rawLibDf = pd.read_csv(libraryFilePath, sep=separator)
+        self.rawUploadedLibraryObject = pd.read_csv(libraryFilePath, sep=separator)
         self.oldToNewColumnDict = _set_old_to_new_column_dict(libraryFilePath)
         _assert_there_are_no_missing_columns(
-            self.oldToNewColumnDict.keys(), self.rawLibDf.columns
+            self.oldToNewColumnDict.keys(), self.rawUploadedLibraryObject.columns
         )
 
     def _format_raw_library_object_into_csodiaq_library_dict(self) -> dict:
         """abstract class implementation - see 'LibraryLoaderStrategy.py' for details"""
         maxPeakNum = 10
         reformattedLibDf = _reformat_raw_library_object_columns(
-            self.rawLibDf, self.oldToNewColumnDict
+            self.rawUploadedLibraryObject, self.oldToNewColumnDict
         )
         organizedDataDict = _organize_data_by_csodiaq_library_dict_keys(
             reformattedLibDf

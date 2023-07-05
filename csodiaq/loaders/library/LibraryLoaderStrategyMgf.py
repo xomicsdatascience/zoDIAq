@@ -17,18 +17,18 @@ class LibraryLoaderStrategyMgf(LibraryLoaderStrategy):
 
     Attributes
     ----------
-    rawLibMgf : pyteomics.mgf.IndexedMGF
+    rawUploadedLibraryObject : pyteomics.mgf.IndexedMGF
         The original mgf library as loaded using the pyteomics mgf class.
     """
 
     def _load_raw_library_object_from_file(self, libraryFilePath: os.PathLike) -> None:
-        self.rawLibMgf = mgf.read(libraryFilePath)
+        self.rawUploadedLibraryObject = mgf.read(libraryFilePath)
 
     def _format_raw_library_object_into_csodiaq_library_dict(self) -> dict:
         maxPeakNum = 10
         csodiaqLibDict = {}
-        for csodiaqKeyIdx in range(len(self.rawLibMgf)):
-            librarySpectrum = self.rawLibMgf[csodiaqKeyIdx]
+        for csodiaqKeyIdx in range(len(self.rawUploadedLibraryObject)):
+            librarySpectrum = self.rawUploadedLibraryObject[csodiaqKeyIdx]
             csodiaqKey, csodiaqValue = _create_csodiaq_library_entry(
                 librarySpectrum, maxPeakNum, csodiaqKeyIdx
             )

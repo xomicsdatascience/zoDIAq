@@ -8,8 +8,10 @@ import pytest
 import os
 import re
 
+
 def get_parent_dir():
     return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 @pytest.fixture
 def tableContext():
@@ -50,7 +52,9 @@ def test__library_loader_context__table__load_csodiaq_library_dict(tableContext)
 
 
 def test__library_loader_context__table__initialization_csv():
-    tableLibPath = os.path.join(get_parent_dir(), "test_files", "sample_lib_table_prosit.csv")
+    tableLibPath = os.path.join(
+        get_parent_dir(), "test_files", "sample_lib_table_prosit.csv"
+    )
     context = LibraryLoaderContext(tableLibPath)
     assert isinstance(context._strategy, LibraryLoaderStrategyTable)
 

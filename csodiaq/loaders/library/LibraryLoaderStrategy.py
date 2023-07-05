@@ -3,6 +3,9 @@ import os
 
 
 class LibraryLoaderStrategy(ABC):
+    def __init__(self):
+        self.rawUploadedLibraryObject = None
+
     @abstractmethod
     def _load_raw_library_object_from_file(self, libraryFilePath: os.PathLike) -> None:
         """
