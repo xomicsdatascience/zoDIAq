@@ -95,3 +95,7 @@ class QueryLoaderStrategy(ABC):
                 return value for 'peak' in LibraryLoaderStrategy.py.
         """
         pass
+
+
+def precursor_mz_missing_warning_text(scanNum):
+    return f"scan number {scanNum} has no precursorMz and will be ignored. This may be because it is from an ms1 scan."

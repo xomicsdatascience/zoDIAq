@@ -2,6 +2,7 @@ from csodiaq.loaders.query.QueryLoaderStrategy import QueryLoaderStrategy
 from csodiaq.loaders.query.QueryLoaderStrategyMzxml import QueryLoaderStrategyMzxml
 import pytest
 import os
+import re
 from expectedPooledQueryPeaks import (
     expectedOutputPoolSingleScan,
     expectedOutputPoolMultipleScans,
@@ -36,6 +37,25 @@ def test__query_loader_strategy_mzxml__map_query_scan_ids_to_dia_mz_windows(load
     for key, value in expectedOutputDict.items():
         assert key in outputDict
         assert outputDict[key] == value
+
+
+def test__query_loader_strategy_mzxml__map_query_scan_ids_to_dia_mz_windows__warning_error_thrown_when_precursorMz_not_found():
+    testFile = os.path.join(
+        get_parent_dir(),
+        "test_files",
+        "sample_query_mzxml_with_no_precursor_mz_on_first_scan.mzXML",
+    )
+    loader = QueryLoaderStrategyMzxml(testFile)
+    expectedOutputDict = {
+        (781.400024414063, 2.0): ["119"],
+        (816.419982910156, 2.0): ["2"],
+    }
+    errorOutput = f"scan number 1 has no precursorMz and will be ignored. This may be because it is from an ms1 scan"
+    with pytest.raises(SyntaxWarning, match=re.escape(errorOutput)):
+        outputDict = loader.map_query_scan_ids_to_dia_mz_windows()
+        for key, value in expectedOutputDict.items():
+            assert key in outputDict
+            assert outputDict[key] == value
 
 
 def test__query_loader_strategy_mzxml__extract_metadata_from_query_scans(loader):

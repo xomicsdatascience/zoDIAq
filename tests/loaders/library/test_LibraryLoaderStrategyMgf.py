@@ -18,7 +18,6 @@ def get_parent_dir():
     return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-
 @pytest.fixture
 def libFilePath():
     return os.path.join(get_parent_dir(), "test_files", "sample_lib_mgf.mgf")
@@ -28,8 +27,8 @@ def test__library_loader_strategy_mgf__load_raw_library_object_from_file(
     loader, libFilePath
 ):
     loader._load_raw_library_object_from_file(libFilePath)
-    assert hasattr(loader, "rawLibMgf")
-    assert isinstance(loader.rawLibMgf, mgf.IndexedMGF)
+    assert hasattr(loader, "rawUploadedLibraryObject")
+    assert isinstance(loader.rawUploadedLibraryObject, mgf.IndexedMGF)
 
 
 def test__library_loader_strategy_mgf__format_raw_library_object_into_csodiaq_library_dict(
