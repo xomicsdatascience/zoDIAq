@@ -9,7 +9,7 @@ from expectedPooledQueryPeaks import (
 
 
 def get_parent_dir():
-    return os.path.dirname(os.getcwd())
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 @pytest.fixture
