@@ -57,12 +57,9 @@ def perform_spectra_pooling_and_analysis(
         for precMz_win, scans in queWindowDict.items():
             top_mz = precMz_win[0] + precMz_win[1] / 2
             bottom_mz = precMz_win[0] - precMz_win[1] / 2
-
             libKeys = identify_lib_spectra_in_window(top_mz, bottom_mz, allLibKeys)
             if len(libKeys) == 0:
                 continue
-            print('hi there _____')
-
             pooledLibSpectra = pool_lib_spectra(lib, libKeys)
             pooledQueSpectra = []
 
@@ -215,7 +212,7 @@ def traml_library_upload(fileName):
         lib_df = pd.read_csv(fileName)
     smf.print_milestone("Enter library dictionary upload: ")
 
-    # Pan human and spectraST library have different column names. This normalizes the columns.
+    # Pan human and spectraST libraries have different column names. This normalizes the columns.
     headings = traml_column_headings(lib_df.columns)
     lib_df = lib_df.loc[
         :,
@@ -372,7 +369,6 @@ def pool_scans_by_mz_windows(querySpectraFile):
     queScanValuesDict = defaultdict(dict)
 
     with mzxml.read(querySpectraFile, use_index=True) as spectra:
-        count = 0
         for spec in spectra:
             if "precursorMz" not in spec:
                 continue
@@ -389,7 +385,6 @@ def pool_scans_by_mz_windows(querySpectraFile):
             else:
                 CV = ""
             queScanValuesDict[scan]["CV"] = CV
-            count += 1
     return queWindowDict, queScanValuesDict
 
 
