@@ -30,7 +30,7 @@ def test__library_loader_strategy_table__initialization(loader):
 def test__query_loader_strategy_mzxml__map_query_scan_ids_to_dia_mz_windows(loader):
     expectedOutputDict = {
         (781.400024414063, 2.0): ["1", "119"],
-        (816.419982910156, 2.0): ["2"],
+        (517.27001953125, 2.0): ["456"],
     }
     outputDict = loader.map_query_scan_ids_to_dia_mz_windows()
     assert isinstance(outputDict, dict)
@@ -66,18 +66,13 @@ def test__query_loader_strategy_mzxml__extract_metadata_from_query_scans(loader)
             "peaksCount": 266,
             "CV": -30.0,
         },
-        "2": {
-            "precursorMz": 816.419982910156,
-            "windowWidth": 2.0,
-            "peaksCount": 217,
-            "CV": -30.0,
-        },
         "119": {
             "precursorMz": 781.400024414063,
             "windowWidth": 2.0,
             "peaksCount": 660,
             "CV": -40.0,
         },
+        "456": {'precursorMz': 517.27001953125, 'windowWidth': 2.0, 'peaksCount': 1578, 'CV': -70.0},
     }
     outputDict = loader.extract_metadata_from_query_scans()
     for key, value in expectedOutputDict.items():
@@ -88,7 +83,7 @@ def test__query_loader_strategy_mzxml__extract_metadata_from_query_scans(loader)
 
 
 def test__query_loader_strategy_mzxml__pool_query_scans__single_scan(loader):
-    singleScan = ["2"]
+    singleScan = ["456"]
     outputPool = loader.pool_peaks_of_query_scans(singleScan)
     for i in range(len(expectedOutputPoolSingleScan)):
         assert outputPool[i] == expectedOutputPoolSingleScan[i]
