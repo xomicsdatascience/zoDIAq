@@ -8,19 +8,19 @@ def generate_pooled_library_and_query_spectra_by_mz_windows(libraryFile, queryFi
     queryContext = QueryLoaderContext(queryFile)
     queDict = queryContext.map_query_scan_ids_to_dia_mz_windows()
     for mzWindow, scans in queDict.items():
-        pooledLibraryPeaks = pool_library_spectra_by_mz_window(mzWindow, libDict)
+        pooledLibraryPeaks = _pool_library_spectra_by_mz_window(mzWindow, libDict)
         if len(pooledLibraryPeaks) == 0: continue
         pooledQueryPeaks = queryContext.pool_peaks_of_query_scans(scans)
         yield pooledLibraryPeaks, pooledQueryPeaks
 
-def pool_library_spectra_by_mz_window(mzWindow, libDict):
-    libKeys = find_keys_of_library_spectra_in_mz_window(mzWindow, libDict.keys())
+def _pool_library_spectra_by_mz_window(mzWindow, libDict):
+    libKeys = _find_keys_of_library_spectra_in_mz_window(mzWindow, libDict.keys())
     pooledLibPeaks = []
     for key in libKeys:
         pooledLibPeaks.extend(libDict[key]['peaks'])
     return sorted(pooledLibPeaks)
 
-def find_keys_of_library_spectra_in_mz_window(mzWindow, libDictKeys):
+def _find_keys_of_library_spectra_in_mz_window(mzWindow, libDictKeys):
     topMz = mzWindow[0] + mzWindow[1] / 2
     bottomMz = mzWindow[0] - mzWindow[1] / 2
     libKeysDf = pd.DataFrame(libDictKeys, columns=["precursorMz","peptide"])

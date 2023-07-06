@@ -1,4 +1,4 @@
-from csodiaq.identifier.poolingFunctions import pool_library_spectra_by_mz_window, generate_pooled_library_and_query_spectra_by_mz_windows
+from csodiaq.identifier.poolingFunctions import _pool_library_spectra_by_mz_window, generate_pooled_library_and_query_spectra_by_mz_windows
 from csodiaq.loaders.library.LibraryLoaderContext import LibraryLoaderContext
 from csodiaq.loaders.query.QueryLoaderContext import QueryLoaderContext
 from csodiaq.loaders.query.QueryLoaderStrategyMzxml import QueryLoaderStrategyMzxml
@@ -48,7 +48,7 @@ def test__pooler__pool_library_spectra_by_mz_window():
     }
     mzWindow = (20.0, 2.0)
     expectedOutput = bPeaks + cPeaks + dPeaks
-    output = pool_library_spectra_by_mz_window(mzWindow, testLibDict)
+    output = _pool_library_spectra_by_mz_window(mzWindow, testLibDict)
     assert output == expectedOutput
 
 def test__pooler__pool_library_spectra_by_mz_window__throws_warning_when_no_lib_peptides_found_in_window():
@@ -60,7 +60,7 @@ def test__pooler__pool_library_spectra_by_mz_window__throws_warning_when_no_lib_
     expectedOutput = []
     errorOutput = f"No library spectra found in the {mzWindow} m/z window. Skipping"
     with pytest.warns(SyntaxWarning, match=re.escape(errorOutput)):
-        output = pool_library_spectra_by_mz_window(mzWindow, testLibDict)
+        output = _pool_library_spectra_by_mz_window(mzWindow, testLibDict)
         assert output == expectedOutput
 
 
