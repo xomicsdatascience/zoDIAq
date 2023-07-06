@@ -265,10 +265,6 @@ def test__library_loader_strategy_table__organize_data_by_csodiaq_library_dict_k
     }
 
     dataDict = _organize_data_by_csodiaq_library_dict_keys(reformattedDf)
-    print()
-    print(dataDict["mz"])
-    print(dataDict["intensities"])
-    print(dataDict["metadata"])
     assert dataDict["csodiaqKeys"] == expectedKeys
     assert dataDict["mz"] == expectedTupleToListMzDict
     assert dataDict["intensities"] == expectedTupleToListIntensityDict
