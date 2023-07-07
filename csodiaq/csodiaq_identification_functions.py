@@ -74,9 +74,6 @@ def perform_spectra_pooling_and_analysis(
 
                 if (i % maxQuerySpectraToPool == 0 and i != 0) or i == len(scans) - 1:
                     pooledQueSpectra.sort()
-                    print()
-                    print(pooledLibSpectra)
-                    print(pooledQueSpectra)
 
                     windowSpectraMatches = (
                         IdentificationSpectraMatcher.IdentificationSpectraMatcher()
