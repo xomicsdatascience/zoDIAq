@@ -1,6 +1,6 @@
 import pandas as pd
-
-
+pd.set_option('display.max_columns', None)
+pd.set_option('display.max_rows', None)
 
 def calculate_parts_per_million_relative_difference(referenceMz, targetMz):
     return (referenceMz - targetMz) * (1e6) / referenceMz
@@ -8,7 +8,7 @@ def calculate_parts_per_million_relative_difference(referenceMz, targetMz):
 def is_within_tolerance(ppm, tolerance):
     return abs(ppm) <= tolerance
 
-def find_all_library_matches_in_query_spectra(libraryPeaks, queryPeaks, ppmTolerance):
+def match_library_to_query_pooled_spectra(libraryPeaks, queryPeaks, ppmTolerance):
     i, j = 0, 0
     mzIdx, intensityIdx, tagIdx = 0, 1, 2
     data = []
@@ -33,5 +33,8 @@ def find_all_library_matches_in_query_spectra(libraryPeaks, queryPeaks, ppmToler
         j += 1
     return pd.DataFrame(data, columns=["libraryIdx","libraryIntensity","queryIdx","queryIntensity","ppmDifference"])
 
+def eliminate_low_count_matches(matches):
+    minNumMatches = 3
+    return matches.groupby(["libraryIdx","queryIdx"]).filter(lambda x: x.shape[0] >= minNumMatches)
 
 
