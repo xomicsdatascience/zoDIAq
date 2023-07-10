@@ -14,16 +14,15 @@ def calculate_cosine_similarity_score(vectorA, vectorB):
 def calculate_macc_score(vectorA, vectorB):
     return len(vectorA.index)**(1/5) * calculate_cosine_similarity_score(vectorA, vectorB)
 
-def add_decoy_label_to_score_df(decoySet, scoreDf):
-    scoreDf["isDecoy"] = np.where(scoreDf["libraryIdx"].isin(decoySet), 1, 0)
-    return scoreDf
+def identify_all_decoys(decoySet, scoreDf):
+    return np.where(scoreDf["libraryIdx"].isin(decoySet), 1, 0)
 
-def determine_index_of_fdr_cutoff(isDecoySeries):
-    if isDecoySeries[0]:
+def determine_index_of_fdr_cutoff(isDecoyArray):
+    if isDecoyArray[0]:
         raise ValueError('None of the library peptides were identified in the query spectra (highest score was a decoy).')
     fdrCutoff = 1e-2
-    decoyIndices = np.flatnonzero(isDecoySeries)
+    decoyIndices = np.flatnonzero(isDecoyArray)
     fdrs = (np.arange(1, len(decoyIndices)+1))/(decoyIndices + 1)
-    lastDecoyIdx = np.argmax(fdrs > fdrCutoff)
-    return decoyIndices[lastDecoyIdx] - 1
+    lastDecoy = np.argmax(fdrs > fdrCutoff)
+    return decoyIndices[lastDecoy]
 

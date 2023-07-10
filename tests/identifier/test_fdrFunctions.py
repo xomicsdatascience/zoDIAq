@@ -1,8 +1,9 @@
 import pytest
 import pandas as pd
 import re
+import numpy as np
 
-from csodiaq.identifier.fdrFunctions import score_library_to_query_matches, calculate_cosine_similarity_score, calculate_macc_score, add_decoy_label_to_score_df, determine_index_of_fdr_cutoff
+from csodiaq.identifier.fdrFunctions import score_library_to_query_matches, calculate_cosine_similarity_score, calculate_macc_score, identify_all_decoys, determine_index_of_fdr_cutoff
 
 @pytest.fixture
 def vectorA():
@@ -39,7 +40,7 @@ def test__fdr_functions__score_library_to_query_matches(vectorA, vectorB):
     outputDf = score_library_to_query_matches(matchesDf)
     assert expectedOutputDf.equals(outputDf)
 
-def test__fdr_functions__add_decoy_label_to_score_df():
+def test__fdr_functions__identify_all_decoys():
     isNotDecoy, isDecoy = 0, 1
     targetLibraryIdx, decoyLibraryIdx, queryIdx, score = 0, 1, 0, 0
 
@@ -48,38 +49,39 @@ def test__fdr_functions__add_decoy_label_to_score_df():
         [decoyLibraryIdx, queryIdx, score],
     ]
     scoreDf = pd.DataFrame(scoreData, columns=["libraryIdx","queryIdx","score"])
-    expectedOutputData = [
-        [targetLibraryIdx, queryIdx, score, isNotDecoy],
-        [decoyLibraryIdx, queryIdx, score, isDecoy],
-    ]
-    expectedOutputDf = pd.DataFrame(expectedOutputData, columns=["libraryIdx","queryIdx","score", "isDecoy"])
+    expectedOutput = np.array([
+        isNotDecoy,
+        isDecoy
+    ])
     decoySet = set([decoyLibraryIdx])
-    outputDf = add_decoy_label_to_score_df(decoySet, scoreDf)
-    assert expectedOutputDf.equals(outputDf)
+    output = identify_all_decoys(decoySet, scoreDf)
+    print()
+    print(expectedOutput)
+    print(output)
+    assert np.array_equal(output, expectedOutput)
 
 def test__fdr_functions__determine_index_of_fdr_cutoff():
     fdrCutoff = 0.01
     numberOfNonDecoys = int(1/fdrCutoff)
     decoys = [1, 1]
-    isDecoySeries = pd.Series([0] * numberOfNonDecoys + decoys)
+    isDecoySeries = np.array([0] * numberOfNonDecoys + decoys)
     indexCutoff = determine_index_of_fdr_cutoff(isDecoySeries)
     lastDecoyIdx = numberOfNonDecoys + len(decoys) - 1
-    assert indexCutoff == lastDecoyIdx - 1
+    assert indexCutoff == lastDecoyIdx
 
 
 def test__fdr_functions__determine_index_of_fdr_cutoff__first_decoy_appears_before_fdr_cutoff():
     numberOfNonDecoys = 1
     decoys = [1]
-    isDecoySeries = pd.Series([0] * numberOfNonDecoys + decoys)
+    isDecoySeries = np.array([0] * numberOfNonDecoys + decoys)
     indexCutoff = determine_index_of_fdr_cutoff(isDecoySeries)
     lastDecoyIdx = numberOfNonDecoys + len(decoys) - 1
-    assert indexCutoff == lastDecoyIdx - 1
+    assert indexCutoff == lastDecoyIdx
 
 def test__fdr_functions__determine_index_of_fdr_cutoff__throws_error_when_top_score_is_decoy():
     numberOfNonDecoys = 0
     decoys = [1]
-    isDecoySeries = pd.Series([0] * numberOfNonDecoys + decoys)
+    isDecoySeries = np.array([0] * numberOfNonDecoys + decoys)
     errorOutput = 'None of the library peptides were identified in the query spectra (highest score was a decoy).'
     with pytest.raises(ValueError, match=re.escape(errorOutput)):
         indexCutoff = determine_index_of_fdr_cutoff(isDecoySeries)
-
