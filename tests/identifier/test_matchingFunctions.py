@@ -48,7 +48,7 @@ def test__matchingFunctions__eliminate_low_count_matches():
     genericPpmDifference = 10.0
     minNumMatches = 3
     highCountMatches = [[highCountLibIdx, genericIntensity, queryIdx, genericIntensity, genericPpmDifference]] * minNumMatches
-    lowCountMatches = [[lowCountLibIdx, genericIntensity, queryIdx, genericIntensity, genericPpmDifference]] * minNumMatches - 1
+    lowCountMatches = [[lowCountLibIdx, genericIntensity, queryIdx, genericIntensity, genericPpmDifference]] * (minNumMatches - 1)
     columns = ["libraryIdx","libraryIntensity","queryIdx","queryIntensity","ppmDifference"]
     input = pd.DataFrame(highCountMatches + lowCountMatches, columns=columns)
     expectedOutput = pd.DataFrame(highCountMatches, columns=columns)
