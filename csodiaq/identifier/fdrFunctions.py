@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.spatial.distance import cosine
+import matplotlib.pyplot as pyplot
 
 def score_library_to_query_matches(matches):
     output = matches\
@@ -26,15 +27,21 @@ def determine_index_of_fdr_cutoff(isDecoyArray):
     lastDecoy = np.argmax(fdrs > fdrCutoff)
     return decoyIndices[lastDecoy]
 
-def calculate_ppm_offset_tolerance(): pass
+def calculate_ppm_offset_tolerance(ppms, numStandardDeviations):
+    if numStandardDeviations: return calculate_ppm_offset_tolerance_using_mean_and_standard_deviation(ppms, numStandardDeviations)
+    else: return calculate_ppm_offset_tolerance_using_tallest_bin_peak(ppms)
 
 def calculate_ppm_offset_tolerance_using_mean_and_standard_deviation(ppms, numStandardDeviations):
     return np.mean(ppms), np.std(ppms) * numStandardDeviations
 
-def calculate_ppm_offset_tolerance_using_tallest_bin_peak(ppms):
+def create_standardized_histogram(ppms):
     numBins = 200
-    binHeights, bins = np.histogram(ppms, bins=200) # y, x
+    binHeights, bins = np.histogram(ppms, bins=numBins)
     bins =  normalize_bin_position_from_left_to_center_of_each_bin(bins)
+    return binHeights, bins
+
+def calculate_ppm_offset_tolerance_using_tallest_bin_peak(ppms):
+    binHeights, bins = create_standardized_histogram(ppms)
     tallestBinIdx = max(range(len(binHeights)), key=binHeights.__getitem__)
     nearestNoiseBinIdx = identify_nearest_bin_to_tallest_bin_that_represents_noise(binHeights, tallestBinIdx)
     offset = bins[tallestBinIdx]
@@ -52,3 +59,19 @@ def identify_nearest_bin_to_tallest_bin_that_represents_noise(binHeights, talles
     afterNearestNoiseBinIdx = np.argmin(binsAfterTallest >= averageNoise) + tallestBinIdx
     nearestNoiseBinIdx = min([beforeNearestNoiseBinIdx, afterNearestNoiseBinIdx], key=lambda x: abs(tallestBinIdx - x))
     return nearestNoiseBinIdx
+
+def create_ppm_histogram(ppms, offset, tolerance):
+    binHeights, bins = create_standardized_histogram(ppms)
+    barReductionForVisibility = 0.7
+    binWidth = barReductionForVisibility * (bins[1] - bins[0])
+    pyplot.clf()
+    pyplot.bar(bins, binHeights, align='center', width=binWidth)
+    pyplot.axvline(x=offset, color='black',
+                   linestyle='dashed', linewidth=4)
+    pyplot.axvline(x=offset - tolerance, color='red',
+                   linestyle='dashed', linewidth=4)
+    pyplot.axvline(x=offset + tolerance, color='red',
+                   linestyle='dashed', linewidth=4)
+    pyplot.suptitle('offset: ' + str(offset) +
+                    ', tolerance: ' + str(tolerance))
+    pyplot.show()
