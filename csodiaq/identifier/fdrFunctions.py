@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.spatial.distance import cosine
 import matplotlib.pyplot as pyplot
+from csodiaq.identifier.matchingFunctions import eliminate_low_count_matches
 
 def score_library_to_query_matches(matches):
     output = matches\
@@ -75,3 +76,9 @@ def create_ppm_histogram(ppms, offset, tolerance):
     pyplot.suptitle('offset: ' + str(offset) +
                     ', tolerance: ' + str(tolerance))
     pyplot.show()
+
+def filter_matches_by_ppm_offset_and_tolerance(matchDf, offset, tolerance):
+    ppmLowerBound = offset - tolerance
+    ppmUpperBound = offset + tolerance
+    matchDf = matchDf[(matchDf["ppmDifference"] > ppmLowerBound) & (matchDf["ppmDifference"] < ppmUpperBound)]
+    return eliminate_low_count_matches(matchDf)
