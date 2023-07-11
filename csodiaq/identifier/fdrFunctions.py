@@ -8,7 +8,7 @@ def score_library_to_query_matches(matches):
                 .groupby(["libraryIdx", "queryIdx"])\
                 .apply(lambda x: calculate_macc_score(x["libraryIntensity"], x["queryIntensity"]))\
                 .reset_index(name='score')
-    return output
+    return output.sort_values('score', ascending=False).reset_index(drop=True)
 
 def calculate_cosine_similarity_score(vectorA, vectorB):
     return 1 - cosine(vectorA, vectorB)

@@ -43,7 +43,7 @@ def test__fdr_functions__calculate_macc_score(vectorA, vectorB):
 
 
 def test__fdr_functions__score_library_to_query_matches(vectorA, vectorB):
-    libraryIdx, queryIdx, ppmDiff = 0, 0, 0
+    libraryIdx, queryIdx, ppmDiff = 1, 0, 0
     matchesDf = pd.DataFrame(
         index=vectorA.index,
         columns=[
@@ -66,6 +66,22 @@ def test__fdr_functions__score_library_to_query_matches(vectorA, vectorB):
     )
     outputDf = score_library_to_query_matches(matchesDf)
     assert expectedOutputDf.equals(outputDf)
+
+    lowScoreMatchesDf = matchesDf.copy()
+    lowScoreMatchesDf["libraryIdx"] = [libraryIdx - 1 for i in vectorA.index]
+    reverseVectorA = pd.Series(list(vectorA)[::-1])
+    lowScoreMatchesDf["libraryIntensity"] = reverseVectorA
+    lowMaccScore = calculate_macc_score(reverseVectorA, vectorB)
+    unsortedMatchesDf = pd.concat([lowScoreMatchesDf, matchesDf])
+    expectedOutputDf = pd.DataFrame(
+        data=[
+            [libraryIdx, queryIdx, maccScore],
+            [libraryIdx - 1, queryIdx, lowMaccScore],
+        ],
+        columns=["libraryIdx", "queryIdx", "score"],
+    )
+    sortedOutputDf = score_library_to_query_matches(unsortedMatchesDf)
+    assert expectedOutputDf.equals(sortedOutputDf)
 
 
 def test__fdr_functions__identify_all_decoys():
