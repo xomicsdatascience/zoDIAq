@@ -4,11 +4,16 @@ import matplotlib.pyplot as pyplot
 from csodiaq.identifier.matchingFunctions import eliminate_low_count_matches
 
 def score_library_to_query_matches(matches):
-    output = matches\
+    scoreDf = matches\
                 .groupby(["libraryIdx", "queryIdx"])\
-                .apply(lambda x: calculate_macc_score(x["libraryIntensity"], x["queryIntensity"]))\
-                .reset_index(name='score')
-    return output.sort_values('score', ascending=False).reset_index(drop=True)
+                .apply(lambda x: (
+                    calculate_cosine_similarity_score(x["libraryIntensity"], x["queryIntensity"]),
+                    calculate_macc_score(x["libraryIntensity"], x["queryIntensity"])
+                ))\
+                .reset_index(name="scores")
+    scoreDf["cosineScore"],scoreDf["maccScore"] = zip(*scoreDf["scores"])
+    del scoreDf["scores"]
+    return scoreDf.sort_values("maccScore", ascending=False).reset_index(drop=True)
 
 def calculate_cosine_similarity_score(vectorA, vectorB):
     return 1 - cosine(vectorA, vectorB)

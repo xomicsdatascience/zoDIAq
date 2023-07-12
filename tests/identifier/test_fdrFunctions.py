@@ -59,10 +59,11 @@ def test__fdr_functions__score_library_to_query_matches(vectorA, vectorB):
     matchesDf["queryIdx"] = [queryIdx for i in vectorA.index]
     matchesDf["queryIntensity"] = vectorB
     matchesDf["ppmDifference"] = [ppmDiff for i in vectorA.index]
+    cosineScore = calculate_cosine_similarity_score(vectorA, vectorB)
     maccScore = calculate_macc_score(vectorA, vectorB)
     expectedOutputDf = pd.DataFrame(
-        data=[[libraryIdx, queryIdx, maccScore]],
-        columns=["libraryIdx", "queryIdx", "score"],
+        data=[[libraryIdx, queryIdx, cosineScore, maccScore]],
+        columns=["libraryIdx", "queryIdx", "cosineScore", "maccScore"],
     )
     outputDf = score_library_to_query_matches(matchesDf)
     assert expectedOutputDf.equals(outputDf)
@@ -71,14 +72,15 @@ def test__fdr_functions__score_library_to_query_matches(vectorA, vectorB):
     lowScoreMatchesDf["libraryIdx"] = [libraryIdx - 1 for i in vectorA.index]
     reverseVectorA = pd.Series(list(vectorA)[::-1])
     lowScoreMatchesDf["libraryIntensity"] = reverseVectorA
+    lowCosineScore = calculate_cosine_similarity_score(reverseVectorA, vectorB)
     lowMaccScore = calculate_macc_score(reverseVectorA, vectorB)
     unsortedMatchesDf = pd.concat([lowScoreMatchesDf, matchesDf])
     expectedOutputDf = pd.DataFrame(
         data=[
-            [libraryIdx, queryIdx, maccScore],
-            [libraryIdx - 1, queryIdx, lowMaccScore],
+            [libraryIdx, queryIdx, cosineScore, maccScore],
+            [libraryIdx - 1, queryIdx, lowCosineScore, lowMaccScore],
         ],
-        columns=["libraryIdx", "queryIdx", "score"],
+        columns=["libraryIdx", "queryIdx", "cosineScore", "maccScore"],
     )
     sortedOutputDf = score_library_to_query_matches(unsortedMatchesDf)
     assert expectedOutputDf.equals(sortedOutputDf)
@@ -89,10 +91,10 @@ def test__fdr_functions__identify_all_decoys():
     targetLibraryIdx, decoyLibraryIdx, queryIdx, score = 0, 1, 0, 0
 
     scoreData = [
-        [targetLibraryIdx, queryIdx, score],
-        [decoyLibraryIdx, queryIdx, score],
+        [targetLibraryIdx, queryIdx, score, score],
+        [decoyLibraryIdx, queryIdx, score, score],
     ]
-    scoreDf = pd.DataFrame(scoreData, columns=["libraryIdx", "queryIdx", "score"])
+    scoreDf = pd.DataFrame(scoreData, columns=["libraryIdx", "queryIdx", "cosineScore", "maccScore"])
     expectedOutput = np.array([isNotDecoy, isDecoy])
     decoySet = set([decoyLibraryIdx])
     output = identify_all_decoys(decoySet, scoreDf)
@@ -125,11 +127,6 @@ def test__fdr_functions__determine_index_of_fdr_cutoff__throws_error_when_top_sc
     errorOutput = "None of the library peptides were identified in the query spectra (highest score was a decoy)."
     with pytest.raises(ValueError, match=re.escape(errorOutput)):
         indexCutoff = determine_index_of_fdr_cutoff(isDecoySeries)
-
-
-def test__fdr_functions__calculate_ppm_offset_tolerance():
-    pass
-
 
 def test__fdr_functions__calculate_ppm_offset_tolerance_using_mean_and_standard_deviation():
     mean = 10

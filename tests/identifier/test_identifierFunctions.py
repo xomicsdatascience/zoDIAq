@@ -22,7 +22,7 @@ def test__identifier_functions__format_output_line():
         "shared":9,
         "ionCount":10,
         "maccScore":11,
-        "excludeNum":12,
+        #"excludeNum":12,
     }
     expectedOutput = [
         "3",
@@ -40,7 +40,7 @@ def test__identifier_functions__format_output_line():
         6,
         7,
         11,
-        12,
+        #12,
     ]
     output = format_output_line(libDict, queryDict, matchDict)
     assert output == expectedOutput
@@ -53,8 +53,10 @@ def test__identifier_functions__extract_metadata_from_match_and_score_dataframes
     genericPpmDifference = 10.0
     lib1PeakCount = 3
     lib2PeakCount = 4
-    lib1Score = 1.0
-    lib2Score = 0.9
+    lib1CosineScore = 1.0
+    lib2CosineScore = 0.9
+    lib1Score = 0.8
+    lib2Score = 0.7
     lib1Match = [[lib1Idx, genericIntensity, queryIdx, genericIntensity,
                          genericPpmDifference]] * lib1PeakCount
     lib2Match = [[lib2Idx, genericIntensity, queryIdx, genericIntensity, genericPpmDifference]] * lib2PeakCount
@@ -62,22 +64,25 @@ def test__identifier_functions__extract_metadata_from_match_and_score_dataframes
     matchDf = pd.DataFrame(lib1Match + lib2Match, columns=columns)
 
     scoreData = [
-        [lib1Idx, queryIdx, lib1Score],
-        [lib2Idx, queryIdx, lib2Score],
+        [lib1Idx, queryIdx, lib1CosineScore, lib1Score],
+        [lib2Idx, queryIdx, lib2CosineScore, lib2Score],
     ]
-    scoreDf = pd.DataFrame(scoreData, columns=["libraryIdx", "queryIdx", "score"])
+    scoreDf = pd.DataFrame(scoreData, columns=["libraryIdx", "queryIdx", "cosineScore", "maccScore"])
     expectedOutput = {
         (lib1Idx, queryIdx): {
-            #TODO: add cosine
+            "cosineSimilarityScore": lib1CosineScore,
             "peaks": lib1PeakCount,
             "ionCount": lib1PeakCount * genericIntensity,
-            "score": lib1Score,
-            #TODO: add excludeNum
+            "maccScore": lib1Score,
+            # TODO: calculate excludeNum
+            #"excludeNum": 0
         },
         (lib2Idx, queryIdx): {
+            "cosineSimilarityScore": lib2CosineScore,
             "peaks": lib2PeakCount,
             "ionCount": lib2PeakCount * genericIntensity,
-            "score": lib2Score,
+            "maccScore": lib2Score,
+            #"excludeNum": 0
         },
     }
     output = extract_metadata_from_match_and_score_dataframes(matchDf, scoreDf)
