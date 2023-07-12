@@ -1,7 +1,6 @@
 from csodiaq.identifier.poolingFunctions import _pool_library_spectra_by_mz_window, generate_pooled_library_and_query_spectra_by_mz_windows
 from csodiaq.loaders.library.LibraryLoaderContext import LibraryLoaderContext
 from csodiaq.loaders.query.QueryLoaderContext import QueryLoaderContext
-from csodiaq.loaders.query.QueryLoaderStrategyMzxml import QueryLoaderStrategyMzxml
 from expectedPooledPeaks import expectedLibraryPeaks, expectedQueryPeaks
 import os
 import pytest
@@ -22,6 +21,14 @@ def libraryFile():
 @pytest.fixture
 def queryFile():
     return os.path.join(get_parent_dir(), "test_files", "sample_query_mzxml.mzXML")
+
+@pytest.fixture
+def libraryDict(libraryFile):
+    return LibraryLoaderContext(libraryFile).load_csodiaq_library_dict()
+
+@pytest.fixture
+def queryContext(queryFile):
+    return QueryLoaderContext(queryFile)
 
 def assert_final_dict_output_matches_expected(outputDict, expectedOutputDict):
     for csodiaqLibKey in expectedOutputDict:
@@ -64,10 +71,10 @@ def test__pooler__pool_library_spectra_by_mz_window__throws_warning_when_no_lib_
         assert output == expectedOutput
 
 
-def test__pooler__generate_pooled_library_and_query_spectra_by_mz_windows(libraryFile, queryFile):
+def test__pooler__generate_pooled_library_and_query_spectra_by_mz_windows(libraryDict, queryContext):
     errorOutput = f"No library spectra found in the {(781.400024414063, 2.0)} m/z window. Skipping"
     with pytest.warns(SyntaxWarning, match=re.escape(errorOutput)):
-        for libPeaks, queryPeaks in generate_pooled_library_and_query_spectra_by_mz_windows(libraryFile, queryFile):
+        for libPeaks, queryPeaks in generate_pooled_library_and_query_spectra_by_mz_windows(libraryDict, queryContext):
             assert libPeaks == expectedLibraryPeaks
             assert queryPeaks == expectedQueryPeaks
 

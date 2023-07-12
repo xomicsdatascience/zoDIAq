@@ -3,9 +3,7 @@ from csodiaq.loaders.query.QueryLoaderContext import QueryLoaderContext
 import pandas as pd
 import warnings
 
-def generate_pooled_library_and_query_spectra_by_mz_windows(libraryFile, queryFile):
-    libDict = LibraryLoaderContext(libraryFile).load_csodiaq_library_dict()
-    queryContext = QueryLoaderContext(queryFile)
+def generate_pooled_library_and_query_spectra_by_mz_windows(libDict, queryContext):
     queDict = queryContext.map_query_scan_ids_to_dia_mz_windows()
     for mzWindow, scans in queDict.items():
         pooledLibraryPeaks = _pool_library_spectra_by_mz_window(mzWindow, libDict)

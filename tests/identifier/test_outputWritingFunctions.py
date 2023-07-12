@@ -1,4 +1,4 @@
-from csodiaq.identifier.identifierFunctions import format_output_line, extract_metadata_from_match_and_score_dataframes
+from csodiaq.identifier.outputWritingFunctions import format_output_line, extract_metadata_from_match_and_score_dataframes
 import pandas as pd
 
 def test__identifier_functions__format_output_line():

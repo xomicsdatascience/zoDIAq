@@ -1,6 +1,6 @@
 import pandas as pd
 
-from csodiaq.identifier.matchingFunctions import match_library_to_query_pooled_spectra, calculate_parts_per_million_relative_difference, is_within_tolerance, eliminate_low_count_matches
+from csodiaq.identifier.matchingFunctions import match_library_to_query_pooled_spectra, calculate_parts_per_million_relative_difference, is_within_tolerance, eliminate_low_count_matches, eliminate_matches_below_fdr_cutoff
 
 
 def test__matchingFunctions__calculate_parts_per_million_relative_difference():
@@ -53,4 +53,20 @@ def test__matchingFunctions__eliminate_low_count_matches():
     input = pd.DataFrame(highCountMatches + lowCountMatches, columns=columns)
     expectedOutput = pd.DataFrame(highCountMatches, columns=columns)
     output = eliminate_low_count_matches(input)
+    assert expectedOutput.equals(output)
+
+def test__matchingFunctions__eliminate_matches_below_fdr_cutoff():
+    aboveCutoffLibIdx = 0
+    belowCutoffLibIdx = 1
+    queryIdx = 0
+    genericIntensity = 100.0
+    genericPpmDifference = 10.0
+    minNumMatches = 3
+    aboveCutoffMatches = [[aboveCutoffLibIdx, genericIntensity, queryIdx, genericIntensity, genericPpmDifference]] * minNumMatches
+    belowCutoffMatches = [[belowCutoffLibIdx, genericIntensity, queryIdx, genericIntensity, genericPpmDifference]] * minNumMatches
+    columns = ["libraryIdx","libraryIntensity","queryIdx","queryIntensity","ppmDifference"]
+    input = pd.DataFrame(aboveCutoffMatches + belowCutoffMatches, columns=columns)
+    groupsAboveCutoff = [(aboveCutoffLibIdx, queryIdx)]
+    expectedOutput = pd.DataFrame(aboveCutoffMatches, columns=columns)
+    output = eliminate_matches_below_fdr_cutoff(input, groupsAboveCutoff)
     assert expectedOutput.equals(output)

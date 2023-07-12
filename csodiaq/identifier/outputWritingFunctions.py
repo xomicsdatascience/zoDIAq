@@ -43,7 +43,6 @@ def extract_metadata_from_score_dataframe(df):
 def extract_metadata_from_match_and_score_dataframes(matchDf, scoreDf):
     matchDict = {k: extract_metadata_from_match_dataframe_groupby(v) for k, v in matchDf.groupby(["libraryIdx","queryIdx"])}
     scoreDict = extract_metadata_from_score_dataframe(scoreDf)
-    print(scoreDict)
     metadataDict = {
         k: {**matchDict[k], **scoreDict[k]} for k in scoreDict.keys()
     }
