@@ -1,20 +1,20 @@
-
+import pandas as pd
 
 def format_output_line(libMetadata, queMetadata, matchMetadata):
     return [
         queMetadata["scan"],
         queMetadata["precursorMz"],
         libMetadata["peptide"],
-        libMetadata["protein"],
+        libMetadata["proteinName"],
         libMetadata["precursorMz"],
         libMetadata["precursorCharge"],
-        matchMetadata["cosine"],
+        matchMetadata["cosineSimilarityScore"],
         libMetadata["identifier"],
-        queMetadata["peaks"],
+        queMetadata["peaksCount"],
         libMetadata["peaks"],
         matchMetadata["shared"],
         matchMetadata["ionCount"],
-        queMetadata["compensationVoltage"],
+        queMetadata["CV"],
         queMetadata["windowWidth"],
         matchMetadata["maccScore"],
         #matchMetadata["excludeNum"],
@@ -22,7 +22,7 @@ def format_output_line(libMetadata, queMetadata, matchMetadata):
 
 def extract_metadata_from_match_dataframe_groupby(group):
     return {
-        "peaks": len(group.index),
+        "shared": len(group.index),
         "ionCount": sum(group["queryIntensity"]),
         #TODO: see TODO in extract_metadata_from_match_and_score_dataframes test
         #"extractNum": 0
@@ -47,3 +47,26 @@ def extract_metadata_from_match_and_score_dataframes(matchDf, scoreDf):
         k: {**matchDict[k], **scoreDict[k]} for k in scoreDict.keys()
     }
     return metadataDict
+
+def format_output_as_pandas_dataframe(inputFileName, outputData):
+    columns = [
+        'scan',
+        'MzEXP',
+        'peptide',
+        'protein',
+        'MzLIB',
+        'zLIB',
+        'cosine',
+        'name',
+        'Peak(Query)',
+        'Peaks(Library)',
+        'shared',
+        'ionCount',
+        'CompensationVoltage',
+        'totalWindowWidth',
+        'MaCC_Score',
+    ]
+    outputDf = pd.DataFrame(outputData, columns=columns)
+    outputDf.insert(0, 'fileName', [inputFileName] * len(outputDf.index))
+    return outputDf
+

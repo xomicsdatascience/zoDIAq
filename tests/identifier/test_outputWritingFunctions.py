@@ -1,30 +1,11 @@
-from csodiaq.identifier.outputWritingFunctions import format_output_line, extract_metadata_from_match_and_score_dataframes
+from csodiaq.identifier.outputWritingFunctions import format_output_line, extract_metadata_from_match_and_score_dataframes, format_output_as_pandas_dataframe
 import pandas as pd
+import pytest
+import os
 
-def test__identifier_functions__format_output_line():
-    libDict = {
-        "peptide":"testPeptide",
-        "protein":"testProtein",
-        "precursorMz":0,
-        "precursorCharge":1,
-        "identifier":"testIdentifiers",
-        "peaks":2,
-    }
-    queryDict = {
-        "scan":"3",
-        "precursorMz":4,
-        "peaks":5,
-        "compensationVoltage":6,
-        "windowWidth":7,
-    }
-    matchDict = {
-        "cosine":8,
-        "shared":9,
-        "ionCount":10,
-        "maccScore":11,
-        #"excludeNum":12,
-    }
-    expectedOutput = [
+@pytest.fixture
+def identifierOutputData():
+    return [
         "3",
         4,
         "testPeptide",
@@ -42,8 +23,32 @@ def test__identifier_functions__format_output_line():
         11,
         #12,
     ]
+
+def test__identifier_functions__format_output_line(identifierOutputData):
+    libDict = {
+        "peptide":"testPeptide",
+        "proteinName":"testProtein",
+        "precursorMz":0,
+        "precursorCharge":1,
+        "identifier":"testIdentifiers",
+        "peaks":2,
+    }
+    queryDict = {
+        "scan":"3",
+        "precursorMz":4,
+        "peaksCount":5,
+        "CV":6,
+        "windowWidth":7,
+    }
+    matchDict = {
+        "cosineSimilarityScore":8,
+        "shared":9,
+        "ionCount":10,
+        "maccScore":11,
+        #"excludeNum":12,
+    }
     output = format_output_line(libDict, queryDict, matchDict)
-    assert output == expectedOutput
+    assert output == identifierOutputData
 
 def test__identifier_functions__extract_metadata_from_match_and_score_dataframes():
     lib1Idx = 0
@@ -71,7 +76,7 @@ def test__identifier_functions__extract_metadata_from_match_and_score_dataframes
     expectedOutput = {
         (lib1Idx, queryIdx): {
             "cosineSimilarityScore": lib1CosineScore,
-            "peaks": lib1PeakCount,
+            "shared": lib1PeakCount,
             "ionCount": lib1PeakCount * genericIntensity,
             "maccScore": lib1Score,
             # TODO: calculate excludeNum
@@ -79,7 +84,7 @@ def test__identifier_functions__extract_metadata_from_match_and_score_dataframes
         },
         (lib2Idx, queryIdx): {
             "cosineSimilarityScore": lib2CosineScore,
-            "peaks": lib2PeakCount,
+            "shared": lib2PeakCount,
             "ionCount": lib2PeakCount * genericIntensity,
             "maccScore": lib2Score,
             #"excludeNum": 0
@@ -91,3 +96,27 @@ def test__identifier_functions__extract_metadata_from_match_and_score_dataframes
         for metadataType, metadataValue in metadataDict.items():
             assert metadataType in output[idKey]
             assert output[idKey][metadataType] == metadataValue
+
+def test__identifier_functions__format_output_as_pandas_dataframe(identifierOutputData):
+    expectedColumns = [
+        'fileName',
+        'scan',
+        'MzEXP',
+        'peptide',
+        'protein',
+        'MzLIB',
+        'zLIB',
+        'cosine',
+        'name',
+        'Peak(Query)',
+        'Peaks(Library)',
+        'shared',
+        'ionCount',
+        'CompensationVoltage',
+        'totalWindowWidth',
+        'MaCC_Score',
+    ]
+    inputFileName = 'dummyFile'
+    expectedOutputDf = pd.DataFrame([[inputFileName] + identifierOutputData], columns=expectedColumns)
+    outputDf = format_output_as_pandas_dataframe(inputFileName, [identifierOutputData])
+    assert expectedOutputDf.equals(outputDf)

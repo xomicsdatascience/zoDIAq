@@ -35,7 +35,7 @@ def match_library_to_query_pooled_spectra(libraryPeaks, queryPeaks, ppmTolerance
 
 def eliminate_low_count_matches(matches):
     minNumMatches = 3
-    return matches.groupby(["libraryIdx","queryIdx"]).filter(lambda x: x.shape[0] >= minNumMatches)
+    return matches.groupby(["libraryIdx","queryIdx"]).filter(lambda x: x.shape[0] >= minNumMatches).reset_index(drop=True)
 
 def eliminate_matches_below_fdr_cutoff(matches, groupsAboveCutoff):
     return matches.groupby(["libraryIdx","queryIdx"]).filter(lambda x: x.name in groupsAboveCutoff)

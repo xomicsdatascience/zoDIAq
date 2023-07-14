@@ -6,6 +6,7 @@ class QueryLoaderContext:
     Class for accessing query loading strategies (as used by the strategy design pattern).
     """
     def __init__(self, queryFilePath: os.PathLike):
+        self.filePath = queryFilePath
         self._strategy = Mzxml(queryFilePath)
 
     def map_query_scan_ids_to_dia_mz_windows(self) -> dict:

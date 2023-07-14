@@ -12,6 +12,7 @@ from . import csodiaq_identification_functions as cif
 from . import csodiaq_quantification_functions as cqf
 from . import csodiaq_mgf_cleaning_functions as cmf
 from . import peptide_quantification
+from csodiaq.identifier.Identifier import Identifier
 
 def main():
     arg_parser = set_command_line_settings()
@@ -27,6 +28,8 @@ def main():
         return
 
     if args['command'] == 'id':
+        identifier = Identifier(args)
+        identifier.identify_library_spectra_in_queries()
         lib = cif.library_file_to_dict(args['library'])
         maxQuerySpectraToPool = queryPooling = args['query']
         if not maxQuerySpectraToPool:

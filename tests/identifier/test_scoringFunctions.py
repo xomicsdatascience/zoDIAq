@@ -3,7 +3,7 @@ import pandas as pd
 import re
 import numpy as np
 
-from csodiaq.identifier.fdrFunctions import (
+from csodiaq.identifier.scoringFunctions import (
     score_library_to_query_matches,
     calculate_cosine_similarity_score,
     calculate_macc_score,
@@ -128,6 +128,13 @@ def test__fdr_functions__determine_index_of_fdr_cutoff__throws_error_when_top_sc
     with pytest.raises(ValueError, match=re.escape(errorOutput)):
         indexCutoff = determine_index_of_fdr_cutoff(isDecoySeries)
 
+def test__fdr_functions__determine_index_of_fdr_cutoff__returns_original_df_when_no_decoys_found():
+    numberOfNonDecoys = 10
+    decoys = []
+    isDecoySeries = np.array([0] * numberOfNonDecoys + decoys)
+    indexCutoff = determine_index_of_fdr_cutoff(isDecoySeries)
+    assert indexCutoff == numberOfNonDecoys
+
 def test__fdr_functions__calculate_ppm_offset_tolerance_using_mean_and_standard_deviation():
     mean = 10
     stdDev1 = 2
@@ -184,6 +191,6 @@ def test__fdr_functions__filter_matches_by_ppm_offset_and_tolerance():
     ]
     input = pd.DataFrame(matches, columns=columns)
     ppmTolerance = 11
-    expectedOutput = input.iloc[3:-3,]
+    expectedOutput = input.iloc[3:-3,].reset_index(drop=True)
     output = filter_matches_by_ppm_offset_and_tolerance(input, ppmOffset, ppmTolerance)
     assert expectedOutput.equals(output)

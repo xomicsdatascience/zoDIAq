@@ -26,7 +26,9 @@ def identify_all_decoys(decoySet, scoreDf):
 
 def determine_index_of_fdr_cutoff(isDecoyArray):
     if isDecoyArray[0]:
-        raise ValueError('None of the library peptides were identified in the query spectra (highest score was a decoy).')
+        raise ValueError("None of the library peptides were identified in the query spectra (highest score was a decoy).")
+    if 1 not in isDecoyArray:
+        return len(isDecoyArray)
     fdrCutoff = 1e-2
     decoyIndices = np.flatnonzero(isDecoyArray)
     fdrs = (np.arange(1, len(decoyIndices)+1))/(decoyIndices + 1)
