@@ -30,16 +30,16 @@ def main():
     if args['command'] == 'id':
         identifier = Identifier(args)
         identifier.identify_library_spectra_in_queries()
-        lib = cif.library_file_to_dict(args['library'])
-        maxQuerySpectraToPool = queryPooling = args['query']
-        if not maxQuerySpectraToPool:
-            maxQuerySpectraToPool = np.inf
+        #lib = cif.library_file_to_dict(args['library'])
+        #maxQuerySpectraToPool = queryPooling = args['query']
+        #if not maxQuerySpectraToPool:
+        #    maxQuerySpectraToPool = np.inf
         for i in range(len(args['files'])):
-            outFileHeader = args['outDirectory'] + 'CsoDIAq-file' + str(
-                i+1)+'_' + '.'.join(args['files'][i].split('/')[-1].split('.')[:-1])
+            outFileHeader = args['outDirectory'] + 'CsoDIAq-file' + '_' + '.'.join(args['files'][i].split('/')[-1].split('.')[:-1])
             if args['correction'] != -1:
                 outFileHeader += '_corrected'
             outFile = outFileHeader + '.csv'
+            '''
             if args['histogram']:
                 histFile = outFileHeader + '_histogram.png'
             else:
@@ -55,13 +55,13 @@ def main():
                                                      args['correction'],
                                                      histFile,
                                                      num_peaks=args['peaks'])
+            '''
             spectralFile = outFileHeader + '_spectralFDR.csv'
             peptideFile = outFileHeader + '_peptideFDR.csv'
             if args['proteinTargets']:
                 proteinFile = outFileHeader + '_proteinFDR.csv'
             else:
                 proteinFile = ''
-
             cif.write_fdr_outputs(outFile, spectralFile,
                                   peptideFile, proteinFile)
 
