@@ -12,7 +12,7 @@ from . import csodiaq_identification_functions as cif
 from . import csodiaq_quantification_functions as cqf
 from . import csodiaq_mgf_cleaning_functions as cmf
 from . import peptide_quantification
-from csodiaq.identifier.Identifier import Identifier
+from csodiaq.identifier import Identifier
 
 def main():
     arg_parser = set_command_line_settings()

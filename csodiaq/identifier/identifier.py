@@ -45,7 +45,8 @@ class Identifier():
             self._queryContext = QueryLoaderContext(queryFile)
             matchDf = self._match_library_to_query_spectra()
             scoreDf = self._score_spectra_matches(matchDf)
-            matchDf, scoreDf = self._apply_correction_to_dataframes(matchDf, scoreDf)
+            if self._correction_process_is_to_be_applied():
+                matchDf, scoreDf = self._apply_correction_to_dataframes(matchDf, scoreDf)
             self._write_identifications_to_dataframe(matchDf, scoreDf)
 
     def _match_library_to_query_spectra(self):
@@ -131,11 +132,12 @@ class Identifier():
         scoreDf : pandas DataFrame
             The score dataframe is recalculated from the ground up using the filtered match dataframe.
         """
-        if self._args["correction"] == -1:
-            return matchDf, scoreDf
         matchDf = self._apply_correction_to_match_dataframe(matchDf, scoreDf)
         scoreDf = self._apply_correction_to_score_dataframe(matchDf, scoreDf)
         return matchDf, scoreDf
+
+    def _correction_process_is_to_be_applied(self):
+        return self._args["correction"] != -1
 
     def _apply_correction_to_match_dataframe(self, matchDf, scoreDf):
         aboveCutoffGroups = set(scoreDf.groupby(["libraryIdx", "queryIdx"]).groups)

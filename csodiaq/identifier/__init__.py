@@ -1,1 +1,1 @@
-import csodiaq.identifier
+from .identifier import Identifier

@@ -24,12 +24,11 @@ def calculate_macc_score(vectorA, vectorB):
 def identify_all_decoys(decoySet, scoreDf):
     return np.where(scoreDf["libraryIdx"].isin(decoySet), 1, 0)
 
-def determine_index_of_fdr_cutoff(isDecoyArray):
+def determine_index_of_fdr_cutoff(isDecoyArray, fdrCutoff = 1e-2):
     if isDecoyArray[0]:
         raise ValueError("None of the library peptides were identified in the query spectra (highest score was a decoy).")
     if 1 not in isDecoyArray:
         return len(isDecoyArray)
-    fdrCutoff = 1e-2
     decoyIndices = np.flatnonzero(isDecoyArray)
     fdrs = (np.arange(1, len(decoyIndices)+1))/(decoyIndices + 1)
     lastDecoy = np.argmax(fdrs > fdrCutoff)
@@ -42,8 +41,8 @@ def calculate_ppm_offset_tolerance(ppms, numStandardDeviations):
 def calculate_ppm_offset_tolerance_using_mean_and_standard_deviation(ppms, numStandardDeviations):
     return np.mean(ppms), np.std(ppms) * numStandardDeviations
 
-def create_standardized_histogram(ppms):
-    numBins = 200
+def create_standardized_histogram(ppms, numBins = 200):
+
     binHeights, bins = np.histogram(ppms, bins=numBins)
     bins =  normalize_bin_position_from_left_to_center_of_each_bin(bins)
     return binHeights, bins

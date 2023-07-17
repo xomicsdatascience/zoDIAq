@@ -29,7 +29,6 @@ def extract_metadata_from_match_dataframe_groupby(group):
     }
 
 def extract_metadata_from_score_dataframe(df):
-    #TODO: there has to be a cleaner way to do this
     maccDict = df.set_index(["libraryIdx", "queryIdx"])["maccScore"].to_dict()
     cosineDict = df.set_index(["libraryIdx", "queryIdx"])["cosineScore"].to_dict()
     outputDict = {
