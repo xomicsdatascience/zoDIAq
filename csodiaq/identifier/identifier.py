@@ -35,18 +35,17 @@ class Identifier():
         self._libraryDict = LibraryLoaderContext(self._commandLineArgs["library"]).load_csodiaq_library_dict()
         self._decoySet = set([key for key,value in self._libraryDict.items() if value["isDecoy"]])
 
-    def identify_library_spectra_in_queries(self):
+    def identify_library_spectra_in_query_file(self, queryFile):
         """
         The primary function called for matching library spectra to query spectra.
             This is the only public-facing function of the class.
         """
-        for queryFile in self._commandLineArgs["files"]:
-            self._queryContext = QueryLoaderContext(queryFile)
-            matchDf = self._match_library_to_query_spectra()
-            scoreDf = self._score_spectra_matches(matchDf)
-            if self._correction_process_is_to_be_applied():
-                matchDf, scoreDf = self._apply_correction_to_dataframes(matchDf, scoreDf)
-            self._write_identifications_to_dataframe(matchDf, scoreDf)
+        self._queryContext = QueryLoaderContext(queryFile)
+        matchDf = self._match_library_to_query_spectra()
+        scoreDf = self._score_spectra_matches(matchDf)
+        if self._correction_process_is_to_be_applied():
+            matchDf, scoreDf = self._apply_correction_to_dataframes(matchDf, scoreDf)
+        return self._format_identifications_as_dataframe(matchDf, scoreDf)
 
     def _match_library_to_query_spectra(self):
         """
@@ -151,7 +150,7 @@ class Identifier():
         scoreDfCutoffIdx = determine_index_of_fdr_cutoff(isDecoyArray)
         return scoreDf.iloc[:scoreDfCutoffIdx, :]
 
-    def _write_identifications_to_dataframe(self, matchDf, scoreDf):
+    def _format_identifications_as_dataframe(self, matchDf, scoreDf):
         """
         The final match/score identifications are consolidated and written to a single output
             .csv file.
@@ -168,9 +167,7 @@ class Identifier():
             queryMetadata["scan"] = queryScan
             outputLine = format_output_line(libraryMetadata, queryMetadata, matchMetadata)
             outputs.append(outputLine)
-        outputDf = format_output_as_pandas_dataframe(self._queryContext.filePath, outputs)
-        outFile = self._create_outfile_path()
-        outputDf.to_csv(outFile, index=False)
+        return format_output_as_pandas_dataframe(self._queryContext.filePath, outputs)
 
     def _prepare_library_dictionary_for_output(self, libKeyIdx, sortedLibKeys):
         libKey = sortedLibKeys[libKeyIdx]
@@ -178,10 +175,3 @@ class Identifier():
         libraryMetadata["precursorMz"] = libKey[0]
         libraryMetadata["peptide"] = libKey[1]
         return libraryMetadata
-
-    def _create_outfile_path(self, ):
-        outFileHeader = self._commandLineArgs['outDirectory'] + 'CsoDIAq-file' + '_' + '.'.join(
-            self._queryContext.filePath.split('/')[-1].split('.')[:-1])
-        if self._commandLineArgs['correction'] != -1:
-            outFileHeader += '_corrected'
-        return outFileHeader + '.csv'
