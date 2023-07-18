@@ -1,1 +1,1 @@
-from csodiaq.loaders.query.QueryLoaderContext import QueryLoaderContext
+from csodiaq.loaders import QueryLoaderContext

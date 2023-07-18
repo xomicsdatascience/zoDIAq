@@ -1,4 +1,4 @@
-from csodiaq.loaders.library.LibraryLoaderStrategy import (
+from csodiaq.loaders.library.libraryLoaderStrategy import (
     LibraryLoaderStrategy,
     create_peaks_from_mz_intensity_lists_and_csodiaq_key_id,
     remove_low_intensity_peaks_below_max_peak_num,
@@ -51,7 +51,7 @@ class LibraryLoaderStrategyTable(LibraryLoaderStrategy):
         )
 
     def _format_raw_library_object_into_csodiaq_library_dict(self) -> dict:
-        """abstract class implementation - see 'LibraryLoaderStrategy.py' for details"""
+        """abstract class implementation - see 'libraryLoaderStrategy.py' for details"""
         maxPeakNum = 10
         reformattedLibDf = _reformat_raw_library_object_columns(
             self.rawUploadedLibraryObject, self.oldToNewColumnDict

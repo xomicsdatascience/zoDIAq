@@ -1,7 +1,5 @@
-from . import (
-    LibraryLoaderContext,
-    LibraryLoaderStrategy,
-    LibraryLoaderStrategyMgf,
-    LibraryLoaderStrategyTable,
-    mappings,
-)
+from .libraryLoaderContext import LibraryLoaderContext
+from .libraryLoaderStrategy import LibraryLoaderStrategy
+from .libraryLoaderStrategyMgf import LibraryLoaderStrategyMgf
+from .libraryLoaderStrategyTable import LibraryLoaderStrategyTable
+from . import mappings

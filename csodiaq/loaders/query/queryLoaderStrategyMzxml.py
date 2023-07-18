@@ -1,8 +1,8 @@
-from csodiaq.loaders.query.QueryLoaderStrategy import (
+from csodiaq.loaders.query.queryLoaderStrategy import (
     QueryLoaderStrategy,
     precursor_mz_missing_warning_text,
 )
-from csodiaq.loaders.library.LibraryLoaderStrategy import (
+from csodiaq.loaders.library.libraryLoaderStrategy import (
     create_peaks_from_mz_intensity_lists_and_csodiaq_key_id,
 )
 from collections import defaultdict

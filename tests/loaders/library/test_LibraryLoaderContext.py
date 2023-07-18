@@ -1,8 +1,8 @@
-from csodiaq.loaders.library.LibraryLoaderContext import LibraryLoaderContext
-from csodiaq.loaders.library.LibraryLoaderStrategyTable import (
+from csodiaq.loaders.library.libraryLoaderContext import LibraryLoaderContext
+from csodiaq.loaders.library.libraryLoaderStrategyTable import (
     LibraryLoaderStrategyTable,
 )
-from csodiaq.loaders.library.LibraryLoaderStrategyMgf import LibraryLoaderStrategyMgf
+from csodiaq.loaders.library.libraryLoaderStrategyMgf import LibraryLoaderStrategyMgf
 
 import pytest
 import os
@@ -27,21 +27,21 @@ def test__library_loader_context__table__initialization(tableContext):
 
 def test__library_loader_context__table__load_csodiaq_library_dict(tableContext):
     expectedCsodiaqLibDict = {
-        (375.87322429333335, "FANYIDKVR"): {
-            "precursorCharge": 3,
-            "identifier": "1_FANYIDKVR_3",
-            "proteinName": "1/sp|P08670|VIME_HUMAN",
+        (516.801083027, "YRPGTVALR"): {
+            "precursorCharge": 2,
+            "identifier": "51327_YRPGTVALR_2",
+            "proteinName": "5/sp|Q71DI3|H32_HUMAN/sp|Q6NXT2|H3C_HUMAN/sp|Q16695|H31T_HUMAN/sp|P84243|H33_HUMAN/sp|P68431|H31_HUMAN",
             "peaks": [
-                (333.15573166, 1072.6, 0),
-                (397.23197061, 2082.7, 0),
-                (402.2823291699999, 4930.4, 0),
-                (445.738434336, 746.7, 0),
-                (454.253434336, 1301.3, 0),
-                (489.771991231, 1398.4, 0),
-                (500.2792722, 863.7, 0),
-                (517.3092722, 10000.0, 0),
-                (630.393336182, 8235.6, 0),
-                (793.4566647199999, 5098.5, 0),
+                (429.745245163, 39.7, 0),
+                (435.269418758, 84.0, 0),
+                (458.308543918, 61.0, 0),
+                (559.3562223920001, 67.3, 0),
+                (575.293622136, 57.3, 0),
+                (616.3776861179999, 124.8, 0),
+                (674.362036054, 143.6, 0),
+                (713.4304499719999, 1795.5, 0),
+                (745.399149844, 324.1, 0),
+                (858.483213826, 271.9, 0),
             ],
             "csodiaqKeyIdx": 0,
             "isDecoy": 0,
