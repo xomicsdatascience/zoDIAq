@@ -1,6 +1,6 @@
 from csodiaq.identifier.poolingFunctions import _pool_library_spectra_by_mz_window, generate_pooled_library_and_query_spectra_by_mz_windows
-from csodiaq.loaders.library.LibraryLoaderContext import LibraryLoaderContext
-from csodiaq.loaders.query.QueryLoaderContext import QueryLoaderContext
+from csodiaq.loaders.library.libraryLoaderContext import LibraryLoaderContext
+from csodiaq.loaders.query.queryLoaderContext import QueryLoaderContext
 from expectedPooledPeaks import expectedLibraryPeaks, expectedQueryPeaks
 import os
 import pytest

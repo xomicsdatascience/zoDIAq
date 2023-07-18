@@ -11,8 +11,8 @@ from numba import njit
 from . import IdentificationSpectraMatcher
 from . import spectra_matcher_functions as smf
 import csodiaq
-from csodiaq.loaders.library.LibraryLoaderContext import LibraryLoaderContext
-from csodiaq.loaders.query.QueryLoaderContext import QueryLoaderContext
+from csodiaq.loaders.library.libraryLoaderContext import LibraryLoaderContext
+from csodiaq.loaders.query.queryLoaderContext import QueryLoaderContext
 
 def library_file_to_dict(inFile):
     context = LibraryLoaderContext(inFile)

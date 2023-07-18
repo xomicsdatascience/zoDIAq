@@ -1,4 +1,4 @@
-from csodiaq.loaders.query.QueryLoaderStrategyMzxml import QueryLoaderStrategyMzxml as Mzxml
+from csodiaq.loaders.query.queryLoaderStrategyMzxml import QueryLoaderStrategyMzxml as Mzxml
 import os
 
 class QueryLoaderContext:

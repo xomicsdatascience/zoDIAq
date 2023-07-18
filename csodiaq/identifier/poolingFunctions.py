@@ -1,5 +1,5 @@
-from csodiaq.loaders.library.LibraryLoaderContext import LibraryLoaderContext
-from csodiaq.loaders.query.QueryLoaderContext import QueryLoaderContext
+from csodiaq.loaders.library.libraryLoaderContext import LibraryLoaderContext
+from csodiaq.loaders.query.queryLoaderContext import QueryLoaderContext
 import pandas as pd
 import warnings
 

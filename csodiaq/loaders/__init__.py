@@ -1,2 +1,2 @@
-import csodiaq.loaders.library
-import csodiaq.loaders.query
+from csodiaq.loaders.query import QueryLoaderContext
+from csodiaq.loaders.library import LibraryLoaderContext

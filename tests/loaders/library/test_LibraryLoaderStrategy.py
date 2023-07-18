@@ -1,4 +1,4 @@
-from csodiaq.loaders.library.LibraryLoaderStrategy import (
+from csodiaq.loaders.library.libraryLoaderStrategy import (
     LibraryLoaderStrategy,
     create_peaks_from_mz_intensity_lists_and_csodiaq_key_id,
     remove_low_intensity_peaks_below_max_peak_num,

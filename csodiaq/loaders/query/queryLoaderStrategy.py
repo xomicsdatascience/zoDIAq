@@ -92,7 +92,7 @@ class QueryLoaderStrategy(ABC):
         -------
         pooledPeaks : list
             List of pooled peaks. See _format_raw_library_object_into_csodiaq_library_dict
-                return value for 'peak' in LibraryLoaderStrategy.py.
+                return value for 'peak' in libraryLoaderStrategy.py.
         """
         pass
 

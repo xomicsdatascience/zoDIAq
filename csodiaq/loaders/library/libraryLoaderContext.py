@@ -1,10 +1,10 @@
-from csodiaq.loaders.library.LibraryLoaderStrategyTable import (
+from csodiaq.loaders.library.libraryLoaderStrategyTable import (
     LibraryLoaderStrategyTable as Table,
 )
-from csodiaq.loaders.library.LibraryLoaderStrategyMgf import (
+from csodiaq.loaders.library.libraryLoaderStrategyMgf import (
     LibraryLoaderStrategyMgf as Mgf,
 )
-from csodiaq.loaders.library.LibraryLoaderStrategy import LibraryLoaderStrategy
+from csodiaq.loaders.library.libraryLoaderStrategy import LibraryLoaderStrategy
 import os
 
 

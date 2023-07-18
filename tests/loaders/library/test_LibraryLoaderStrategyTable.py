@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import re
 from tempfile import TemporaryDirectory, NamedTemporaryFile
-from csodiaq.loaders.library.LibraryLoaderStrategyTable import (
+from csodiaq.loaders.library.libraryLoaderStrategyTable import (
     LibraryLoaderStrategyTable,
     _reformat_raw_library_object_columns,
     _organize_data_by_csodiaq_library_dict_keys,

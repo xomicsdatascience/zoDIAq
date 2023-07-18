@@ -1,8 +1,8 @@
-from csodiaq.loaders.library.LibraryLoaderContext import LibraryLoaderContext
-from csodiaq.loaders.library.LibraryLoaderStrategyTable import (
+from csodiaq.loaders.library.libraryLoaderContext import LibraryLoaderContext
+from csodiaq.loaders.library.libraryLoaderStrategyTable import (
     LibraryLoaderStrategyTable,
 )
-from csodiaq.loaders.library.LibraryLoaderStrategyMgf import LibraryLoaderStrategyMgf
+from csodiaq.loaders.library.libraryLoaderStrategyMgf import LibraryLoaderStrategyMgf
 
 import pytest
 import os

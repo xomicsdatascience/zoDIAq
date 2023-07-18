@@ -1,5 +1,5 @@
-from csodiaq.loaders.query.QueryLoaderStrategy import QueryLoaderStrategy
-from csodiaq.loaders.query.QueryLoaderStrategyMzxml import QueryLoaderStrategyMzxml
+from csodiaq.loaders.query import QueryLoaderStrategy
+from csodiaq.loaders.query import QueryLoaderStrategyMzxml
 import pytest
 import os
 import re
