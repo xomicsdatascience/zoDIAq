@@ -1,7 +1,9 @@
+import os.path
+
 from csodiaq.loaders import LibraryLoaderContext, QueryLoaderContext
 from csodiaq.identifier.poolingFunctions import generate_pooled_library_and_query_spectra_by_mz_windows
 from csodiaq.identifier.matchingFunctions import match_library_to_query_pooled_spectra, eliminate_low_count_matches, eliminate_matches_below_fdr_cutoff
-from csodiaq.identifier.scoringFunctions import score_library_to_query_matches, identify_all_decoys, determine_index_of_fdr_cutoff, filter_matches_by_ppm_offset_and_tolerance, calculate_ppm_offset_tolerance
+from csodiaq.identifier.scoringFunctions import score_library_to_query_matches, identify_all_decoys, determine_index_of_fdr_cutoff, filter_matches_by_ppm_offset_and_tolerance, calculate_ppm_offset_tolerance, create_ppm_histogram
 from csodiaq.identifier.outputWritingFunctions import extract_metadata_from_match_and_score_dataframes, format_output_line, format_output_as_pandas_dataframe
 import pandas as pd
 
@@ -141,6 +143,11 @@ class Identifier():
         aboveCutoffGroups = set(scoreDf.groupby(["libraryIdx", "queryIdx"]).groups)
         matchDf = eliminate_matches_below_fdr_cutoff(matchDf, aboveCutoffGroups)
         offset, tolerance = calculate_ppm_offset_tolerance(matchDf["ppmDifference"], self._commandLineArgs["correction"])
+        if self._commandLineArgs["histogram"]:
+            outFileHeader = self._commandLineArgs['outDirectory'] + 'CsoDIAq-file' + '_' + '.'.join(self._queryContext.filePath.split('/')[-1].split('.')[:-1])
+            if self._commandLineArgs['correction'] != -1:
+                outFileHeader += '_corrected'
+            create_ppm_histogram(matchDf["ppmDifference"], offset, tolerance, outFileHeader + "_histogram.png")
         matchDf = filter_matches_by_ppm_offset_and_tolerance(matchDf, offset, tolerance)
         return eliminate_low_count_matches(matchDf)
 

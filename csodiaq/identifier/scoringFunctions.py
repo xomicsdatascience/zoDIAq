@@ -67,7 +67,7 @@ def identify_nearest_bin_to_tallest_bin_that_represents_noise(binHeights, talles
     nearestNoiseBinIdx = min([beforeNearestNoiseBinIdx, afterNearestNoiseBinIdx], key=lambda x: abs(tallestBinIdx - x))
     return nearestNoiseBinIdx
 
-def create_ppm_histogram(ppms, offset, tolerance):
+def create_ppm_histogram(ppms, offset, tolerance, histogramFile):
     binHeights, bins = create_standardized_histogram(ppms)
     barReductionForVisibility = 0.7
     binWidth = barReductionForVisibility * (bins[1] - bins[0])
@@ -81,7 +81,7 @@ def create_ppm_histogram(ppms, offset, tolerance):
                    linestyle='dashed', linewidth=4)
     pyplot.suptitle('offset: ' + str(offset) +
                     ', tolerance: ' + str(tolerance))
-    pyplot.show()
+    pyplot.savefig(histogramFile)
 
 def filter_matches_by_ppm_offset_and_tolerance(matchDf, offset, tolerance):
     ppmLowerBound = offset - tolerance
