@@ -52,14 +52,12 @@ def test__score_functions__score_library_to_query_matches(vectorA, vectorB):
             "libraryIntensity",
             "queryIdx",
             "queryIntensity",
-            "ppmDifference",
         ],
     )
     matchesDf["libraryIdx"] = [libraryIdx for i in vectorA.index]
     matchesDf["libraryIntensity"] = vectorA
     matchesDf["queryIdx"] = [queryIdx for i in vectorA.index]
     matchesDf["queryIntensity"] = vectorB
-    matchesDf["ppmDifference"] = [ppmDiff for i in vectorA.index]
     cosineScore = calculate_cosine_similarity_score(vectorA, vectorB)
     maccScore = calculate_macc_score(vectorA, vectorB)
     expectedOutputDf = pd.DataFrame(
@@ -89,13 +87,13 @@ def test__score_functions__score_library_to_query_matches(vectorA, vectorB):
 
 def test__score_functions__identify_all_decoys():
     isNotDecoy, isDecoy = 0, 1
-    targetLibraryIdx, decoyLibraryIdx, queryIdx, score = 0, 1, 0, 0
+    targetLibraryIdx, decoyLibraryIdx, queryIdx = 0, 1, 0
 
     scoreData = [
-        [targetLibraryIdx, queryIdx, score, score],
-        [decoyLibraryIdx, queryIdx, score, score],
+        [targetLibraryIdx, queryIdx],
+        [decoyLibraryIdx, queryIdx],
     ]
-    scoreDf = pd.DataFrame(scoreData, columns=["libraryIdx", "queryIdx", "cosineScore", "maccScore"])
+    scoreDf = pd.DataFrame(scoreData, columns=["libraryIdx", "queryIdx"])
     expectedOutput = np.array([isNotDecoy, isDecoy])
     decoySet = set([decoyLibraryIdx])
     output = identify_all_decoys(decoySet, scoreDf)
@@ -176,18 +174,14 @@ def test__score_functions__calculate_ppm_offset_tolerance_using_tallest_bin_peak
 def test__score_functions__filter_matches_by_ppm_offset_and_tolerance():
     libIdx = 0
     queryIdx = 0
-    genericIntensity = 100.0
-    genericPpmDifference = 10.0
     ppmOffset = 6
     matches = [
-        [libIdx, genericIntensity, queryIdx, genericIntensity, (i * 5) + ppmOffset]
+        [libIdx, queryIdx, (i * 5) + ppmOffset]
         for i in range(-5, 6)
     ]
     columns = [
         "libraryIdx",
-        "libraryIntensity",
         "queryIdx",
-        "queryIntensity",
         "ppmDifference",
     ]
     input = pd.DataFrame(matches, columns=columns)

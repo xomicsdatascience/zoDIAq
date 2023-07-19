@@ -38,7 +38,7 @@ def match_query_peak_to_all_succeeding_library_peaks_within_tolerance(baselineLi
             return data
         data.append(
             [libraryPeaks[tempLibraryIdx][tagIdx], libraryPeaks[tempLibraryIdx][intensityIdx],
-             queryPeak[tagIdx], queryPeak[intensityIdx], ppm]
+             queryPeak[tagIdx], queryPeak[intensityIdx], queryPeak[mzIdx], ppm]
         )
         tempLibraryIdx += 1
     return data
@@ -96,7 +96,7 @@ def match_library_to_query_pooled_spectra(libraryPeaks, queryPeaks, ppmTolerance
     libraryArray = np.array(libraryPeaks)
     queryArray = np.array(queryPeaks)
     data = numba_enhanced_matching_of_library_to_query_pooled_spectra(libraryArray, queryArray, ppmTolerance)
-    matchDf = pd.DataFrame(data, columns=["libraryIdx","libraryIntensity","queryIdx","queryIntensity","ppmDifference"])
+    matchDf = pd.DataFrame(data, columns=["libraryIdx","libraryIntensity","queryIdx","queryIntensity","queryMz","ppmDifference"])
     matchDf[["libraryIdx", "queryIdx"]] = matchDf[["libraryIdx", "queryIdx"]].astype(int)
     return matchDf
 

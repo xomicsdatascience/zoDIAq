@@ -21,7 +21,7 @@ def identifierOutputData():
         6,
         7,
         11,
-        #12,
+        12,
     ]
 
 def test__identifier_functions__format_output_line(identifierOutputData):
@@ -45,7 +45,7 @@ def test__identifier_functions__format_output_line(identifierOutputData):
         "shared":9,
         "ionCount":10,
         "maccScore":11,
-        #"excludeNum":12,
+        "exclude_num":12,
     }
     output = format_output_line(libDict, queryDict, matchDict)
     assert output == identifierOutputData
@@ -56,17 +56,23 @@ def test__identifier_functions__extract_metadata_from_match_and_score_dataframes
     queryIdx = 0
     genericIntensity = 100.0
     genericPpmDifference = 10.0
-    lib1PeakCount = 3
+    lib1PeakCount = 10
+    lib1PeakCountAbovePrecursorMz = 3
     lib2PeakCount = 4
+    precursorMz = 100.0
+    abovePrecursorMz = precursorMz + 10
+    belowPrecursorMz = precursorMz - 10
     lib1CosineScore = 1.0
     lib2CosineScore = 0.9
     lib1Score = 0.8
     lib2Score = 0.7
-    lib1Match = [[lib1Idx, genericIntensity, queryIdx, genericIntensity,
-                         genericPpmDifference]] * lib1PeakCount
-    lib2Match = [[lib2Idx, genericIntensity, queryIdx, genericIntensity, genericPpmDifference]] * lib2PeakCount
-    columns = ["libraryIdx", "libraryIntensity", "queryIdx", "queryIntensity", "ppmDifference"]
-    matchDf = pd.DataFrame(lib1Match + lib2Match, columns=columns)
+    lib1MatchAbovePrecursorMz = [[lib1Idx, genericIntensity, queryIdx, genericIntensity, abovePrecursorMz,
+                         genericPpmDifference]] * lib1PeakCountAbovePrecursorMz
+    lib1MatchBelowPrecursorMz = [[lib1Idx, genericIntensity, queryIdx, genericIntensity, belowPrecursorMz,
+                         genericPpmDifference]] * (lib1PeakCount - lib1PeakCountAbovePrecursorMz)
+    lib2Match = [[lib2Idx, genericIntensity, queryIdx, genericIntensity, abovePrecursorMz, genericPpmDifference]] * lib2PeakCount
+    columns = ["libraryIdx", "libraryIntensity", "queryIdx", "queryIntensity", "queryMz", "ppmDifference"]
+    matchDf = pd.DataFrame(lib1MatchAbovePrecursorMz + lib1MatchBelowPrecursorMz + lib2Match, columns=columns)
 
     scoreData = [
         [lib1Idx, queryIdx, lib1CosineScore, lib1Score],
@@ -77,20 +83,24 @@ def test__identifier_functions__extract_metadata_from_match_and_score_dataframes
         (lib1Idx, queryIdx): {
             "cosineSimilarityScore": lib1CosineScore,
             "shared": lib1PeakCount,
-            "ionCount": lib1PeakCount * genericIntensity,
+            "ionCount": genericIntensity * lib1PeakCountAbovePrecursorMz,
             "maccScore": lib1Score,
-            # TODO: calculate excludeNum
-            #"excludeNum": 0
+            "exclude_num": lib1PeakCount - lib1PeakCountAbovePrecursorMz
         },
         (lib2Idx, queryIdx): {
             "cosineSimilarityScore": lib2CosineScore,
             "shared": lib2PeakCount,
             "ionCount": lib2PeakCount * genericIntensity,
             "maccScore": lib2Score,
-            #"excludeNum": 0
+            "exclude_num": 0
         },
     }
-    output = extract_metadata_from_match_and_score_dataframes(matchDf, scoreDf)
+    queryDict = {
+        str(queryIdx): {
+            "precursorMz": precursorMz,
+        },
+    }
+    output = extract_metadata_from_match_and_score_dataframes(matchDf, scoreDf, queryDict)
     for idKey, metadataDict in expectedOutput.items():
         assert idKey in output
         for metadataType, metadataValue in metadataDict.items():
@@ -115,6 +125,7 @@ def test__identifier_functions__format_output_as_pandas_dataframe(identifierOutp
         'CompensationVoltage',
         'totalWindowWidth',
         'MaCC_Score',
+        'exclude_num',
     ]
     inputFileName = 'dummyFile'
     expectedOutputDf = pd.DataFrame([[inputFileName] + identifierOutputData], columns=expectedColumns)

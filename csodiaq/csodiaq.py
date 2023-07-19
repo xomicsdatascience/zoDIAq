@@ -38,8 +38,8 @@ def main():
     if args['command'] == 'id':
         identifier = Identifier(args)
         for queryFile in args["files"]:
-            idDf = identifier.identify_library_spectra_in_query_file(queryFile)
             outFilePath = _create_outfile_path(args['outDirectory'], queryFile, args['correction'])
+            idDf = identifier.identify_library_spectra_in_query_file(queryFile)
             idDf.to_csv(outFilePath, index=False)
         #lib = cif.library_file_to_dict(args['library'])
         #maxQuerySpectraToPool = queryPooling = args['query']

@@ -17,15 +17,24 @@ def format_output_line(libMetadata, queMetadata, matchMetadata):
         queMetadata["CV"],
         queMetadata["windowWidth"],
         matchMetadata["maccScore"],
-        #matchMetadata["excludeNum"],
+        matchMetadata["exclude_num"],
     ]
 
-def extract_metadata_from_match_dataframe_groupby(group):
+def extract_metadata_from_match_and_score_dataframes(matchDf, scoreDf, queryDict):
+    matchDict = {k: extract_metadata_from_match_dataframe_groupby(v, queryDict[str(k[1])]) for k, v in matchDf.groupby(["libraryIdx","queryIdx"])}
+    scoreDict = extract_metadata_from_score_dataframe(scoreDf)
+    metadataDict = {
+        k: {**matchDict[k], **scoreDict[k]} for k in scoreDict.keys()
+    }
+    return metadataDict
+
+def extract_metadata_from_match_dataframe_groupby(group, queryMetadata):
+    precursorMz = queryMetadata["precursorMz"]
+    groupRowsAbovePrecursorMz = group[group["queryMz"] > precursorMz]
     return {
         "shared": len(group.index),
-        "ionCount": sum(group["queryIntensity"]),
-        #TODO: see TODO in extract_metadata_from_match_and_score_dataframes test
-        #"extractNum": 0
+        "ionCount": sum(groupRowsAbovePrecursorMz["queryIntensity"]),
+        "exclude_num": len(group.index) - len(groupRowsAbovePrecursorMz)
     }
 
 def extract_metadata_from_score_dataframe(df):
@@ -37,15 +46,6 @@ def extract_metadata_from_score_dataframe(df):
             "cosineSimilarityScore": cosineDict[k]
         } for k in maccDict.keys()}
     return outputDict
-
-
-def extract_metadata_from_match_and_score_dataframes(matchDf, scoreDf):
-    matchDict = {k: extract_metadata_from_match_dataframe_groupby(v) for k, v in matchDf.groupby(["libraryIdx","queryIdx"])}
-    scoreDict = extract_metadata_from_score_dataframe(scoreDf)
-    metadataDict = {
-        k: {**matchDict[k], **scoreDict[k]} for k in scoreDict.keys()
-    }
-    return metadataDict
 
 def format_output_as_pandas_dataframe(inputFileName, outputData):
     columns = [
@@ -64,6 +64,7 @@ def format_output_as_pandas_dataframe(inputFileName, outputData):
         'CompensationVoltage',
         'totalWindowWidth',
         'MaCC_Score',
+        'exclude_num',
     ]
     outputDf = pd.DataFrame(outputData, columns=columns)
     outputDf.insert(0, 'fileName', [inputFileName] * len(outputDf.index))

@@ -155,9 +155,8 @@ class Identifier():
         The final match/score identifications are consolidated and written to a single output
             .csv file.
         """
-
-        matchDict = extract_metadata_from_match_and_score_dataframes(matchDf, scoreDf)
         queryDict = self._queryContext.extract_metadata_from_query_scans()
+        matchDict = extract_metadata_from_match_and_score_dataframes(matchDf, scoreDf, queryDict)
         sortedLibKeys = sorted(self._libraryDict.keys())
         outputs = []
         for key, matchMetadata in matchDict.items():
