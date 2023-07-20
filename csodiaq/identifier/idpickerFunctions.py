@@ -24,33 +24,61 @@ def group_nodes_by_identical_edges(df, isPeptideNodes):
 
 def separate__identify_and_label_independent_clusters(df):
     clusterColumn = np.array([-1] * len(df.index))
-    clusters = extract_clusters_from_dataframe_recursion(df, clusters=[])
+    clusters = extract_clusters_from_dataframe_recursively(df, clusters=[])
     for clusterNum in range(len(clusters)):
         clusterIdx = clusters[clusterNum]
         clusterColumn[clusterIdx] = clusterNum
     return clusterColumn
 
-def extract_clusters_from_dataframe_recursion(df, clusters):
+def extract_clusters_from_dataframe_recursively(df, clusters):
     if len(df.index) == 0:
         return clusters
     initialPeptideSet, initialProteinSet = initialize_peptide_protein_sets_of_next_cluster(df)
-    peptideSet, _ = identify_next_cluster_in_dataframe_recursion(df, initialPeptideSet, initialProteinSet)
+    peptideSet, _ = identify_next_cluster_in_dataframe_recursively(df, initialPeptideSet, initialProteinSet)
     clusterDf = df[df["peptide"].isin(peptideSet)]
     clusters.append(clusterDf.index)
     df = df[~df.index.isin(clusterDf.index)]
-    return extract_clusters_from_dataframe_recursion(df, clusters)
+    return extract_clusters_from_dataframe_recursively(df, clusters)
 
 def initialize_peptide_protein_sets_of_next_cluster(df):
     peptideSet = set([df.iloc[0]["peptide"]])
     proteinSet = set([df.iloc[0]["protein"]])
     return peptideSet, proteinSet
 
-def identify_next_cluster_in_dataframe_recursion(df, oldPeptideSet, oldProteinSet):
+def identify_next_cluster_in_dataframe_recursively(df, oldPeptideSet, oldProteinSet):
     newPeptideSet, newProteinSet = identify_all_matching_peptide_proteins_in_cluster_from_old_set(df, oldPeptideSet, oldProteinSet)
     if newPeptideSet == oldPeptideSet and newProteinSet == oldProteinSet:
         return oldPeptideSet, newPeptideSet
-    return identify_next_cluster_in_dataframe_recursion(df, newPeptideSet, newProteinSet)
+    return identify_next_cluster_in_dataframe_recursively(df, newPeptideSet, newProteinSet)
 
 def identify_all_matching_peptide_proteins_in_cluster_from_old_set(df, peptideSet, proteinSet):
     df = df[df["peptide"].isin(peptideSet) | df["protein"].isin(proteinSet)]
     return set(df["peptide"]), set(df["protein"])
+
+def reduce__identify_minimum_number_of_most_connected_proteins(df):
+    allAcceptedProteins = set()
+    for _, clusterDf in df.groupby("cluster"):
+        sortedClusterDf, initialAcceptedProteins = initialize_protein_identification_recursion_parameters(clusterDf)
+        allAcceptedProteins.update(identify_acceptable_proteins_recursively(sortedClusterDf, initialAcceptedProteins))
+    return allAcceptedProteins
+
+def initialize_protein_identification_recursion_parameters(clusterDf):
+    sortedClusterDf = sort_dataframe_by_descending_protein_count(clusterDf)
+    initialAcceptedProteins = set([sortedClusterDf.iloc[0]["protein"]])
+    return sortedClusterDf, initialAcceptedProteins
+
+def sort_dataframe_by_descending_protein_count(df):
+    return df.assign(freq=df \
+                     .groupby("protein")["protein"] \
+                     .transform('count'))\
+             .sort_values(by=["freq","protein"],ascending=[False,True]) \
+             .drop(["freq"], axis=1)
+
+def identify_acceptable_proteins_recursively(sortedClusterDf, acceptedProteinSet):
+    acceptedProteinDf = sortedClusterDf[sortedClusterDf["protein"].isin(acceptedProteinSet)]
+    unclaimedPeptideDf = sortedClusterDf[~sortedClusterDf["peptide"].isin(acceptedProteinDf["peptide"])]
+    if len(unclaimedPeptideDf.index) == 0:
+        return set(acceptedProteinDf["protein"])
+    nextProtein = unclaimedPeptideDf.iloc[0]["protein"]
+    acceptedProteinSet.add(nextProtein)
+    return identify_acceptable_proteins_recursively(sortedClusterDf, acceptedProteinSet)
