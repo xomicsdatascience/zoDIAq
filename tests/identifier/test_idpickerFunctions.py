@@ -1,7 +1,8 @@
 import pandas as pd
-from csodiaq.identifier.idpickerFunctions import collapse_identically_connected_peptides_and_proteins, separate_independent_clusters
+from csodiaq.identifier.idpickerFunctions import collapse__group_identically_connected_peptides_and_proteins, separate__identify_and_label_independent_clusters
+import numpy as np
 
-def test__idpicker_functions__collapse_identically_connected_peptides_and_proteins():
+def test__idpicker_functions__collapse__group_identically_connected_peptides_and_proteins():
     data = [
         (1,7),
         (2,4),
@@ -38,10 +39,10 @@ def test__idpicker_functions__collapse_identically_connected_peptides_and_protei
         ((10,), (4, 9))
     ]
     expectedOutput = pd.DataFrame(groupedData, columns=["peptide","protein"])
-    output = collapse_identically_connected_peptides_and_proteins(df)
+    output = collapse__group_identically_connected_peptides_and_proteins(df)
     assert expectedOutput.equals(output)
 
-def test__idpicker_functions__separate_independent_clusters():
+def test__idpicker_functions__separate__identify_and_label_independent_clusters():
     data = [
         ((1, 5), (7,)),
         ((2,), (4, 9)),
@@ -57,7 +58,7 @@ def test__idpicker_functions__separate_independent_clusters():
         ((10,), (4, 9))
     ]
     df = pd.DataFrame(data, columns=["peptide","protein"])
-    expectedClusters = pd.Series([
+    expectedClusters = np.array([
         0,
         1,
         1,
@@ -71,8 +72,8 @@ def test__idpicker_functions__separate_independent_clusters():
         2,
         1
     ])
-    clusters = separate_independent_clusters(df)
-    #assert expectedClusters.equals(clusters)
+    clusters = separate__identify_and_label_independent_clusters(df)
+    np.testing.assert_array_equal(expectedClusters, clusters)
 
 
 
