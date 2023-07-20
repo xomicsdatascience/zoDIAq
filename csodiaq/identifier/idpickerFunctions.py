@@ -1,7 +1,18 @@
 import numpy as np
+import pandas as pd
+
+def initialize__format_peptide_protein_connections(df):
+    peptideProteinConnections = []
+
+    for i in range(len(df)):
+        peptide = df["peptide"].loc[i]
+        proteinGroup = df["protein"].loc[i]
+
+        for protein in proteinGroup.split("/")[1:]:
+            peptideProteinConnections.append((peptide, protein))
+    return pd.DataFrame(peptideProteinConnections, columns=["peptide","protein"])
 
 def collapse__group_identically_connected_peptides_and_proteins(df):
-
     df["peptideGroup"] = group_nodes_by_identical_edges(df, isPeptideNodes=True)
     df["proteinGroup"] = group_nodes_by_identical_edges(df, isPeptideNodes=False)
 
