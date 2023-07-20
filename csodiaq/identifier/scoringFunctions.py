@@ -29,10 +29,14 @@ def determine_index_of_fdr_cutoff(isDecoyArray, fdrCutoff = 1e-2):
         raise ValueError("None of the library peptides were identified in the query spectra (highest score was a decoy).")
     if 1 not in isDecoyArray:
         return len(isDecoyArray)
-    decoyIndices = np.flatnonzero(isDecoyArray)
-    fdrs = (np.arange(1, len(decoyIndices)+1))/(decoyIndices + 1)
-    lastDecoy = np.argmax(fdrs > fdrCutoff)
-    return decoyIndices[lastDecoy]
+    fdrs = calculate_fdr_rates_of_decoy_array(isDecoyArray)
+    lastDecoyIdx = np.argmax(fdrs > fdrCutoff)
+    return lastDecoyIdx
+
+def calculate_fdr_rates_of_decoy_array(isDecoyArray):
+    isDecoyArrayIdx = np.arange(1, len(isDecoyArray)+1)
+    decoyCumSum = np.array(isDecoyArray).cumsum()
+    return decoyCumSum / isDecoyArrayIdx
 
 def calculate_ppm_offset_tolerance(ppms, numStandardDeviations):
     if numStandardDeviations: return calculate_ppm_offset_tolerance_using_mean_and_standard_deviation(ppms, numStandardDeviations)
