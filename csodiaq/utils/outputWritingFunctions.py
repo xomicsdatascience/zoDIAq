@@ -1,3 +1,4 @@
+import os.path
 import pandas as pd
 
 def format_output_line(libMetadata, queMetadata, matchMetadata):
@@ -70,3 +71,10 @@ def format_output_as_pandas_dataframe(inputFileName, outputData):
     outputDf.insert(0, 'fileName', [inputFileName] * len(outputDf.index))
     return outputDf
 
+def create_outfile_header(outputDir, queryFile, correction):
+    outputCsodiaqTag = 'CsoDIAq-file_'
+    queryFileName = '.'.join(queryFile.split('/')[-1].split('.')[:-1])
+    outputFile = outputCsodiaqTag + queryFileName
+    outFileHeader = os.path.join(outputDir, outputFile)
+    if correction != -1: outFileHeader += '_corrected'
+    return outFileHeader

@@ -1,10 +1,8 @@
-import os.path
-
 from csodiaq.loaders import LibraryLoaderContext, QueryLoaderContext
 from csodiaq.identifier.poolingFunctions import generate_pooled_library_and_query_spectra_by_mz_windows
 from csodiaq.identifier.matchingFunctions import match_library_to_query_pooled_spectra, eliminate_low_count_matches, eliminate_matches_below_fdr_cutoff
 from csodiaq.identifier.scoringFunctions import score_library_to_query_matches, identify_all_decoys, determine_index_of_fdr_cutoff, filter_matches_by_ppm_offset_and_tolerance, calculate_ppm_offset_tolerance, create_ppm_histogram
-from csodiaq.identifier.outputWritingFunctions import extract_metadata_from_match_and_score_dataframes, format_output_line, format_output_as_pandas_dataframe
+from csodiaq.utils.outputWritingFunctions import extract_metadata_from_match_and_score_dataframes, format_output_line, format_output_as_pandas_dataframe
 import pandas as pd
 
 class Identifier():

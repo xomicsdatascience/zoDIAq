@@ -13,14 +13,7 @@ from . import csodiaq_quantification_functions as cqf
 from . import csodiaq_mgf_cleaning_functions as cmf
 from . import peptide_quantification
 from csodiaq.identifier import Identifier
-
-
-def _create_outfile_path(outputDir, queryFile, correction):
-    outFileHeader = outputDir + 'CsoDIAq-file' + '_' + '.'.join(
-        queryFile.split('/')[-1].split('.')[:-1])
-    if correction != -1:
-        outFileHeader += '_corrected'
-    return outFileHeader + '.csv'
+from csodiaq.utils import create_outfile_header
 
 def main():
     arg_parser = set_command_line_settings()
@@ -38,9 +31,10 @@ def main():
     if args['command'] == 'id':
         identifier = Identifier(args)
         for queryFile in args["files"]:
-            outFilePath = _create_outfile_path(args['outDirectory'], queryFile, args['correction'])
+            outFileHeader = create_outfile_header(args['outDirectory'], queryFile, args['correction'])
             idDf = identifier.identify_library_spectra_in_query_file(queryFile)
-            idDf.to_csv(outFilePath, index=False)
+            idDf.to_csv(outFileHeader + '.csv', index=False)
+
         #lib = cif.library_file_to_dict(args['library'])
         #maxQuerySpectraToPool = queryPooling = args['query']
         #if not maxQuerySpectraToPool:

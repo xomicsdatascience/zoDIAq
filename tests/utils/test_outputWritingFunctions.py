@@ -1,7 +1,7 @@
-from csodiaq.identifier.outputWritingFunctions import format_output_line, extract_metadata_from_match_and_score_dataframes, format_output_as_pandas_dataframe
+from csodiaq.utils import format_output_line, extract_metadata_from_match_and_score_dataframes, format_output_as_pandas_dataframe, create_outfile_header
 import pandas as pd
 import pytest
-import os
+
 
 @pytest.fixture
 def identifierOutputData():
@@ -24,7 +24,7 @@ def identifierOutputData():
         12,
     ]
 
-def test__identifier_functions__format_output_line(identifierOutputData):
+def test__output_writing_functions__format_output_line(identifierOutputData):
     libDict = {
         "peptide":"testPeptide",
         "proteinName":"testProtein",
@@ -50,7 +50,7 @@ def test__identifier_functions__format_output_line(identifierOutputData):
     output = format_output_line(libDict, queryDict, matchDict)
     assert output == identifierOutputData
 
-def test__identifier_functions__extract_metadata_from_match_and_score_dataframes():
+def test__output_writing_functions__extract_metadata_from_match_and_score_dataframes():
     lib1Idx = 0
     lib2Idx = 1
     queryIdx = 0
@@ -107,7 +107,7 @@ def test__identifier_functions__extract_metadata_from_match_and_score_dataframes
             assert metadataType in output[idKey]
             assert output[idKey][metadataType] == metadataValue
 
-def test__identifier_functions__format_output_as_pandas_dataframe(identifierOutputData):
+def test__output_writing_functions__format_output_as_pandas_dataframe(identifierOutputData):
     expectedColumns = [
         'fileName',
         'scan',
@@ -131,3 +131,50 @@ def test__identifier_functions__format_output_as_pandas_dataframe(identifierOutp
     expectedOutputDf = pd.DataFrame([[inputFileName] + identifierOutputData], columns=expectedColumns)
     outputDf = format_output_as_pandas_dataframe(inputFileName, [identifierOutputData])
     assert expectedOutputDf.equals(outputDf)
+
+@pytest.fixture
+def outputDirectory():
+    return 'test/output/dir'
+
+@pytest.fixture
+def inputFileName():
+    return 'mzxml_test'
+
+@pytest.fixture
+def inputFile(inputFileName):
+    return inputFileName + '.mzxml'
+
+@pytest.fixture
+def inputFilePath(inputFile):
+    return 'mzxml/directory/' + inputFile
+
+@pytest.fixture
+def outputCsodiaqTag():
+    return 'CsoDIAq-file_'
+
+def test__output_writing_functions__create_outfile_header__no_correction(outputDirectory, inputFileName, inputFilePath, outputCsodiaqTag):
+    expectedOutput = f'{outputDirectory}/{outputCsodiaqTag}{inputFileName}'
+    output = create_outfile_header(outputDirectory, inputFilePath, correction=-1)
+    assert expectedOutput == output
+
+def test__output_writing_functions__create_outfile_header__no_correction__output_directory_ends_in_slash(outputDirectory, inputFileName, inputFilePath, outputCsodiaqTag):
+    expectedOutput = f'{outputDirectory}/{outputCsodiaqTag}{inputFileName}'
+    output = create_outfile_header(outputDirectory + '/', inputFilePath, correction=-1)
+    assert expectedOutput == output
+
+def test__output_writing_functions__create_outfile_header__no_correction__includes_non_file_type_dots(outputDirectory, inputFileName, inputFilePath, outputCsodiaqTag):
+    inputFileNameWithPeriods = inputFileName + '.dots.added'
+    inputFilePathWithPeriods = inputFileNameWithPeriods + '.mzxml'
+    expectedOutput = f'{outputDirectory}/{outputCsodiaqTag}{inputFileNameWithPeriods}'
+    output = create_outfile_header(outputDirectory, inputFilePathWithPeriods, correction=-1)
+    assert expectedOutput == output
+
+def test__output_writing_functions__create_outfile_header__custom_correction(outputDirectory, inputFileName, inputFilePath, outputCsodiaqTag):
+    expectedOutput = f'{outputDirectory}/{outputCsodiaqTag}{inputFileName}_corrected'
+    output = create_outfile_header(outputDirectory, inputFilePath, correction=0)
+    assert expectedOutput == output
+
+def test__output_writing_functions__create_outfile_header__stdev_correction(outputDirectory, inputFileName, inputFilePath, outputCsodiaqTag):
+    expectedOutput = f'{outputDirectory}/{outputCsodiaqTag}{inputFileName}_corrected'
+    output = create_outfile_header(outputDirectory, inputFilePath, correction=1)
+    assert expectedOutput == output
