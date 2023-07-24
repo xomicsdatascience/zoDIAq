@@ -1,5 +1,7 @@
 import os.path
 import pandas as pd
+from csodiaq.identifier.scoringFunctions import calculate_fdr_rates_of_decoy_array
+pd.set_option("display.max_columns", None)
 
 def format_output_line(libMetadata, queMetadata, matchMetadata):
     return [
@@ -86,3 +88,44 @@ def drop_duplicate_values_from_df_in_given_column(df, column):
         drop=True
     )
 
+def identify_leading_protein_fdrs_for_leading_proteins_below_fdr_cutoff(df, fdrCutoff = 0.01):
+    df = drop_duplicate_values_from_df_in_given_column(df, column="leadingProtein")
+    df["FDR"] = calculate_fdr_rates_of_decoy_array(df["isDecoy"])
+    df = df[df["FDR"] < fdrCutoff]
+    return dict(zip(df["leadingProtein"], df["FDR"]))
+
+def organize_peptide_df_by_leading_proteins(peptideDf, leadingProteins):
+    proteinToProteinGroup = create_dictionary_that_matches_individual_proteins_to_group_the_protein_belongs_to(leadingProteins)
+    proteinDf = create_dataframe_where_peptides_match_to_one_or_more_leading_proteins(peptideDf, proteinToProteinGroup)
+    return proteinDf
+
+def create_dictionary_that_matches_individual_proteins_to_group_the_protein_belongs_to(proteinGroups):
+    proteinToProteinGroup = {}
+    for proteinGroup in proteinGroups:
+        proteinToProteinGroup.update({
+        proteinGroup[i]: proteinGroup for i in range(len(proteinGroup))
+    })
+    return proteinToProteinGroup
+
+def create_dataframe_where_peptides_match_to_one_or_more_leading_proteins(peptideDf, proteinToProteinGroup):
+    originalProteinGroups = peptideDf["protein"].apply(format_protein_string_to_list)
+    peptideToLeadingProteinMatchIdx = []
+    leadingProteinColumn = []
+    for i in range(len(originalProteinGroups)):
+        originalProteinGroup = originalProteinGroups[i]
+        for originalProtein in originalProteinGroup:
+            if originalProtein in proteinToProteinGroup.keys():
+                peptideToLeadingProteinMatchIdx.append(i)
+                leadingProteinColumn.append(format_protein_list_to_string(proteinToProteinGroup[originalProtein]))
+    proteinDf = peptideDf.copy().iloc[peptideToLeadingProteinMatchIdx]
+    proteinDf["leadingProtein"] = leadingProteinColumn
+    proteinDf = proteinDf.drop_duplicates(keep="first").reset_index(
+        drop=True
+    )
+    return proteinDf
+
+def format_protein_string_to_list(proteinString):
+    return proteinString.split("/")[1:]
+
+def format_protein_list_to_string(proteinList):
+    return f"{len(proteinList)}/{'/'.join(proteinList)}"
