@@ -1,4 +1,4 @@
-from csodiaq.utils import format_output_line, extract_metadata_from_match_and_score_dataframes, format_output_as_pandas_dataframe, create_outfile_header
+from csodiaq.utils import format_output_line, extract_metadata_from_match_and_score_dataframes, format_output_as_pandas_dataframe, create_outfile_header, drop_duplicate_values_from_df_in_given_column
 import pandas as pd
 import pytest
 
@@ -10,6 +10,7 @@ def identifierOutputData():
         4,
         "testPeptide",
         "testProtein",
+        0,
         0,
         1,
         8,
@@ -28,6 +29,7 @@ def test__output_writing_functions__format_output_line(identifierOutputData):
     libDict = {
         "peptide":"testPeptide",
         "proteinName":"testProtein",
+        "isDecoy": 0,
         "precursorMz":0,
         "precursorCharge":1,
         "identifier":"testIdentifiers",
@@ -114,6 +116,7 @@ def test__output_writing_functions__format_output_as_pandas_dataframe(identifier
         'MzEXP',
         'peptide',
         'protein',
+        'isDecoy',
         'MzLIB',
         'zLIB',
         'cosine',
@@ -178,3 +181,37 @@ def test__output_writing_functions__create_outfile_header__stdev_correction(outp
     expectedOutput = f'{outputDirectory}/{outputCsodiaqTag}{inputFileName}_corrected'
     output = create_outfile_header(outputDirectory, inputFilePath, correction=1)
     assert expectedOutput == output
+
+def test__output_writing_functions__drop_duplicate_values_from_df_in_given_column():
+    columnName = "test"
+    data = [
+            [0],
+            [0],
+            [1],
+            [1],
+            [2],
+    ]
+    df = pd.DataFrame(data, columns=[columnName])
+    expectedOutputData = [
+            [0],
+            [1],
+            [2],
+    ]
+    expectedOutputDf = pd.DataFrame(expectedOutputData, columns=[columnName])
+    outputDf = drop_duplicate_values_from_df_in_given_column(df, columnName)
+    assert expectedOutputDf.equals(outputDf)
+
+def test__output_writing_functions__add_leading_protein_column_to_peptide_dataframe():
+    peptideProteinData = [
+        ['peptide01', '1/protein7'],
+        ['peptide02', '3/protein4/protein6/protein9'],
+        ['peptide03', '1/protein1'],
+        ['peptide04', '2/protein1/protein5'],
+        ['peptide05', '1/protein7'],
+        ['peptide06', '2/protein3/protein6'],
+        ['peptide07', '1/protein1'],
+        ['peptide08', '4/protein1/protein2/protein5/protein8'],
+        ['peptide09', '1/protein1'],
+        ['peptide10', '2/protein4/protein9'],
+    ]
+    df = pd.DataFrame(peptideProteinData, columns=["peptide","protein"])

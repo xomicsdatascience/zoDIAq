@@ -1,4 +1,4 @@
-# dev_tdd_rewrite
+# csdev_tdd_rewrite
 
 This is the dev branch for the csodiaq 2.0 rewrite. In summary, we are enhancing the modularity and testability of csodiaq.
 

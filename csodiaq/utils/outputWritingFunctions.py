@@ -7,6 +7,7 @@ def format_output_line(libMetadata, queMetadata, matchMetadata):
         queMetadata["precursorMz"],
         libMetadata["peptide"],
         libMetadata["proteinName"],
+        libMetadata["isDecoy"],
         libMetadata["precursorMz"],
         libMetadata["precursorCharge"],
         matchMetadata["cosineSimilarityScore"],
@@ -54,6 +55,7 @@ def format_output_as_pandas_dataframe(inputFileName, outputData):
         'MzEXP',
         'peptide',
         'protein',
+        'isDecoy',
         'MzLIB',
         'zLIB',
         'cosine',
@@ -78,3 +80,9 @@ def create_outfile_header(outputDir, queryFile, correction):
     outFileHeader = os.path.join(outputDir, outputFile)
     if correction != -1: outFileHeader += '_corrected'
     return outFileHeader
+
+def drop_duplicate_values_from_df_in_given_column(df, column):
+   return df.drop_duplicates(subset=column, keep="first").reset_index(
+        drop=True
+    )
+
