@@ -1,4 +1,4 @@
-from csodiaq.utils import format_output_line, extract_metadata_from_match_and_score_dataframes, format_output_as_pandas_dataframe, create_outfile_header, drop_duplicate_values_from_df_in_given_column, identify_leading_protein_fdrs_for_leading_proteins_below_fdr_cutoff, organize_peptide_df_by_leading_proteins, determine_if_peptides_are_unique_to_leading_protein
+from csodiaq.utils import format_output_line, extract_metadata_from_match_and_score_dataframes, format_output_as_pandas_dataframe, create_outfile_header, drop_duplicate_values_from_df_in_given_column, identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff, organize_peptide_df_by_leading_proteins, determine_if_peptides_are_unique_to_leading_protein
 import pandas as pd
 import pytest
 pd.set_option("display.max_columns",None)
@@ -239,7 +239,7 @@ def test__output_writing_functions__organize_peptide_df_by_leading_proteins():
     outputDf = organize_peptide_df_by_leading_proteins(peptideProteinDf, leadingProteins)
     assert expectedOutputDf.equals(outputDf)
 
-def test__output_writing_functions__identify_leading_protein_fdrs_for_leading_proteins_below_fdr_cutoff():
+def test__output_writing_functions__identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff():
     numLeadingProteins = 100
     duplicateLeadingProtein = 0
     decoyLeadingProteins = ['decoy1', 'decoy2']
@@ -254,7 +254,7 @@ def test__output_writing_functions__identify_leading_protein_fdrs_for_leading_pr
         i: 0.0 for i in range(numLeadingProteins)
     }
     expectedOutput['decoy1'] = 1 / (numLeadingProteins + 1)
-    output = identify_leading_protein_fdrs_for_leading_proteins_below_fdr_cutoff(df)
+    output = identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff(df)
     assert expectedOutput == output
 
 def test__determine_if_peptides_are_unique_to_leading_protein():
