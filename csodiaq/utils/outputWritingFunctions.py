@@ -1,7 +1,9 @@
 import os.path
 import pandas as pd
+import numpy as np
 from csodiaq.identifier.scoringFunctions import calculate_fdr_rates_of_decoy_array
 pd.set_option("display.max_columns", None)
+pd.set_option("display.max_rows", None)
 
 def format_output_line(libMetadata, queMetadata, matchMetadata):
     return [
@@ -15,7 +17,7 @@ def format_output_line(libMetadata, queMetadata, matchMetadata):
         matchMetadata["cosineSimilarityScore"],
         libMetadata["identifier"],
         queMetadata["peaksCount"],
-        libMetadata["peaks"],
+        len(libMetadata["peaks"]),
         matchMetadata["shared"],
         matchMetadata["ionCount"],
         queMetadata["CV"],
@@ -129,3 +131,9 @@ def format_protein_string_to_list(proteinString):
 
 def format_protein_list_to_string(proteinList):
     return f"{len(proteinList)}/{'/'.join(proteinList)}"
+
+def determine_if_peptides_are_unique_to_leading_protein(df):
+    uniqueValuesDf = df.groupby("leadingProtein").filter(lambda group: len(group) == 1)
+    uniquePeptides = np.array([0]*len(df.index))
+    uniquePeptides[uniqueValuesDf.index] = 1
+    return list(uniquePeptides)

@@ -1,5 +1,5 @@
 import pandas as pd
-from csodiaq.identifier.idpickerFunctions import initialize__format_peptide_protein_connections, collapse__group_identically_connected_peptides_and_proteins, separate__identify_and_label_independent_clusters, reduce__identify_minimum_number_of_most_connected_proteins
+from csodiaq.identifier.idpickerFunctions import initialize__format_peptide_protein_connections, collapse__group_identically_connected_peptides_and_proteins, separate__identify_and_label_independent_clusters, reduce__identify_minimum_number_of_most_connected_proteins, identify_high_confidence_proteins
 import numpy as np
 
 def test__idpicker_functions__initialize__format_peptide_protein_connections():
@@ -154,6 +154,26 @@ def test__idpicker_functions__reduce__identify_minimum_number_of_most_connected_
     proteins = reduce__identify_minimum_number_of_most_connected_proteins(df)
     assert expectedProteins == proteins
 
-
-
+def test__idpicker_functions__identify_high_confidence_proteins():
+    peptideProteinData = [
+        ['peptide01', '1/protein7'],
+        ['peptide02', '3/protein4/protein6/protein9'],
+        ['peptide03', '1/protein1'],
+        ['peptide04', '2/protein1/protein5'],
+        ['peptide05', '1/protein7'],
+        ['peptide06', '2/protein3/protein6'],
+        ['peptide07', '1/protein1'],
+        ['peptide08', '4/protein1/protein2/protein5/protein8'],
+        ['peptide09', '1/protein1'],
+        ['peptide10', '2/protein4/protein9'],
+    ]
+    peptideProteinDf = pd.DataFrame(peptideProteinData, columns=["peptide","protein"])
+    expectedProteins = set([
+        ('protein1',),
+        ('protein4', 'protein9'),
+        ('protein6',),
+        ('protein7',),
+    ])
+    proteins = identify_high_confidence_proteins(peptideProteinDf)
+    assert expectedProteins == proteins
 

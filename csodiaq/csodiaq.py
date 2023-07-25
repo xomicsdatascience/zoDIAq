@@ -12,8 +12,28 @@ from . import csodiaq_identification_functions as cif
 from . import csodiaq_quantification_functions as cqf
 from . import csodiaq_mgf_cleaning_functions as cmf
 from . import peptide_quantification
-from csodiaq.identifier import Identifier
-from csodiaq.utils import create_outfile_header
+from csodiaq.identifier import Identifier, identify_high_confidence_proteins, calculate_fdr_rates_of_decoy_array
+from csodiaq.utils import create_outfile_header, drop_duplicate_values_from_df_in_given_column, organize_peptide_df_by_leading_proteins, identify_leading_protein_fdrs_for_leading_proteins_below_fdr_cutoff, determine_if_peptides_are_unique_to_leading_protein
+import pandas as pd
+
+def write_identification_outputs(idDf, outFileHeader, isProtein):
+    idDf["spectralFDR"] = calculate_fdr_rates_of_decoy_array(idDf["isDecoy"])
+    idDf.to_csv(outFileHeader + '_spectralFDR.csv', index=False)
+    peptideDf = drop_duplicate_values_from_df_in_given_column(idDf, "peptide")
+    peptideDf["peptideFDR"] = calculate_fdr_rates_of_decoy_array(peptideDf["isDecoy"])
+    peptideDf.to_csv(outFileHeader + '_peptideFDR.csv', index=False)
+    if isProtein:
+        proteinDf = create_protein_df(peptideDf)
+        proteinDf.to_csv(outFileHeader + '_proteinFDR.csv', index=False)
+
+def create_protein_df(peptideDf):
+    highConfidenceProteins = identify_high_confidence_proteins(peptideDf)
+    proteinDf = organize_peptide_df_by_leading_proteins(peptideDf, highConfidenceProteins)
+    proteinFdrDict = identify_leading_protein_fdrs_for_leading_proteins_below_fdr_cutoff(proteinDf)
+    proteinDf = proteinDf[proteinDf["leadingProtein"].isin(proteinFdrDict.keys())]
+    proteinDf["leadingProteinFDR"] = proteinDf["leadingProtein"].apply(lambda x: proteinFdrDict[x])
+    proteinDf["uniquePeptide"] = determine_if_peptides_are_unique_to_leading_protein(proteinDf)
+    return proteinDf
 
 def main():
     arg_parser = set_command_line_settings()
@@ -31,10 +51,9 @@ def main():
     if args['command'] == 'id':
         identifier = Identifier(args)
         for queryFile in args["files"]:
-            outFileHeader = create_outfile_header(args['outDirectory'], queryFile, args['correction'])
             idDf = identifier.identify_library_spectra_in_query_file(queryFile)
-            idDf.to_csv(outFileHeader + '.csv', index=False)
-
+            outFileHeader = create_outfile_header(args['outDirectory'], queryFile, args['correction'])
+            write_identification_outputs(idDf, outFileHeader, args['proteinTargets'])
         #lib = cif.library_file_to_dict(args['library'])
         #maxQuerySpectraToPool = queryPooling = args['query']
         #if not maxQuerySpectraToPool:
@@ -67,8 +86,8 @@ def main():
                 proteinFile = outFileHeader + '_proteinFDR.csv'
             else:
                 proteinFile = ''
-            cif.write_fdr_outputs(outFile, spectralFile,
-                                  peptideFile, proteinFile)
+            #cif.write_fdr_outputs(outFile, spectralFile,
+            #                      peptideFile, proteinFile)
 
             reanalysisHeader = outFileHeader + '_mostIntenseTargs'
             if args['proteinTargets']:

@@ -1,4 +1,4 @@
-from csodiaq.utils import format_output_line, extract_metadata_from_match_and_score_dataframes, format_output_as_pandas_dataframe, create_outfile_header, drop_duplicate_values_from_df_in_given_column, identify_leading_protein_fdrs_for_leading_proteins_below_fdr_cutoff, organize_peptide_df_by_leading_proteins
+from csodiaq.utils import format_output_line, extract_metadata_from_match_and_score_dataframes, format_output_as_pandas_dataframe, create_outfile_header, drop_duplicate_values_from_df_in_given_column, identify_leading_protein_fdrs_for_leading_proteins_below_fdr_cutoff, organize_peptide_df_by_leading_proteins, determine_if_peptides_are_unique_to_leading_protein
 import pandas as pd
 import pytest
 pd.set_option("display.max_columns",None)
@@ -34,7 +34,7 @@ def test__output_writing_functions__format_output_line(identifierOutputData):
         "precursorMz":0,
         "precursorCharge":1,
         "identifier":"testIdentifiers",
-        "peaks":2,
+        "peaks":list(range(2)),
     }
     queryDict = {
         "scan":"3",
@@ -202,25 +202,7 @@ def test__output_writing_functions__drop_duplicate_values_from_df_in_given_colum
     outputDf = drop_duplicate_values_from_df_in_given_column(df, columnName)
     assert expectedOutputDf.equals(outputDf)
 
-def test__output_writing_functions__identify_leading_protein_fdrs_for_leading_proteins_below_fdr_cutoff():
-    numLeadingProteins = 100
-    duplicateLeadingProtein = 0
-    decoyLeadingProteins = ['decoy1', 'decoy2']
-    leadingProteinColumn = list(range(numLeadingProteins)) + [duplicateLeadingProtein] + decoyLeadingProteins
-    isDecoyColumn = [0 for i in range(len(leadingProteinColumn)-len(decoyLeadingProteins))]
-    isDecoyColumn += [1 for i in range(len(decoyLeadingProteins))]
-    df = pd.DataFrame({
-        'leadingProtein': leadingProteinColumn,
-        'isDecoy': isDecoyColumn,
-    })
-    expectedOutput = {
-        i: 0.0 for i in range(numLeadingProteins)
-    }
-    expectedOutput['decoy1'] = 1 / (numLeadingProteins + 1)
-    output = identify_leading_protein_fdrs_for_leading_proteins_below_fdr_cutoff(df)
-    assert expectedOutput == output
-
-def test__output_writing_functions__reorganize_peptide_df_by_leading_proteins():
+def test__output_writing_functions__organize_peptide_df_by_leading_proteins():
     peptideProteinData = [
         ['peptide01', '1/protein7'],
         ['peptide02', '3/protein4/protein6/protein9'],
@@ -256,3 +238,36 @@ def test__output_writing_functions__reorganize_peptide_df_by_leading_proteins():
     expectedOutputDf = pd.DataFrame(expectedOutputData, columns=["peptide","protein","leadingProtein"])
     outputDf = organize_peptide_df_by_leading_proteins(peptideProteinDf, leadingProteins)
     assert expectedOutputDf.equals(outputDf)
+
+def test__output_writing_functions__identify_leading_protein_fdrs_for_leading_proteins_below_fdr_cutoff():
+    numLeadingProteins = 100
+    duplicateLeadingProtein = 0
+    decoyLeadingProteins = ['decoy1', 'decoy2']
+    leadingProteinColumn = list(range(numLeadingProteins)) + [duplicateLeadingProtein] + decoyLeadingProteins
+    isDecoyColumn = [0 for i in range(len(leadingProteinColumn)-len(decoyLeadingProteins))]
+    isDecoyColumn += [1 for i in range(len(decoyLeadingProteins))]
+    df = pd.DataFrame({
+        'leadingProtein': leadingProteinColumn,
+        'isDecoy': isDecoyColumn,
+    })
+    expectedOutput = {
+        i: 0.0 for i in range(numLeadingProteins)
+    }
+    expectedOutput['decoy1'] = 1 / (numLeadingProteins + 1)
+    output = identify_leading_protein_fdrs_for_leading_proteins_below_fdr_cutoff(df)
+    assert expectedOutput == output
+
+def test__determine_if_peptides_are_unique_to_leading_protein():
+    inputData = [
+        ["peptide1","protein1"],
+        ["peptide2", "protein1"],
+        ["peptide3", "protein2"],
+    ]
+    inputDf = pd.DataFrame(inputData, columns=["peptide","leadingProtein"])
+    expectedOutput = [
+        0,
+        0,
+        1,
+    ]
+    output = determine_if_peptides_are_unique_to_leading_protein(inputDf)
+    assert expectedOutput == output
