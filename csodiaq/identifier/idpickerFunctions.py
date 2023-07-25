@@ -31,9 +31,16 @@ def identify_high_confidence_proteins(peptideDf):
 
     """
     peptideProteinEdgeDf = initialize__format_peptide_protein_connections(peptideDf)
-    peptideProteinEdgeDf = collapse__group_identically_connected_peptides_and_proteins(peptideProteinEdgeDf)
-    peptideProteinEdgeDf["cluster"] = separate__identify_and_label_independent_clusters(peptideProteinEdgeDf)
-    return reduce__identify_minimum_number_of_most_connected_proteins(peptideProteinEdgeDf)
+    peptideProteinEdgeDf = collapse__group_identically_connected_peptides_and_proteins(
+        peptideProteinEdgeDf
+    )
+    peptideProteinEdgeDf["cluster"] = separate__identify_and_label_independent_clusters(
+        peptideProteinEdgeDf
+    )
+    return reduce__identify_minimum_number_of_most_connected_proteins(
+        peptideProteinEdgeDf
+    )
+
 
 def initialize__format_peptide_protein_connections(peptideDf):
     """
@@ -61,9 +68,12 @@ def initialize__format_peptide_protein_connections(peptideDf):
         proteinGroup = peptideDf["protein"].loc[i]
         for protein in format_protein_string_to_list(proteinGroup):
             peptideProteinConnections.append((peptide, protein))
-    return pd.DataFrame(peptideProteinConnections, columns=["peptide","protein"])
+    return pd.DataFrame(peptideProteinConnections, columns=["peptide", "protein"])
 
-def collapse__group_identically_connected_peptides_and_proteins(peptideProteinConnectionsDf):
+
+def collapse__group_identically_connected_peptides_and_proteins(
+    peptideProteinConnectionsDf,
+):
     """
     Identifies redundant peptide-protein connections and groups peptides/proteins accordingly.
 
@@ -82,12 +92,21 @@ def collapse__group_identically_connected_peptides_and_proteins(peptideProteinCo
         A 2-column dataframe representing single peptide-protein relationships, where
             redundant relationships have been collapsed into single groups.
     """
-    peptideProteinConnectionsDf["peptideGroup"] = group_nodes_by_identical_edges(peptideProteinConnectionsDf, isPeptideNodes=True)
-    peptideProteinConnectionsDf["proteinGroup"] = group_nodes_by_identical_edges(peptideProteinConnectionsDf, isPeptideNodes=False)
-    peptideProteinConnectionsDf = peptideProteinConnectionsDf[["peptideGroup","proteinGroup"]]
-    peptideProteinConnectionsDf = peptideProteinConnectionsDf.drop_duplicates(["peptideGroup","proteinGroup"]).reset_index(drop=True)
-    peptideProteinConnectionsDf.columns = ["peptide","protein"]
+    peptideProteinConnectionsDf["peptideGroup"] = group_nodes_by_identical_edges(
+        peptideProteinConnectionsDf, isPeptideNodes=True
+    )
+    peptideProteinConnectionsDf["proteinGroup"] = group_nodes_by_identical_edges(
+        peptideProteinConnectionsDf, isPeptideNodes=False
+    )
+    peptideProteinConnectionsDf = peptideProteinConnectionsDf[
+        ["peptideGroup", "proteinGroup"]
+    ]
+    peptideProteinConnectionsDf = peptideProteinConnectionsDf.drop_duplicates(
+        ["peptideGroup", "proteinGroup"]
+    ).reset_index(drop=True)
+    peptideProteinConnectionsDf.columns = ["peptide", "protein"]
     return peptideProteinConnectionsDf
+
 
 def group_nodes_by_identical_edges(df, isPeptideNodes):
     if isPeptideNodes:
@@ -97,8 +116,13 @@ def group_nodes_by_identical_edges(df, isPeptideNodes):
         mainNode = "protein"
         connectedNode = "peptide"
     tempDf = df.copy()
-    tempDf["allConnections"] = df.groupby(mainNode)[connectedNode].transform(lambda x: [tuple(x.tolist())] * len(x))
-    return tempDf.groupby("allConnections")[mainNode].transform(lambda x: [tuple(sorted(set(x.tolist())))] * len(x))
+    tempDf["allConnections"] = df.groupby(mainNode)[connectedNode].transform(
+        lambda x: [tuple(x.tolist())] * len(x)
+    )
+    return tempDf.groupby("allConnections")[mainNode].transform(
+        lambda x: [tuple(sorted(set(x.tolist())))] * len(x)
+    )
+
 
 def separate__identify_and_label_independent_clusters(peptideProteinConnectionsDf):
     """
@@ -128,32 +152,53 @@ def separate__identify_and_label_independent_clusters(peptideProteinConnectionsD
         clusterColumn[clusterIdx] = clusterNum
     return clusterColumn
 
+
 def extract_clusters_from_dataframe(df):
     clusters = []
     while len(df.index) > 0:
-        initialPeptideSet, initialProteinSet = initialize_peptide_protein_sets_of_next_cluster(df)
-        peptideSet, _ = identify_next_cluster_in_dataframe_recursively(df, initialPeptideSet, initialProteinSet)
+        (
+            initialPeptideSet,
+            initialProteinSet,
+        ) = initialize_peptide_protein_sets_of_next_cluster(df)
+        peptideSet, _ = identify_next_cluster_in_dataframe_recursively(
+            df, initialPeptideSet, initialProteinSet
+        )
         clusterDf = df[df["peptide"].isin(peptideSet)]
         clusters.append(clusterDf.index)
         df = df[~df.index.isin(clusterDf.index)]
     return clusters
+
 
 def initialize_peptide_protein_sets_of_next_cluster(df):
     peptideSet = set([df.iloc[0]["peptide"]])
     proteinSet = set([df.iloc[0]["protein"]])
     return peptideSet, proteinSet
 
+
 def identify_next_cluster_in_dataframe_recursively(df, oldPeptideSet, oldProteinSet):
-    newPeptideSet, newProteinSet = identify_all_matching_peptide_proteins_in_cluster_from_old_set(df, oldPeptideSet, oldProteinSet)
+    (
+        newPeptideSet,
+        newProteinSet,
+    ) = identify_all_matching_peptide_proteins_in_cluster_from_old_set(
+        df, oldPeptideSet, oldProteinSet
+    )
     if newPeptideSet == oldPeptideSet and newProteinSet == oldProteinSet:
         return oldPeptideSet, newPeptideSet
-    return identify_next_cluster_in_dataframe_recursively(df, newPeptideSet, newProteinSet)
+    return identify_next_cluster_in_dataframe_recursively(
+        df, newPeptideSet, newProteinSet
+    )
 
-def identify_all_matching_peptide_proteins_in_cluster_from_old_set(df, peptideSet, proteinSet):
+
+def identify_all_matching_peptide_proteins_in_cluster_from_old_set(
+    df, peptideSet, proteinSet
+):
     df = df[df["peptide"].isin(peptideSet) | df["protein"].isin(proteinSet)]
     return set(df["peptide"]), set(df["protein"])
 
-def reduce__identify_minimum_number_of_most_connected_proteins(peptideProteinConnectionsDf):
+
+def reduce__identify_minimum_number_of_most_connected_proteins(
+    peptideProteinConnectionsDf,
+):
     """
     Identifies the presence of proteins that are represented by the given peptides.
 
@@ -174,28 +219,41 @@ def reduce__identify_minimum_number_of_most_connected_proteins(peptideProteinCon
     """
     leadingProteins = set()
     for _, clusterDf in peptideProteinConnectionsDf.groupby("cluster"):
-        sortedClusterDf, initialAcceptedProteins = initialize_protein_identification_recursion_parameters(clusterDf)
-        leadingProteins.update(identify_acceptable_proteins_recursively(sortedClusterDf, initialAcceptedProteins))
+        (
+            sortedClusterDf,
+            initialAcceptedProteins,
+        ) = initialize_protein_identification_recursion_parameters(clusterDf)
+        leadingProteins.update(
+            identify_acceptable_proteins_recursively(
+                sortedClusterDf, initialAcceptedProteins
+            )
+        )
     return leadingProteins
+
 
 def initialize_protein_identification_recursion_parameters(clusterDf):
     sortedClusterDf = sort_dataframe_by_descending_protein_count(clusterDf)
     initialAcceptedProteins = set([sortedClusterDf.iloc[0]["protein"]])
     return sortedClusterDf, initialAcceptedProteins
 
+
 def sort_dataframe_by_descending_protein_count(df):
-    return df.assign(freq=df \
-                     .groupby("protein")["protein"] \
-                     .transform('count'))\
-             .sort_values(by=["freq","protein"],ascending=[False,True]) \
-             .drop(["freq"], axis=1)
+    return (
+        df.assign(freq=df.groupby("protein")["protein"].transform("count"))
+        .sort_values(by=["freq", "protein"], ascending=[False, True])
+        .drop(["freq"], axis=1)
+    )
+
 
 def identify_acceptable_proteins_recursively(sortedClusterDf, acceptedProteinSet):
-    acceptedProteinDf = sortedClusterDf[sortedClusterDf["protein"].isin(acceptedProteinSet)]
-    unclaimedPeptideDf = sortedClusterDf[~sortedClusterDf["peptide"].isin(acceptedProteinDf["peptide"])]
+    acceptedProteinDf = sortedClusterDf[
+        sortedClusterDf["protein"].isin(acceptedProteinSet)
+    ]
+    unclaimedPeptideDf = sortedClusterDf[
+        ~sortedClusterDf["peptide"].isin(acceptedProteinDf["peptide"])
+    ]
     if len(unclaimedPeptideDf.index) == 0:
         return set(acceptedProteinDf["protein"])
     nextProtein = unclaimedPeptideDf.iloc[0]["protein"]
     acceptedProteinSet.add(nextProtein)
     return identify_acceptable_proteins_recursively(sortedClusterDf, acceptedProteinSet)
-

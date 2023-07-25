@@ -72,7 +72,12 @@ def test__query_loader_strategy_mzxml__extract_metadata_from_query_scans(loader)
             "peaksCount": 660,
             "CV": -40.0,
         },
-        "456": {'precursorMz': 517.27001953125, 'windowWidth': 2.0, 'peaksCount': 1578, 'CV': -70.0},
+        "456": {
+            "precursorMz": 517.27001953125,
+            "windowWidth": 2.0,
+            "peaksCount": 1578,
+            "CV": -70.0,
+        },
     }
     outputDict = loader.extract_metadata_from_query_scans()
     for key, value in expectedOutputDict.items():

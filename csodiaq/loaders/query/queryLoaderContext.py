@@ -1,10 +1,14 @@
-from csodiaq.loaders.query.queryLoaderStrategyMzxml import QueryLoaderStrategyMzxml as Mzxml
+from csodiaq.loaders.query.queryLoaderStrategyMzxml import (
+    QueryLoaderStrategyMzxml as Mzxml,
+)
 import os
+
 
 class QueryLoaderContext:
     """
     Class for accessing query loading strategies (as used by the strategy design pattern).
     """
+
     def __init__(self, queryFilePath: os.PathLike):
         self.filePath = queryFilePath
         self._strategy = Mzxml(queryFilePath)

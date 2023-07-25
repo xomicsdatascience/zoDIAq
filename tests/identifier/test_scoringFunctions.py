@@ -100,15 +100,17 @@ def test__score_functions__identify_all_decoys():
     output = identify_all_decoys(decoySet, scoreDf)
     assert np.array_equal(output, expectedOutput)
 
+
 def test__score_functions__calculate_fdr_rates_of_decoy_array():
     numberOfNonDecoys = 100
     decoys = [1, 1]
     isDecoySeries = np.array([0] * numberOfNonDecoys + decoys)
     expectedFdrs = [0] * numberOfNonDecoys
-    expectedFdrs.append(1/(numberOfNonDecoys+1))
-    expectedFdrs.append(2/(numberOfNonDecoys+2))
+    expectedFdrs.append(1 / (numberOfNonDecoys + 1))
+    expectedFdrs.append(2 / (numberOfNonDecoys + 2))
     fdrs = calculate_fdr_rates_of_decoy_array(isDecoySeries)
     np.testing.assert_array_equal(expectedFdrs, fdrs)
+
 
 def test__score_functions__determine_index_of_fdr_cutoff():
     fdrCutoff = 0.01
@@ -118,6 +120,7 @@ def test__score_functions__determine_index_of_fdr_cutoff():
     indexCutoff = determine_index_of_fdr_cutoff(isDecoySeries)
     lastDecoyIdx = numberOfNonDecoys + len(decoys) - 1
     assert indexCutoff == lastDecoyIdx
+
 
 def test__score_functions__determine_index_of_fdr_cutoff__first_decoy_appears_before_fdr_cutoff():
     numberOfNonDecoys = 1
@@ -136,12 +139,14 @@ def test__score_functions__determine_index_of_fdr_cutoff__throws_error_when_top_
     with pytest.raises(ValueError, match=re.escape(errorOutput)):
         indexCutoff = determine_index_of_fdr_cutoff(isDecoySeries)
 
+
 def test__score_functions__determine_index_of_fdr_cutoff__returns_original_df_when_no_decoys_found():
     numberOfNonDecoys = 10
     decoys = []
     isDecoySeries = np.array([0] * numberOfNonDecoys + decoys)
     indexCutoff = determine_index_of_fdr_cutoff(isDecoySeries)
     assert indexCutoff == numberOfNonDecoys
+
 
 def test__score_functions__calculate_ppm_offset_tolerance_using_mean_and_standard_deviation():
     mean = 10
@@ -184,10 +189,7 @@ def test__score_functions__filter_matches_by_ppm_offset_and_tolerance():
     libIdx = 0
     queryIdx = 0
     ppmOffset = 6
-    matches = [
-        [libIdx, queryIdx, (i * 5) + ppmOffset]
-        for i in range(-5, 6)
-    ]
+    matches = [[libIdx, queryIdx, (i * 5) + ppmOffset] for i in range(-5, 6)]
     columns = [
         "libraryIdx",
         "queryIdx",
