@@ -21,7 +21,7 @@ def is_within_tolerance(ppm, tolerance):
 
 
 @njit
-def increment_smallest_peak_outside_ppm_tolerance(libMz, queryMz, ppmTolerance):
+def determine_smallest_peak_outside_ppm_tolerance(libMz, queryMz, ppmTolerance):
     ppm = calculate_parts_per_million_relative_difference(libMz, queryMz)
     if is_within_tolerance(ppm, ppmTolerance):
         return Increment.NEITHER
@@ -66,7 +66,7 @@ def numba_enhanced_matching_of_library_to_query_pooled_spectra(
     mzIdx, intensityIdx, tagIdx = 0, 1, 2
     data = []
     while baselineLibraryIdx < len(libraryPeaks) and baselineQueryIdx < len(queryPeaks):
-        incrementation = increment_smallest_peak_outside_ppm_tolerance(
+        incrementation = determine_smallest_peak_outside_ppm_tolerance(
             libraryPeaks[baselineLibraryIdx][mzIdx],
             queryPeaks[baselineQueryIdx][mzIdx],
             ppmTolerance,
