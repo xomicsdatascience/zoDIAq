@@ -7,11 +7,11 @@ import pickle
 import pytest
 
 def get_parent_dir():
-    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.dirname(os.path.abspath(__file__))
 
 def get_file_from_system_test_folder(file):
     return os.path.join(
-        get_parent_dir(), "test_files/system", file
+        get_parent_dir(), "test_files", file
     )
 
 @pytest.fixture
