@@ -78,7 +78,7 @@ def create_standardized_histogram(ppms, numBins=200):
 def calculate_ppm_offset_tolerance_using_tallest_bin_peak(ppms):
     binHeights, bins = create_standardized_histogram(ppms)
     tallestBinIdx = max(range(len(binHeights)), key=binHeights.__getitem__)
-    nearestNoiseBinIdx = identify_nearest_bin_to_tallest_bin_that_represents_noise(
+    nearestNoiseBinIdx = identify_index_of_max_distance_to_noise_from_tallest_bin(
         binHeights, tallestBinIdx
     )
     offset = bins[tallestBinIdx]
@@ -90,7 +90,7 @@ def normalize_bin_position_from_left_to_center_of_each_bin(bins):
     return (bins[:-1] + bins[1:]) / 2
 
 
-def identify_nearest_bin_to_tallest_bin_that_represents_noise(
+def identify_index_of_max_distance_to_noise_from_tallest_bin(
     binHeights, tallestBinIdx
 ):
     averageNoise = np.mean(binHeights[:10] + binHeights[-10:])
@@ -102,7 +102,7 @@ def identify_nearest_bin_to_tallest_bin_that_represents_noise(
     afterNearestNoiseBinIdx = (
         np.argmin(binsAfterTallest >= averageNoise) + tallestBinIdx
     )
-    nearestNoiseBinIdx = min(
+    nearestNoiseBinIdx = max(
         [beforeNearestNoiseBinIdx, afterNearestNoiseBinIdx],
         key=lambda x: abs(tallestBinIdx - x),
     )

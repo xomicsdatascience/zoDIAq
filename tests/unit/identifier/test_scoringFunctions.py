@@ -15,6 +15,7 @@ from csodiaq.identifier.scoringFunctions import (
     calculate_ppm_offset_tolerance_using_mean_and_standard_deviation,
     calculate_ppm_offset_tolerance_using_tallest_bin_peak,
     filter_matches_by_ppm_offset_and_tolerance,
+    identify_index_of_max_distance_to_noise_from_tallest_bin,
 )
 
 
@@ -184,6 +185,23 @@ def test__score_functions__calculate_ppm_offset_tolerance_using_tallest_bin_peak
     assert abs(offset - expectedOffset) < 0.5
     assert abs(tolerance - expectedTolerance) < 0.5
 
+def test__score_functions__identify_index_of_max_distance_to_noise_from_tallest_bin():
+    noisePeakHeight = 1
+    mediumPeakHeight = 50
+    tallestPeakHeight = 100
+    numNoisePeaks = 11
+    numMediumPeaksLeft = 3
+    numMediumPeaksRight = 2
+    peaks = \
+        [noisePeakHeight] * numNoisePeaks + \
+        [mediumPeakHeight] * numMediumPeaksLeft + \
+        [tallestPeakHeight] + \
+        [mediumPeakHeight] * numMediumPeaksRight + \
+        [noisePeakHeight] * numNoisePeaks
+    tallestPeakIdx = numNoisePeaks + numMediumPeaksLeft
+    expectedIdx = numNoisePeaks - 1
+    idx = identify_index_of_max_distance_to_noise_from_tallest_bin(np.array(peaks), tallestPeakIdx)
+    assert expectedIdx == idx
 
 def test__score_functions__filter_matches_by_ppm_offset_and_tolerance():
     libIdx = 0
