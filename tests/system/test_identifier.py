@@ -40,8 +40,11 @@ def assert_numeric_pandas_dataframes_are_equal(expectedDf, df, type):
     columns = get_columns_that_should_match(type)
     for columnName in columns:
         assert columnName in df.columns
-        expectedColumn = np.array(expectedDf[columnName]).sort()
-        column = np.array(df[columnName]).sort()
+        expectedColumn = np.array(expectedDf[columnName])
+        column = np.array(df[columnName])
+        if type != "protein":
+            expectedColumn.sort()
+            column.sort()
         np.testing.assert_array_equal(expectedColumn, column)
 
 def get_columns_that_should_match(type):
@@ -51,10 +54,24 @@ def get_columns_that_should_match(type):
             "queryIntensity",
             "ppmDifference",
         ]
-    else:
+    elif type == "score":
         return [
             "cosineScore",
             "maccScore",
+        ]
+    elif type == "spectral" or type == "peptide":
+        return [
+            "scan",
+            "peptide",
+            "cosine"
+        ]
+    elif type == "protein":
+        return [
+            "scan",
+            "peptide",
+            "cosine",
+            "leadingProtein",
+            "proteinCosine",
         ]
 
 def test__identifier__main_workflow(commandLineArgs):
@@ -73,8 +90,16 @@ def test__identifier__main_workflow(commandLineArgs):
     expectedCorrectedMatchDf = pd.read_csv(get_file_from_system_test_folder('matchDf_postcorrected.csv.gz'), compression='gzip')
     expectedCorrectedScoreDf = pd.read_csv(get_file_from_system_test_folder('scoreDf_postcorrected.csv.gz'), compression='gzip')
     matchDf, scoreDf = identifier._apply_correction_to_dataframes(matchDf, scoreDf)
+    print()
+    print(expectedCorrectedScoreDf.sort_values(["maccScore"]).head())
+    print(scoreDf.sort_values(["maccScore"]).head())
     assert_numeric_pandas_dataframes_are_equal(expectedCorrectedMatchDf, matchDf, "match")
     assert_numeric_pandas_dataframes_are_equal(expectedCorrectedScoreDf, scoreDf, "score")
+
+    expectedSpectralDf = pd.read_csv(get_file_from_system_test_folder('spectralOutput.csv.gz'), compression='gzip')
+    spectralDf = identifier._format_identifications_as_dataframe(matchDf, scoreDf)
+    assert_numeric_pandas_dataframes_are_equal(expectedCorrectedMatchDf, spectralDf, "spectral")
+
 
 
 
