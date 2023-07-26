@@ -10,6 +10,7 @@ from csodiaq.identifier.scoringFunctions import (
     calculate_macc_score,
     identify_all_decoys,
     determine_index_of_fdr_cutoff,
+    calculate_fdr_rates_of_decoy_array,
     calculate_ppm_offset_tolerance,
     calculate_ppm_offset_tolerance_using_mean_and_standard_deviation,
     calculate_ppm_offset_tolerance_using_tallest_bin_peak,
@@ -52,14 +53,12 @@ def test__score_functions__score_library_to_query_matches(vectorA, vectorB):
             "libraryIntensity",
             "queryIdx",
             "queryIntensity",
-            "ppmDifference",
         ],
     )
     matchesDf["libraryIdx"] = [libraryIdx for i in vectorA.index]
     matchesDf["libraryIntensity"] = vectorA
     matchesDf["queryIdx"] = [queryIdx for i in vectorA.index]
     matchesDf["queryIntensity"] = vectorB
-    matchesDf["ppmDifference"] = [ppmDiff for i in vectorA.index]
     cosineScore = calculate_cosine_similarity_score(vectorA, vectorB)
     maccScore = calculate_macc_score(vectorA, vectorB)
     expectedOutputDf = pd.DataFrame(
@@ -89,17 +88,28 @@ def test__score_functions__score_library_to_query_matches(vectorA, vectorB):
 
 def test__score_functions__identify_all_decoys():
     isNotDecoy, isDecoy = 0, 1
-    targetLibraryIdx, decoyLibraryIdx, queryIdx, score = 0, 1, 0, 0
+    targetLibraryIdx, decoyLibraryIdx, queryIdx = 0, 1, 0
 
     scoreData = [
-        [targetLibraryIdx, queryIdx, score, score],
-        [decoyLibraryIdx, queryIdx, score, score],
+        [targetLibraryIdx, queryIdx],
+        [decoyLibraryIdx, queryIdx],
     ]
-    scoreDf = pd.DataFrame(scoreData, columns=["libraryIdx", "queryIdx", "cosineScore", "maccScore"])
+    scoreDf = pd.DataFrame(scoreData, columns=["libraryIdx", "queryIdx"])
     expectedOutput = np.array([isNotDecoy, isDecoy])
     decoySet = set([decoyLibraryIdx])
     output = identify_all_decoys(decoySet, scoreDf)
     assert np.array_equal(output, expectedOutput)
+
+
+def test__score_functions__calculate_fdr_rates_of_decoy_array():
+    numberOfNonDecoys = 100
+    decoys = [1, 1]
+    isDecoySeries = np.array([0] * numberOfNonDecoys + decoys)
+    expectedFdrs = [0] * numberOfNonDecoys
+    expectedFdrs.append(1 / (numberOfNonDecoys + 1))
+    expectedFdrs.append(2 / (numberOfNonDecoys + 2))
+    fdrs = calculate_fdr_rates_of_decoy_array(isDecoySeries)
+    np.testing.assert_array_equal(expectedFdrs, fdrs)
 
 
 def test__score_functions__determine_index_of_fdr_cutoff():
@@ -129,12 +139,14 @@ def test__score_functions__determine_index_of_fdr_cutoff__throws_error_when_top_
     with pytest.raises(ValueError, match=re.escape(errorOutput)):
         indexCutoff = determine_index_of_fdr_cutoff(isDecoySeries)
 
+
 def test__score_functions__determine_index_of_fdr_cutoff__returns_original_df_when_no_decoys_found():
     numberOfNonDecoys = 10
     decoys = []
     isDecoySeries = np.array([0] * numberOfNonDecoys + decoys)
     indexCutoff = determine_index_of_fdr_cutoff(isDecoySeries)
     assert indexCutoff == numberOfNonDecoys
+
 
 def test__score_functions__calculate_ppm_offset_tolerance_using_mean_and_standard_deviation():
     mean = 10
@@ -176,18 +188,11 @@ def test__score_functions__calculate_ppm_offset_tolerance_using_tallest_bin_peak
 def test__score_functions__filter_matches_by_ppm_offset_and_tolerance():
     libIdx = 0
     queryIdx = 0
-    genericIntensity = 100.0
-    genericPpmDifference = 10.0
     ppmOffset = 6
-    matches = [
-        [libIdx, genericIntensity, queryIdx, genericIntensity, (i * 5) + ppmOffset]
-        for i in range(-5, 6)
-    ]
+    matches = [[libIdx, queryIdx, (i * 5) + ppmOffset] for i in range(-5, 6)]
     columns = [
         "libraryIdx",
-        "libraryIntensity",
         "queryIdx",
-        "queryIntensity",
         "ppmDifference",
     ]
     input = pd.DataFrame(matches, columns=columns)

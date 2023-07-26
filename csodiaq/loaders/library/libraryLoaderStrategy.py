@@ -131,6 +131,7 @@ def remove_low_intensity_peaks_below_max_peak_num(peaks: list, maxPeakNum: int) 
     peaks.sort(key=lambda x: x[1], reverse=True)
     return peaks[:maxPeakNum]
 
+
 finalVariableNames = {
     "precursorCharge": "precursorCharge",
     "identifier": "identifier",

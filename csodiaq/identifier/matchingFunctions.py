@@ -1,10 +1,94 @@
 import pandas as pd
+import numpy as np
+from numba import njit
+from enum import Enum
 
+
+class Increment(Enum):
+    NEITHER = 0
+    LIBRARY = 1
+    QUERY = 2
+
+
+@njit
 def calculate_parts_per_million_relative_difference(referenceMz, targetMz):
     return (referenceMz - targetMz) * (1e6) / referenceMz
 
+
+@njit
 def is_within_tolerance(ppm, tolerance):
     return abs(ppm) <= tolerance
+
+
+@njit
+def determine_smallest_peak_outside_ppm_tolerance(libMz, queryMz, ppmTolerance):
+    ppm = calculate_parts_per_million_relative_difference(libMz, queryMz)
+    if is_within_tolerance(ppm, ppmTolerance):
+        return Increment.NEITHER
+    elif libMz > queryMz:
+        return Increment.QUERY
+    else:
+        return Increment.LIBRARY
+
+
+@njit
+def match_query_peak_to_all_succeeding_library_peaks_within_tolerance(
+    baselineLibraryIdx, libraryPeaks, queryPeak, ppmTolerance
+):
+    tempLibraryIdx = baselineLibraryIdx + 0
+    mzIdx, intensityIdx, tagIdx = 0, 1, 2
+    data = []
+    while tempLibraryIdx < len(libraryPeaks):
+        ppm = calculate_parts_per_million_relative_difference(
+            libraryPeaks[tempLibraryIdx][mzIdx], queryPeak[mzIdx]
+        )
+        if not is_within_tolerance(ppm, ppmTolerance):
+            return data
+        data.append(
+            [
+                libraryPeaks[tempLibraryIdx][tagIdx],
+                libraryPeaks[tempLibraryIdx][intensityIdx],
+                queryPeak[tagIdx],
+                queryPeak[intensityIdx],
+                queryPeak[mzIdx],
+                ppm,
+            ]
+        )
+        tempLibraryIdx += 1
+    return data
+
+
+@njit
+def numba_enhanced_matching_of_library_to_query_pooled_spectra(
+    libraryPeaks, queryPeaks, ppmTolerance
+):
+    baselineLibraryIdx, baselineQueryIdx = 0, 0
+    mzIdx, intensityIdx, tagIdx = 0, 1, 2
+    data = []
+    while baselineLibraryIdx < len(libraryPeaks) and baselineQueryIdx < len(queryPeaks):
+        incrementation = determine_smallest_peak_outside_ppm_tolerance(
+            libraryPeaks[baselineLibraryIdx][mzIdx],
+            queryPeaks[baselineQueryIdx][mzIdx],
+            ppmTolerance,
+        )
+        if incrementation == Increment.LIBRARY:
+            baselineLibraryIdx += 1
+            continue
+        if incrementation == Increment.QUERY:
+            baselineQueryIdx += 1
+            continue
+
+        data.extend(
+            match_query_peak_to_all_succeeding_library_peaks_within_tolerance(
+                baselineLibraryIdx,
+                libraryPeaks,
+                queryPeaks[baselineQueryIdx],
+                ppmTolerance,
+            )
+        )
+        baselineQueryIdx += 1
+    return data
+
 
 def match_library_to_query_pooled_spectra(libraryPeaks, queryPeaks, ppmTolerance):
     """
@@ -38,35 +122,37 @@ def match_library_to_query_pooled_spectra(libraryPeaks, queryPeaks, ppmTolerance
             the library/query tags of the peaks, their intensities, and the ppm
             difference between the two.
     """
+    libraryArray = np.array(libraryPeaks)
+    queryArray = np.array(queryPeaks)
+    data = numba_enhanced_matching_of_library_to_query_pooled_spectra(
+        libraryArray, queryArray, ppmTolerance
+    )
+    matchDf = pd.DataFrame(
+        data,
+        columns=[
+            "libraryIdx",
+            "libraryIntensity",
+            "queryIdx",
+            "queryIntensity",
+            "queryMz",
+            "ppmDifference",
+        ],
+    )
+    matchDf[["libraryIdx", "queryIdx"]] = matchDf[["libraryIdx", "queryIdx"]].astype(
+        int
+    )
+    return matchDf
 
-    i, j = 0, 0
-    mzIdx, intensityIdx, tagIdx = 0, 1, 2
-    data = []
-    while i < len(libraryPeaks) and j < len(queryPeaks):
-        ppm = calculate_parts_per_million_relative_difference(libraryPeaks[i][mzIdx], queryPeaks[j][mzIdx])
-        if not is_within_tolerance(ppm, ppmTolerance):
-            if libraryPeaks[i][mzIdx] > queryPeaks[j][mzIdx]:
-                j += 1
-                continue
-            if libraryPeaks[i][mzIdx] < queryPeaks[j][mzIdx]:
-                i += 1
-                continue
-        p = i + 0
-        while (p < len(libraryPeaks)):
-            ppm = calculate_parts_per_million_relative_difference(libraryPeaks[p][mzIdx], queryPeaks[j][mzIdx])
-            if not is_within_tolerance(ppm, ppmTolerance):
-                break
-            data.append(
-                [libraryPeaks[p][tagIdx], libraryPeaks[p][intensityIdx], queryPeaks[j][tagIdx], queryPeaks[j][intensityIdx], ppm]
-            )
-            p += 1
-        j += 1
-    return pd.DataFrame(data, columns=["libraryIdx","libraryIntensity","queryIdx","queryIntensity","ppmDifference"])
 
-def eliminate_low_count_matches(matches, minNumMatches = 3):
-    return matches.groupby(["libraryIdx","queryIdx"]).filter(lambda x: x.shape[0] >= minNumMatches).reset_index(drop=True)
+def eliminate_low_count_matches(matches, minNumMatches=3):
+    return (
+        matches.groupby(["libraryIdx", "queryIdx"])
+        .filter(lambda x: x.shape[0] >= minNumMatches)
+        .reset_index(drop=True)
+    )
+
 
 def eliminate_matches_below_fdr_cutoff(matches, groupsAboveCutoff):
-    return matches.groupby(["libraryIdx","queryIdx"]).filter(lambda x: x.name in groupsAboveCutoff)
-
-
+    return matches.groupby(["libraryIdx", "queryIdx"]).filter(
+        lambda x: x.name in groupsAboveCutoff
+    )

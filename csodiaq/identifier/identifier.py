@@ -1,11 +1,29 @@
 from csodiaq.loaders import LibraryLoaderContext, QueryLoaderContext
-from csodiaq.identifier.poolingFunctions import generate_pooled_library_and_query_spectra_by_mz_windows
-from csodiaq.identifier.matchingFunctions import match_library_to_query_pooled_spectra, eliminate_low_count_matches, eliminate_matches_below_fdr_cutoff
-from csodiaq.identifier.scoringFunctions import score_library_to_query_matches, identify_all_decoys, determine_index_of_fdr_cutoff, filter_matches_by_ppm_offset_and_tolerance, calculate_ppm_offset_tolerance
-from csodiaq.identifier.outputWritingFunctions import extract_metadata_from_match_and_score_dataframes, format_output_line, format_output_as_pandas_dataframe
+from csodiaq.identifier.poolingFunctions import (
+    generate_pooled_library_and_query_spectra_by_mz_windows,
+)
+from csodiaq.identifier.matchingFunctions import (
+    match_library_to_query_pooled_spectra,
+    eliminate_low_count_matches,
+    eliminate_matches_below_fdr_cutoff,
+)
+from csodiaq.identifier.scoringFunctions import (
+    score_library_to_query_matches,
+    identify_all_decoys,
+    determine_index_of_fdr_cutoff,
+    filter_matches_by_ppm_offset_and_tolerance,
+    calculate_ppm_offset_tolerance,
+    create_ppm_histogram,
+)
+from csodiaq.utils.outputWritingFunctions import (
+    extract_metadata_from_match_and_score_dataframes,
+    format_output_line,
+    format_output_as_pandas_dataframe,
+)
 import pandas as pd
 
-class Identifier():
+
+class Identifier:
     """
     Class for identifying library peptides in input query spectra for mass spec DIA experiments.
 
@@ -32,8 +50,12 @@ class Identifier():
 
     def __init__(self, commandLineArgs):
         self._commandLineArgs = commandLineArgs
-        self._libraryDict = LibraryLoaderContext(self._commandLineArgs["library"]).load_csodiaq_library_dict()
-        self._decoySet = set([key for key,value in self._libraryDict.items() if value["isDecoy"]])
+        self._libraryDict = LibraryLoaderContext(
+            self._commandLineArgs["library"]
+        ).load_csodiaq_library_dict()
+        self._decoySet = set(
+            [key for key, value in self._libraryDict.items() if value["isDecoy"]]
+        )
 
     def identify_library_spectra_in_query_file(self, queryFile):
         """
@@ -61,10 +83,17 @@ class Identifier():
                 relative differences between their m/z values.
         """
         matchDfs = []
-        for pooledLibPeaks, pooledQueryPeaks in generate_pooled_library_and_query_spectra_by_mz_windows(
-                self._libraryDict, self._queryContext):
-            matchDf = match_library_to_query_pooled_spectra(pooledLibPeaks, pooledQueryPeaks,
-                                                            self._commandLineArgs["fragmentMassTolerance"])
+        for (
+            pooledLibPeaks,
+            pooledQueryPeaks,
+        ) in generate_pooled_library_and_query_spectra_by_mz_windows(
+            self._libraryDict, self._queryContext
+        ):
+            matchDf = match_library_to_query_pooled_spectra(
+                pooledLibPeaks,
+                pooledQueryPeaks,
+                self._commandLineArgs["fragmentMassTolerance"],
+            )
             matchDf = eliminate_low_count_matches(matchDf)
             matchDfs.append(matchDf)
         return pd.concat(matchDfs)
@@ -140,11 +169,28 @@ class Identifier():
     def _apply_correction_to_match_dataframe(self, matchDf, scoreDf):
         aboveCutoffGroups = set(scoreDf.groupby(["libraryIdx", "queryIdx"]).groups)
         matchDf = eliminate_matches_below_fdr_cutoff(matchDf, aboveCutoffGroups)
-        offset, tolerance = calculate_ppm_offset_tolerance(matchDf["ppmDifference"], self._commandLineArgs["correction"])
+        offset, tolerance = calculate_ppm_offset_tolerance(
+            matchDf["ppmDifference"], self._commandLineArgs["correction"]
+        )
+        if self._commandLineArgs["histogram"]:
+            outFileHeader = (
+                self._commandLineArgs["outDirectory"]
+                + "CsoDIAq-file"
+                + "_"
+                + ".".join(self._queryContext.filePath.split("/")[-1].split(".")[:-1])
+            )
+            if self._commandLineArgs["correction"] != -1:
+                outFileHeader += "_corrected"
+            create_ppm_histogram(
+                matchDf["ppmDifference"],
+                offset,
+                tolerance,
+                outFileHeader + "_histogram.png",
+            )
         matchDf = filter_matches_by_ppm_offset_and_tolerance(matchDf, offset, tolerance)
         return eliminate_low_count_matches(matchDf)
 
-    def _apply_correction_to_score_dataframe(self,  matchDf, scoreDf):
+    def _apply_correction_to_score_dataframe(self, matchDf, scoreDf):
         scoreDf = score_library_to_query_matches(matchDf)
         isDecoyArray = identify_all_decoys(self._decoySet, scoreDf)
         scoreDfCutoffIdx = determine_index_of_fdr_cutoff(isDecoyArray)
@@ -155,17 +201,22 @@ class Identifier():
         The final match/score identifications are consolidated and written to a single output
             .csv file.
         """
-
-        matchDict = extract_metadata_from_match_and_score_dataframes(matchDf, scoreDf)
         queryDict = self._queryContext.extract_metadata_from_query_scans()
+        matchDict = extract_metadata_from_match_and_score_dataframes(
+            matchDf, scoreDf, queryDict
+        )
         sortedLibKeys = sorted(self._libraryDict.keys())
         outputs = []
         for key, matchMetadata in matchDict.items():
             libKeyIdx, queryScan = key
-            libraryMetadata = self._prepare_library_dictionary_for_output(libKeyIdx, sortedLibKeys)
+            libraryMetadata = self._prepare_library_dictionary_for_output(
+                libKeyIdx, sortedLibKeys
+            )
             queryMetadata = queryDict[str(queryScan)]
             queryMetadata["scan"] = queryScan
-            outputLine = format_output_line(libraryMetadata, queryMetadata, matchMetadata)
+            outputLine = format_output_line(
+                libraryMetadata, queryMetadata, matchMetadata
+            )
             outputs.append(outputLine)
         return format_output_as_pandas_dataframe(self._queryContext.filePath, outputs)
 
