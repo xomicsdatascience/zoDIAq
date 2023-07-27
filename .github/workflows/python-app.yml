@@ -5,12 +5,12 @@ name: Pytest (TDD)
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "dev-identifier-system-test-implementation" ]
   pull_request:
     branches: [ "main", "dev" ]
 
 permissions:
-  contents: read
+  contents: read, write
 
 jobs:
   build:
@@ -28,6 +28,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest
         pip install -e .
+    - name: Unzip system test file
+      run: |
+        unzip tests/system/test_files/mzxml.zip -d tests/system/test_files/
     - name: Test with pytest
       run: |
         pytest tests/
