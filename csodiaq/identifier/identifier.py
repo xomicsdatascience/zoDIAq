@@ -53,9 +53,6 @@ class Identifier:
         self._libraryDict = LibraryLoaderContext(
             self._commandLineArgs["library"]
         ).load_csodiaq_library_dict()
-        self._decoySet = set(
-            [key for key, value in self._libraryDict.items() if value["isDecoy"]]
-        )
 
     def identify_library_spectra_in_query_file(self, queryFile):
         """
@@ -64,9 +61,9 @@ class Identifier:
         """
         self._queryContext = QueryLoaderContext(queryFile)
         matchDf = self._match_library_to_query_spectra()
-        scoreDf = self._score_spectra_matches(matchDf)
         if self._correction_process_is_to_be_applied():
-            matchDf, scoreDf = self._apply_correction_to_dataframes(matchDf, scoreDf)
+            matchDf = self._apply_correction_to_match_dataframe(matchDf)
+        scoreDf = self._score_spectra_matches(matchDf)
         return self._format_identifications_as_dataframe(matchDf, scoreDf)
 
     def _match_library_to_query_spectra(self):
@@ -122,12 +119,12 @@ class Identifier:
                 spectrum match containing library/query identifiers and scores calculated for
                 that match (including the cosine similarity score).
         """
-        scoreDf = score_library_to_query_matches(matchDf)
-        isDecoyArray = identify_all_decoys(self._decoySet, scoreDf)
-        scoreDfCutoffIdx = determine_index_of_fdr_cutoff(isDecoyArray)
-        return scoreDf.iloc[:scoreDfCutoffIdx, :]
+        return score_library_to_query_matches(matchDf)
 
-    def _apply_correction_to_dataframes(self, matchDf, scoreDf):
+    def _correction_process_is_to_be_applied(self):
+        return self._commandLineArgs["correction"] != -1
+
+    def _apply_correction_to_match_dataframe(self, matchDf):
         """
         An expected ppm tolerance range is defined and applied to the match and score dataframes.
 
@@ -146,29 +143,13 @@ class Identifier:
         matchDf : pandas DataFrame
             See output of self._match_library_to_query_spectra().
 
-        scoreDf : pandas DataFrame
-            See output of self._score_spectra_matches().
-
         Returns
         -------
         matchDf : pandas DataFrame
             A filtered version of the matchDf input parameter, where peak matches with a ppm value
                 outside the calculated expected range are removed. The removal of all spectral matches
                 with fewer than 3 peak matches is repeated as well.
-
-        scoreDf : pandas DataFrame
-            The score dataframe is recalculated from the ground up using the filtered match dataframe.
         """
-        matchDf = self._apply_correction_to_match_dataframe(matchDf, scoreDf)
-        scoreDf = self._apply_correction_to_score_dataframe(matchDf, scoreDf)
-        return matchDf, scoreDf
-
-    def _correction_process_is_to_be_applied(self):
-        return self._commandLineArgs["correction"] != -1
-
-    def _apply_correction_to_match_dataframe(self, matchDf, scoreDf):
-        aboveCutoffGroups = set(scoreDf.groupby(["libraryIdx", "queryIdx"]).groups)
-        matchDf = eliminate_matches_below_fdr_cutoff(matchDf, aboveCutoffGroups)
         offset, tolerance = calculate_ppm_offset_tolerance(
             matchDf["ppmDifference"], self._commandLineArgs["correction"]
         )
@@ -178,9 +159,9 @@ class Identifier:
                 + "CsoDIAq-file"
                 + "_"
                 + ".".join(self._queryContext.filePath.split("/")[-1].split(".")[:-1])
+                + "_corrected"
             )
-            if self._commandLineArgs["correction"] != -1:
-                outFileHeader += "_corrected"
+
             create_ppm_histogram(
                 matchDf["ppmDifference"],
                 offset,

@@ -83,19 +83,17 @@ def test__identifier__main_workflow(commandLineArgs):
     matchDf = identifier._match_library_to_query_spectra()
     assert_numeric_pandas_dataframes_are_equal(expectedMatchDf, matchDf, "match")
 
-    expectedScoreDf = pd.read_csv(get_file_from_system_test_folder('scoreDf_precorrected.csv.gz'), compression='gzip')
+    expectedCorrectedMatchDf = pd.read_csv(get_file_from_system_test_folder('matchDf_postcorrected.csv.gz'), compression='gzip')
+    matchDf = identifier._apply_correction_to_match_dataframe(matchDf)
+    assert_numeric_pandas_dataframes_are_equal(expectedCorrectedMatchDf, matchDf, "match")
+
+    expectedScoreDf = pd.read_csv(get_file_from_system_test_folder('scoreDf_postcorrected.csv.gz'), compression='gzip')
     scoreDf = identifier._score_spectra_matches(matchDf)
     assert_numeric_pandas_dataframes_are_equal(expectedScoreDf, scoreDf, "score")
 
-    expectedCorrectedMatchDf = pd.read_csv(get_file_from_system_test_folder('matchDf_postcorrected.csv.gz'), compression='gzip')
-    expectedCorrectedScoreDf = pd.read_csv(get_file_from_system_test_folder('scoreDf_postcorrected.csv.gz'), compression='gzip')
-    matchDf, scoreDf = identifier._apply_correction_to_dataframes(matchDf, scoreDf)
-    assert_numeric_pandas_dataframes_are_equal(expectedCorrectedMatchDf, matchDf, "match")
-    assert_numeric_pandas_dataframes_are_equal(expectedCorrectedScoreDf, scoreDf, "score")
-
-    expectedSpectralDf = pd.read_csv(get_file_from_system_test_folder('spectralOutput.csv.gz'), compression='gzip')
+    expectedFullDf = pd.read_csv(get_file_from_system_test_folder('fullOutput.csv.gz'), compression='gzip')
     spectralDf = identifier._format_identifications_as_dataframe(matchDf, scoreDf)
-    assert_numeric_pandas_dataframes_are_equal(expectedCorrectedMatchDf, spectralDf, "spectral")
+    assert_numeric_pandas_dataframes_are_equal(expectedFullDf, spectralDf, "spectral")
 
 
 
