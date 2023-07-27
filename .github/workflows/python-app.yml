@@ -5,7 +5,7 @@ name: Pytest (TDD)
 
 on:
   push:
-    branches: [ "main", "dev-identifier-system-test-implementation" ]
+    branches: [ "main" ]
   pull_request:
     branches: [ "main", "dev" ]
 
@@ -33,4 +33,4 @@ jobs:
         unzip tests/system/test_files/mzxml.zip -d tests/system/test_files/
     - name: Test with pytest
       run: |
-        pytest tests/
+        pytest tests/ -W ignore::SyntaxWarning
