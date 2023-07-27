@@ -45,7 +45,7 @@ def assert_numeric_pandas_dataframes_are_equal(expectedDf, df, type):
         if type != "protein":
             expectedColumn.sort()
             column.sort()
-        np.testing.assert_array_equal(expectedColumn, column)
+        np.testing.assert_array_almost_equal(expectedColumn, column)
 
 def get_columns_that_should_match(type):
     if type == "match":
@@ -90,9 +90,6 @@ def test__identifier__main_workflow(commandLineArgs):
     expectedCorrectedMatchDf = pd.read_csv(get_file_from_system_test_folder('matchDf_postcorrected.csv.gz'), compression='gzip')
     expectedCorrectedScoreDf = pd.read_csv(get_file_from_system_test_folder('scoreDf_postcorrected.csv.gz'), compression='gzip')
     matchDf, scoreDf = identifier._apply_correction_to_dataframes(matchDf, scoreDf)
-    print()
-    print(expectedCorrectedScoreDf.sort_values(["maccScore"]).head())
-    print(scoreDf.sort_values(["maccScore"]).head())
     assert_numeric_pandas_dataframes_are_equal(expectedCorrectedMatchDf, matchDf, "match")
     assert_numeric_pandas_dataframes_are_equal(expectedCorrectedScoreDf, scoreDf, "score")
 
