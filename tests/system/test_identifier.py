@@ -45,7 +45,11 @@ def assert_numeric_pandas_dataframes_are_equal(expectedDf, df, type):
         if type != "protein":
             expectedColumn.sort()
             column.sort()
-        np.testing.assert_array_almost_equal(expectedColumn, column)
+        if expectedColumn.dtype.kind in np.typecodes["AllFloat"]:
+            np.testing.assert_array_almost_equal(expectedColumn, column)
+        else:
+            np.testing.assert_array_equal(expectedColumn, column)
+
 
 def get_columns_that_should_match(type):
     if type == "match":
