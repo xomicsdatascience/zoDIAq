@@ -1,9 +1,10 @@
-from csodiaq.utils import (
+from csodiaq.identifier.outputFormattingFunctions import (
     format_output_line,
     extract_metadata_from_match_and_score_dataframes,
     format_output_as_pandas_dataframe,
-    create_outfile_header,
     drop_duplicate_values_from_df_in_given_column,
+    generate_spectral_fdr_output_from_full_output,
+    generate_peptide_fdr_output_from_full_output,
     identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff,
     organize_peptide_df_by_leading_proteins,
     determine_if_peptides_are_unique_to_leading_protein,
@@ -193,76 +194,6 @@ def test__output_writing_functions__format_output_as_pandas_dataframe(
     outputDf = format_output_as_pandas_dataframe(inputFileName, [identifierOutputData])
     assert expectedOutputDf.equals(outputDf)
 
-
-@pytest.fixture
-def outputDirectory():
-    return "test/output/dir"
-
-
-@pytest.fixture
-def inputFileName():
-    return "mzxml_test"
-
-
-@pytest.fixture
-def inputFile(inputFileName):
-    return inputFileName + ".mzxml"
-
-
-@pytest.fixture
-def inputFilePath(inputFile):
-    return "mzxml/directory/" + inputFile
-
-
-@pytest.fixture
-def outputCsodiaqTag():
-    return "CsoDIAq-file_"
-
-
-def test__output_writing_functions__create_outfile_header__no_correction(
-    outputDirectory, inputFileName, inputFilePath, outputCsodiaqTag
-):
-    expectedOutput = f"{outputDirectory}/{outputCsodiaqTag}{inputFileName}"
-    output = create_outfile_header(outputDirectory, inputFilePath, correction=-1)
-    assert expectedOutput == output
-
-
-def test__output_writing_functions__create_outfile_header__no_correction__output_directory_ends_in_slash(
-    outputDirectory, inputFileName, inputFilePath, outputCsodiaqTag
-):
-    expectedOutput = f"{outputDirectory}/{outputCsodiaqTag}{inputFileName}"
-    output = create_outfile_header(outputDirectory + "/", inputFilePath, correction=-1)
-    assert expectedOutput == output
-
-
-def test__output_writing_functions__create_outfile_header__no_correction__includes_non_file_type_dots(
-    outputDirectory, inputFileName, inputFilePath, outputCsodiaqTag
-):
-    inputFileNameWithPeriods = inputFileName + ".dots.added"
-    inputFilePathWithPeriods = inputFileNameWithPeriods + ".mzxml"
-    expectedOutput = f"{outputDirectory}/{outputCsodiaqTag}{inputFileNameWithPeriods}"
-    output = create_outfile_header(
-        outputDirectory, inputFilePathWithPeriods, correction=-1
-    )
-    assert expectedOutput == output
-
-
-def test__output_writing_functions__create_outfile_header__custom_correction(
-    outputDirectory, inputFileName, inputFilePath, outputCsodiaqTag
-):
-    expectedOutput = f"{outputDirectory}/{outputCsodiaqTag}{inputFileName}_corrected"
-    output = create_outfile_header(outputDirectory, inputFilePath, correction=0)
-    assert expectedOutput == output
-
-
-def test__output_writing_functions__create_outfile_header__stdev_correction(
-    outputDirectory, inputFileName, inputFilePath, outputCsodiaqTag
-):
-    expectedOutput = f"{outputDirectory}/{outputCsodiaqTag}{inputFileName}_corrected"
-    output = create_outfile_header(outputDirectory, inputFilePath, correction=1)
-    assert expectedOutput == output
-
-
 def test__output_writing_functions__drop_duplicate_values_from_df_in_given_column():
     columnName = "test"
     data = [
@@ -280,6 +211,43 @@ def test__output_writing_functions__drop_duplicate_values_from_df_in_given_colum
     ]
     expectedOutputDf = pd.DataFrame(expectedOutputData, columns=[columnName])
     outputDf = drop_duplicate_values_from_df_in_given_column(df, columnName)
+    assert expectedOutputDf.equals(outputDf)
+
+def test__output_writing_functions__generate_spectral_fdr_output_from_full_output():
+    numNonDecoys = 100
+    numDecoys = 2
+    isDecoyColumn = ([0] * numNonDecoys) + ([1] * numDecoys)
+    scoreColumn = list(range(len(isDecoyColumn)-1,-1,-1))
+    inputDf = pd.DataFrame()
+    inputDf["isDecoy"] = isDecoyColumn
+
+    expectedOutputDf = pd.DataFrame()
+    expectedOutputDf["isDecoy"] = isDecoyColumn[:-1]
+    expectedOutputDf["spectralFDR"] = [0] * numNonDecoys + [1/(numNonDecoys + 1)]
+
+    outputDf = generate_spectral_fdr_output_from_full_output(inputDf)
+    assert expectedOutputDf.equals(outputDf)
+
+def test__output_writing_functions__generate_peptide_fdr_output_from_full_output():
+    numDuplicatePeptides = 2
+    numNonDuplicatePeptides = 99
+    numNonDecoys = numDuplicatePeptides + numNonDuplicatePeptides
+    numDecoys = 2
+    peptideColumn = [0] * numDuplicatePeptides + \
+                    list(range(1, numNonDuplicatePeptides+1)) + \
+                    [f'decoy{i}' for i in range(numDecoys)]
+    isDecoyColumn = ([0] * numNonDecoys) + ([1] * numDecoys)
+    spectralFDRColumn = [0] * numNonDecoys + [1/(numNonDecoys + 1)] + [2/(numNonDecoys + 2)]
+    inputDf = pd.DataFrame()
+    inputDf["peptide"] = peptideColumn
+    inputDf["isDecoy"] = isDecoyColumn
+
+    expectedOutputDf = pd.DataFrame()
+    expectedOutputDf["peptide"] = peptideColumn[1:-1]
+    expectedOutputDf["isDecoy"] = isDecoyColumn[1:-1]
+    expectedOutputDf["peptideFDR"] = [0] * (numNonDecoys-1) + [1/numNonDecoys]
+    outputDf = generate_peptide_fdr_output_from_full_output(inputDf)
+
     assert expectedOutputDf.equals(outputDf)
 
 

@@ -15,10 +15,13 @@ from csodiaq.identifier.scoringFunctions import (
     calculate_ppm_offset_tolerance,
     create_ppm_histogram,
 )
-from csodiaq.utils.outputWritingFunctions import (
+from csodiaq.identifier.outputFormattingFunctions import (
     extract_metadata_from_match_and_score_dataframes,
     format_output_line,
     format_output_as_pandas_dataframe,
+    generate_spectral_fdr_output_from_full_output,
+    generate_peptide_fdr_output_from_full_output,
+    generate_protein_fdr_output_from_peptide_fdr_output,
 )
 import pandas as pd
 
@@ -179,8 +182,7 @@ class Identifier:
 
     def _format_identifications_as_dataframe(self, matchDf, scoreDf):
         """
-        The final match/score identifications are consolidated and written to a single output
-            .csv file.
+        The final match/score identifications are consolidated into a dataframe.
         """
         queryDict = self._queryContext.extract_metadata_from_query_scans()
         matchDict = extract_metadata_from_match_and_score_dataframes(
@@ -200,6 +202,14 @@ class Identifier:
             )
             outputs.append(outputLine)
         return format_output_as_pandas_dataframe(self._queryContext.filePath, outputs)
+
+    def _format_identifications_for_output(self, matchDf, scoreDf):
+        outputDict = {}
+        outputDict["fullOutput"] = self._format_identifications_as_dataframe(matchDf, scoreDf)
+        outputDict["spectralFDR"] = generate_spectral_fdr_output_from_full_output(outputDict["fullOutput"])
+        outputDict["peptideFDR"] = generate_peptide_fdr_output_from_full_output(outputDict["fullOutput"])
+        #outputDict["proteinFDR"] = generate_protein_fdr_output_from_peptide_fdr_output(outputDict["peptideFDR"])
+        return outputDict
 
     def _prepare_library_dictionary_for_output(self, libKeyIdx, sortedLibKeys):
         libKey = sortedLibKeys[libKeyIdx]

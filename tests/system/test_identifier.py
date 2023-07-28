@@ -63,11 +63,25 @@ def get_columns_that_should_match(type):
             "cosineScore",
             "maccScore",
         ]
-    elif type == "spectral" or type == "peptide":
+    elif type == "full":
         return [
             "scan",
             "peptide",
             "cosine"
+        ]
+    elif type == "spectral":
+        return [
+            "scan",
+            "peptide",
+            "cosine",
+            "spectralFDR",
+        ]
+    elif type == "peptide":
+        return [
+            "scan",
+            "peptide",
+            "cosine",
+            "peptideFDR",
         ]
     elif type == "protein":
         return [
@@ -76,6 +90,8 @@ def get_columns_that_should_match(type):
             "cosine",
             "leadingProtein",
             "proteinCosine",
+            "peptideFDR",
+            "leadingProteinFDR",
         ]
 
 def test__identifier__main_workflow(commandLineArgs):
@@ -96,9 +112,15 @@ def test__identifier__main_workflow(commandLineArgs):
     assert_numeric_pandas_dataframes_are_equal(expectedScoreDf, scoreDf, "score")
 
     expectedFullDf = pd.read_csv(get_file_from_system_test_folder('fullOutput.csv.gz'), compression='gzip')
-    spectralDf = identifier._format_identifications_as_dataframe(matchDf, scoreDf)
-    assert_numeric_pandas_dataframes_are_equal(expectedFullDf, spectralDf, "spectral")
+    expectedSpectralDf = pd.read_csv(get_file_from_system_test_folder('spectralOutput.csv.gz'), compression='gzip')
+    expectedPeptideDf = pd.read_csv(get_file_from_system_test_folder('peptideOutput.csv.gz'), compression='gzip')
+    expectedProteinDf = pd.read_csv(get_file_from_system_test_folder('proteinOutput.csv.gz'), compression='gzip')
+    outputDict = identifier._format_identifications_for_output(matchDf, scoreDf)
 
+    assert_numeric_pandas_dataframes_are_equal(expectedFullDf, outputDict["fullOutput"], "full")
+    assert_numeric_pandas_dataframes_are_equal(expectedSpectralDf, outputDict["spectralFDR"], "spectral")
+    assert_numeric_pandas_dataframes_are_equal(expectedPeptideDf, outputDict["peptideFDR"], "peptide")
+    #assert_numeric_pandas_dataframes_are_equal(expectedProteinDf, outputDict["proteinFDR"], "protein")
 
 
 

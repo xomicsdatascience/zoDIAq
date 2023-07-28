@@ -1,11 +1,9 @@
 import os.path
 import pandas as pd
 import numpy as np
-from csodiaq.identifier.scoringFunctions import calculate_fdr_rates_of_decoy_array
-
-pd.set_option("display.max_columns", None)
-pd.set_option("display.max_rows", None)
-
+from csodiaq.identifier.scoringFunctions import calculate_fdr_rates_of_decoy_array, determine_index_of_fdr_cutoff
+from csodiaq.identifier.idpickerFunctions import identify_high_confidence_proteins
+from csodiaq.utils import format_protein_list_to_string, format_protein_string_to_list
 
 def format_output_line(libMetadata, queMetadata, matchMetadata):
     return [
@@ -83,20 +81,30 @@ def format_output_as_pandas_dataframe(inputFileName, outputData):
     outputDf.insert(0, "fileName", [inputFileName] * len(outputDf.index))
     return outputDf
 
-
-def create_outfile_header(outputDir, queryFile, correction):
-    outputCsodiaqTag = "CsoDIAq-file_"
-    queryFileName = ".".join(queryFile.split("/")[-1].split(".")[:-1])
-    outputFile = outputCsodiaqTag + queryFileName
-    outFileHeader = os.path.join(outputDir, outputFile)
-    if correction != -1:
-        outFileHeader += "_corrected"
-    return outFileHeader
-
-
 def drop_duplicate_values_from_df_in_given_column(df, column):
     return df.drop_duplicates(subset=column, keep="first").reset_index(drop=True)
 
+def generate_spectral_fdr_output_from_full_output(fullDf, fdrCutoff = 0.01):
+    fdrs = calculate_fdr_rates_of_decoy_array(fullDf["isDecoy"])
+    scoreDfCutoffIdx = np.argmax(fdrs > fdrCutoff)
+    fullDf["spectralFDR"] = fdrs
+    return fullDf.iloc[:scoreDfCutoffIdx, :]
+
+def generate_peptide_fdr_output_from_full_output(fullDf, fdrCutoff = 0.01):
+    peptideDf = drop_duplicate_values_from_df_in_given_column(fullDf, "peptide")
+    fdrs = calculate_fdr_rates_of_decoy_array(peptideDf["isDecoy"])
+    scoreDfCutoffIdx = np.argmax(fdrs > fdrCutoff)
+    peptideDf["peptideFDR"] = fdrs
+    return peptideDf.iloc[:scoreDfCutoffIdx, :]
+
+def generate_protein_fdr_output_from_peptide_fdr_output(peptideDf): # no unit test made yet - tested in system test
+    highConfidenceProteins = identify_high_confidence_proteins(peptideDf)
+    proteinDf = organize_peptide_df_by_leading_proteins(peptideDf, highConfidenceProteins)
+    proteinFdrDict = identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff(proteinDf)
+    proteinDf = proteinDf[proteinDf["leadingProtein"].isin(proteinFdrDict.keys())]
+    proteinDf["leadingProteinFDR"] = proteinDf["leadingProtein"].apply(lambda x: proteinFdrDict[x])
+    proteinDf["uniquePeptide"] = determine_if_peptides_are_unique_to_leading_protein(proteinDf)
+    return proteinDf
 
 def identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff(
     df, fdrCutoff=0.01
@@ -204,58 +212,6 @@ def create_dataframe_where_peptides_match_to_one_or_more_leading_proteins(
     proteinDf["leadingProtein"] = leadingProteinColumn
     proteinDf = proteinDf.drop_duplicates(keep="first").reset_index(drop=True)
     return proteinDf
-
-
-def format_protein_string_to_list(proteinString):
-    """
-    Returns a protein group string as a list of proteins.
-
-    Parameters
-    ----------
-    proteinString : string
-        Example: a protein group string would have the following format.
-        '3/protein1/protein2/protein3'
-        Where the number of proteins starts the string, followed by the proteins
-        separated by slashes.
-
-    Returns
-    -------
-    proteinList : list
-        A list of protein names as strings, such as the following:
-        [
-            'protein1',
-            'protein2',
-            'protein3',
-        ]
-    """
-    return proteinString.split("/")[1:]
-
-
-def format_protein_list_to_string(proteinList):
-    """
-    Returns a list of proteins as a protein group string.
-
-    Parameters
-    ----------
-    proteinList : list
-        A list of protein names as strings, such as the following:
-        [
-            'protein1',
-            'protein2',
-            'protein3',
-        ]
-
-    Returns
-    -------
-        proteinString : string
-        Example: a protein group string would have the following format.
-        '3/protein1/protein2/protein3'
-        Where the number of proteins starts the string, followed by the proteins
-        separated by slashes.
-    """
-
-    return f"{len(proteinList)}/{'/'.join(proteinList)}"
-
 
 def determine_if_peptides_are_unique_to_leading_protein(proteinDf):
     """

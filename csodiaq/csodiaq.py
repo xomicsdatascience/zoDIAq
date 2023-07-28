@@ -13,27 +13,8 @@ from . import csodiaq_quantification_functions as cqf
 from . import csodiaq_mgf_cleaning_functions as cmf
 from . import peptide_quantification
 from csodiaq.identifier import Identifier, identify_high_confidence_proteins, calculate_fdr_rates_of_decoy_array
-from csodiaq.utils import create_outfile_header, drop_duplicate_values_from_df_in_given_column, organize_peptide_df_by_leading_proteins, identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff, determine_if_peptides_are_unique_to_leading_protein
+from csodiaq.utils import create_outfile_header
 import pandas as pd
-
-def write_identification_outputs(idDf, outFileHeader, isProtein):
-    idDf["spectralFDR"] = calculate_fdr_rates_of_decoy_array(idDf["isDecoy"])
-    idDf.to_csv(outFileHeader + '_spectralFDR.csv', index=False)
-    peptideDf = drop_duplicate_values_from_df_in_given_column(idDf, "peptide")
-    peptideDf["peptideFDR"] = calculate_fdr_rates_of_decoy_array(peptideDf["isDecoy"])
-    peptideDf.to_csv(outFileHeader + '_peptideFDR.csv', index=False)
-    if isProtein:
-        proteinDf = create_protein_df(peptideDf)
-        proteinDf.to_csv(outFileHeader + '_proteinFDR.csv', index=False)
-
-def create_protein_df(peptideDf):
-    highConfidenceProteins = identify_high_confidence_proteins(peptideDf)
-    proteinDf = organize_peptide_df_by_leading_proteins(peptideDf, highConfidenceProteins)
-    proteinFdrDict = identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff(proteinDf)
-    proteinDf = proteinDf[proteinDf["leadingProtein"].isin(proteinFdrDict.keys())]
-    proteinDf["leadingProteinFDR"] = proteinDf["leadingProtein"].apply(lambda x: proteinFdrDict[x])
-    proteinDf["uniquePeptide"] = determine_if_peptides_are_unique_to_leading_protein(proteinDf)
-    return proteinDf
 
 def main():
     arg_parser = set_command_line_settings()
