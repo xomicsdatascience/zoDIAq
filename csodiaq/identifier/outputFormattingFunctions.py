@@ -97,7 +97,7 @@ def generate_peptide_fdr_output_from_full_output(fullDf, fdrCutoff = 0.01):
     peptideDf["peptideFDR"] = fdrs
     return peptideDf.iloc[:scoreDfCutoffIdx, :]
 
-def generate_protein_fdr_output_from_peptide_fdr_output(peptideDf): # no unit test made yet - tested in system test
+def generate_protein_fdr_output_from_peptide_fdr_output(peptideDf): # TODO: no unit test made yet - tested in system test
     highConfidenceProteins = identify_high_confidence_proteins(peptideDf)
     proteinDf = organize_peptide_df_by_leading_proteins(peptideDf, highConfidenceProteins)
     proteinFdrDict = identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff(proteinDf)

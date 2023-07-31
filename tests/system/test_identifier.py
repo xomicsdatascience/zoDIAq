@@ -44,12 +44,6 @@ def assert_numeric_pandas_dataframes_are_equal(expectedDf, df, type):
         column = np.array(df[columnName])
         expectedColumn.sort()
         column.sort()
-        if type == "protein" and columnName=="leadingProtein":
-            print()
-            print(columnName)
-            for i in range(len(expectedColumn)):
-                if expectedColumn[i] != column[i]:
-                    print(f'{i},{expectedColumn[i]},{column[i]}')
         if expectedColumn.dtype.kind in np.typecodes["AllFloat"]:
             np.testing.assert_array_almost_equal(expectedColumn, column)
         else:
@@ -93,8 +87,8 @@ def get_columns_that_should_match(type):
             "scan",
             "peptide",
             "cosine",
-            #"leadingProtein", #currently a bug in the main branch, add when new system test files are generated
-            #"proteinCosine",
+            "leadingProtein",
+            "proteinCosine",
             "peptideFDR",
             "leadingProteinFDR",
         ]
