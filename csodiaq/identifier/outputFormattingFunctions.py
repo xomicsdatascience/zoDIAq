@@ -102,6 +102,7 @@ def generate_protein_fdr_output_from_peptide_fdr_output(peptideDf): # no unit te
     proteinDf = organize_peptide_df_by_leading_proteins(peptideDf, highConfidenceProteins)
     proteinFdrDict = identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff(proteinDf)
     proteinDf = proteinDf[proteinDf["leadingProtein"].isin(proteinFdrDict.keys())]
+    proteinDf["proteinCosine"] = proteinDf.groupby("leadingProtein")["cosine"].transform("max")
     proteinDf["leadingProteinFDR"] = proteinDf["leadingProtein"].apply(lambda x: proteinFdrDict[x])
     proteinDf["uniquePeptide"] = determine_if_peptides_are_unique_to_leading_protein(proteinDf)
     return proteinDf

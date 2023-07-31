@@ -219,6 +219,7 @@ def reduce__identify_minimum_number_of_most_connected_proteins(
     """
     leadingProteins = set()
     for _, clusterDf in peptideProteinConnectionsDf.groupby("cluster"):
+        clusterDf["originalProteinCount"] = label_proteins_by_original_protein_count_for_breaking_ties(clusterDf)
         (
             sortedClusterDf,
             initialAcceptedProteins,
@@ -239,11 +240,13 @@ def initialize_protein_identification_recursion_parameters(clusterDf):
 
 def sort_dataframe_by_descending_protein_count(df):
     return (
-        df.assign(freq=df.groupby("protein")["protein"].transform("count"))
-        .sort_values(by=["freq", "protein"], ascending=[False, True])
-        .drop(["freq"], axis=1)
+        df.assign(currentProteinCount=df.groupby("protein")["protein"].transform("count"))
+        .sort_values(by=["currentProteinCount", "originalProteinCount", "protein"], ascending=[False, False, True])
+        .drop(["currentProteinCount"], axis=1)
     )
 
+def label_proteins_by_original_protein_count_for_breaking_ties(df):
+    return df.groupby("protein")["protein"].transform("count")
 
 def identify_acceptable_proteins_recursively(sortedClusterDf, acceptedProteinSet):
     acceptedProteinDf = sortedClusterDf[
@@ -254,6 +257,7 @@ def identify_acceptable_proteins_recursively(sortedClusterDf, acceptedProteinSet
     ]
     if len(unclaimedPeptideDf.index) == 0:
         return set(acceptedProteinDf["protein"])
+    unclaimedPeptideDf = sort_dataframe_by_descending_protein_count(unclaimedPeptideDf)
     nextProtein = unclaimedPeptideDf.iloc[0]["protein"]
     acceptedProteinSet.add(nextProtein)
     return identify_acceptable_proteins_recursively(sortedClusterDf, acceptedProteinSet)

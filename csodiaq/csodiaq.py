@@ -32,9 +32,14 @@ def main():
     if args['command'] == 'id':
         identifier = Identifier(args)
         for queryFile in args["files"]:
-            idDf = identifier.identify_library_spectra_in_query_file(queryFile)
+            outputDict = identifier.identify_library_spectra_in_query_file(queryFile)
             outFileHeader = create_outfile_header(args['outDirectory'], queryFile, args['correction'])
-            write_identification_outputs(idDf, outFileHeader, args['proteinTargets'])
+            for dfType, df in outputDict.items():
+
+                if dfType != "fullOutput":
+                    dfType += "FDR"
+                df.to_csv(f'{outFileHeader}_{dfType}.csv', index=False)
+
         #lib = cif.library_file_to_dict(args['library'])
         #maxQuerySpectraToPool = queryPooling = args['query']
         #if not maxQuerySpectraToPool:

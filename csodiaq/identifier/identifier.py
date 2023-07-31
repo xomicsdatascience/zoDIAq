@@ -67,7 +67,7 @@ class Identifier:
         if self._correction_process_is_to_be_applied():
             matchDf = self._apply_correction_to_match_dataframe(matchDf)
         scoreDf = self._score_spectra_matches(matchDf)
-        return self._format_identifications_as_dataframe(matchDf, scoreDf)
+        return self._format_identification_data_with_fdr_outputs(matchDf, scoreDf)
 
     def _match_library_to_query_spectra(self):
         """
@@ -203,12 +203,13 @@ class Identifier:
             outputs.append(outputLine)
         return format_output_as_pandas_dataframe(self._queryContext.filePath, outputs)
 
-    def _format_identifications_for_output(self, matchDf, scoreDf):
+    def _format_identification_data_with_fdr_outputs(self, matchDf, scoreDf):
         outputDict = {}
         outputDict["fullOutput"] = self._format_identifications_as_dataframe(matchDf, scoreDf)
         outputDict["spectralFDR"] = generate_spectral_fdr_output_from_full_output(outputDict["fullOutput"])
         outputDict["peptideFDR"] = generate_peptide_fdr_output_from_full_output(outputDict["fullOutput"])
-        #outputDict["proteinFDR"] = generate_protein_fdr_output_from_peptide_fdr_output(outputDict["peptideFDR"])
+        outputDict["proteinFDR"] = generate_protein_fdr_output_from_peptide_fdr_output(outputDict["peptideFDR"])
+
         return outputDict
 
     def _prepare_library_dictionary_for_output(self, libKeyIdx, sortedLibKeys):
