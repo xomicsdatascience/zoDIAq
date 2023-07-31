@@ -2,6 +2,7 @@ import os.path
 import pandas as pd
 import numpy as np
 
+
 def create_outfile_header(outputDir, queryFile, correction):
     outputCsodiaqTag = "CsoDIAq-file_"
     queryFileName = ".".join(queryFile.split("/")[-1].split(".")[:-1])

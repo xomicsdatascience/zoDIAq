@@ -90,9 +90,7 @@ def normalize_bin_position_from_left_to_center_of_each_bin(bins):
     return (bins[:-1] + bins[1:]) / 2
 
 
-def identify_index_of_max_distance_to_noise_from_tallest_bin(
-    binHeights, tallestBinIdx
-):
+def identify_index_of_max_distance_to_noise_from_tallest_bin(binHeights, tallestBinIdx):
     averageNoise = np.mean(binHeights[:10] + binHeights[-10:])
     binsBeforeTallest = binHeights[:tallestBinIdx]
     beforeNearestNoiseBinIdx = (

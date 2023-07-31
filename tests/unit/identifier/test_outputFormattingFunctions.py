@@ -194,6 +194,7 @@ def test__output_writing_functions__format_output_as_pandas_dataframe(
     outputDf = format_output_as_pandas_dataframe(inputFileName, [identifierOutputData])
     assert expectedOutputDf.equals(outputDf)
 
+
 def test__output_writing_functions__drop_duplicate_values_from_df_in_given_column():
     columnName = "test"
     data = [
@@ -213,31 +214,37 @@ def test__output_writing_functions__drop_duplicate_values_from_df_in_given_colum
     outputDf = drop_duplicate_values_from_df_in_given_column(df, columnName)
     assert expectedOutputDf.equals(outputDf)
 
+
 def test__output_writing_functions__generate_spectral_fdr_output_from_full_output():
     numNonDecoys = 100
     numDecoys = 2
     isDecoyColumn = ([0] * numNonDecoys) + ([1] * numDecoys)
-    scoreColumn = list(range(len(isDecoyColumn)-1,-1,-1))
+    scoreColumn = list(range(len(isDecoyColumn) - 1, -1, -1))
     inputDf = pd.DataFrame()
     inputDf["isDecoy"] = isDecoyColumn
 
     expectedOutputDf = pd.DataFrame()
     expectedOutputDf["isDecoy"] = isDecoyColumn[:-1]
-    expectedOutputDf["spectralFDR"] = [0] * numNonDecoys + [1/(numNonDecoys + 1)]
+    expectedOutputDf["spectralFDR"] = [0] * numNonDecoys + [1 / (numNonDecoys + 1)]
 
     outputDf = generate_spectral_fdr_output_from_full_output(inputDf)
     assert expectedOutputDf.equals(outputDf)
+
 
 def test__output_writing_functions__generate_peptide_fdr_output_from_full_output():
     numDuplicatePeptides = 2
     numNonDuplicatePeptides = 99
     numNonDecoys = numDuplicatePeptides + numNonDuplicatePeptides
     numDecoys = 2
-    peptideColumn = [0] * numDuplicatePeptides + \
-                    list(range(1, numNonDuplicatePeptides+1)) + \
-                    [f'decoy{i}' for i in range(numDecoys)]
+    peptideColumn = (
+        [0] * numDuplicatePeptides
+        + list(range(1, numNonDuplicatePeptides + 1))
+        + [f"decoy{i}" for i in range(numDecoys)]
+    )
     isDecoyColumn = ([0] * numNonDecoys) + ([1] * numDecoys)
-    spectralFDRColumn = [0] * numNonDecoys + [1/(numNonDecoys + 1)] + [2/(numNonDecoys + 2)]
+    spectralFDRColumn = (
+        [0] * numNonDecoys + [1 / (numNonDecoys + 1)] + [2 / (numNonDecoys + 2)]
+    )
     inputDf = pd.DataFrame()
     inputDf["peptide"] = peptideColumn
     inputDf["isDecoy"] = isDecoyColumn
@@ -245,7 +252,7 @@ def test__output_writing_functions__generate_peptide_fdr_output_from_full_output
     expectedOutputDf = pd.DataFrame()
     expectedOutputDf["peptide"] = peptideColumn[1:-1]
     expectedOutputDf["isDecoy"] = isDecoyColumn[1:-1]
-    expectedOutputDf["peptideFDR"] = [0] * (numNonDecoys-1) + [1/numNonDecoys]
+    expectedOutputDf["peptideFDR"] = [0] * (numNonDecoys - 1) + [1 / numNonDecoys]
     outputDf = generate_peptide_fdr_output_from_full_output(inputDf)
 
     assert expectedOutputDf.equals(outputDf)

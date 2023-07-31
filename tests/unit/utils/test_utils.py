@@ -4,6 +4,7 @@ from csodiaq.utils import (
 import pandas as pd
 import pytest
 
+
 @pytest.fixture
 def outputDirectory():
     return "test/output/dir"
@@ -27,6 +28,7 @@ def inputFilePath(inputFile):
 @pytest.fixture
 def outputCsodiaqTag():
     return "CsoDIAq-file_"
+
 
 def test__output_writing_functions__create_outfile_header__no_correction(
     outputDirectory, inputFileName, inputFilePath, outputCsodiaqTag
@@ -70,4 +72,3 @@ def test__output_writing_functions__create_outfile_header__stdev_correction(
     expectedOutput = f"{outputDirectory}/{outputCsodiaqTag}{inputFileName}_corrected"
     output = create_outfile_header(outputDirectory, inputFilePath, correction=1)
     assert expectedOutput == output
-

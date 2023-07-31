@@ -205,10 +205,18 @@ class Identifier:
 
     def _format_identification_data_with_fdr_outputs(self, matchDf, scoreDf):
         outputDict = {}
-        outputDict["fullOutput"] = self._format_identifications_as_dataframe(matchDf, scoreDf)
-        outputDict["spectralFDR"] = generate_spectral_fdr_output_from_full_output(outputDict["fullOutput"])
-        outputDict["peptideFDR"] = generate_peptide_fdr_output_from_full_output(outputDict["fullOutput"])
-        outputDict["proteinFDR"] = generate_protein_fdr_output_from_peptide_fdr_output(outputDict["peptideFDR"])
+        outputDict["fullOutput"] = self._format_identifications_as_dataframe(
+            matchDf, scoreDf
+        )
+        outputDict["spectralFDR"] = generate_spectral_fdr_output_from_full_output(
+            outputDict["fullOutput"]
+        )
+        outputDict["peptideFDR"] = generate_peptide_fdr_output_from_full_output(
+            outputDict["fullOutput"]
+        )
+        outputDict["proteinFDR"] = generate_protein_fdr_output_from_peptide_fdr_output(
+            outputDict["peptideFDR"]
+        )
 
         return outputDict
 

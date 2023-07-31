@@ -6,34 +6,34 @@ import os
 import pickle
 import pytest
 
+
 def get_parent_dir():
     return os.path.dirname(os.path.abspath(__file__))
 
+
 def get_file_from_system_test_folder(file):
-    return os.path.join(
-        get_parent_dir(), "test_files", file
-    )
+    return os.path.join(get_parent_dir(), "test_files", file)
+
 
 @pytest.fixture
 def commandLineArgs():
     args = {
-        'command': 'id',
-        'files': [
-            get_file_from_system_test_folder('20190412_DI2A_1to1_tMS2_n3.mzXML')
-            ],
-        'library': get_file_from_system_test_folder('system_test_library.csv'),
-        'outDirectory': '',
-        'fragmentMassTolerance': 30,
-        'correction': 0,
-        'histogram': False,
-        'proteinTargets': 1,
-        'query': 0,
-        'heavyMz': True,
-        'peaks': 0,
-        'commonpeptide': False,
-        'commonprotein': False
+        "command": "id",
+        "files": [get_file_from_system_test_folder("20190412_DI2A_1to1_tMS2_n3.mzXML")],
+        "library": get_file_from_system_test_folder("system_test_library.csv"),
+        "outDirectory": "",
+        "fragmentMassTolerance": 30,
+        "correction": 0,
+        "histogram": False,
+        "proteinTargets": 1,
+        "query": 0,
+        "heavyMz": True,
+        "peaks": 0,
+        "commonpeptide": False,
+        "commonprotein": False,
     }
     return args
+
 
 def assert_numeric_pandas_dataframes_are_equal(expectedDf, df, type):
     assert len(expectedDf.index) == len(df.index)
@@ -63,11 +63,7 @@ def get_columns_that_should_match(type):
             "maccScore",
         ]
     elif type == "full":
-        return [
-            "scan",
-            "peptide",
-            "cosine"
-        ]
+        return ["scan", "peptide", "cosine"]
     elif type == "spectral":
         return [
             "scan",
@@ -93,36 +89,60 @@ def get_columns_that_should_match(type):
             "leadingProteinFDR",
         ]
 
+
 def test__identifier__main_workflow(commandLineArgs):
     identifier = Identifier(commandLineArgs)
-    queryFile = commandLineArgs['files'][0]
+    queryFile = commandLineArgs["files"][0]
     identifier._queryContext = QueryLoaderContext(queryFile)
 
-    expectedMatchDf = pd.read_csv(get_file_from_system_test_folder('matchDf_precorrected.csv.gz'), compression='gzip')
+    expectedMatchDf = pd.read_csv(
+        get_file_from_system_test_folder("matchDf_precorrected.csv.gz"),
+        compression="gzip",
+    )
     matchDf = identifier._match_library_to_query_spectra()
     assert_numeric_pandas_dataframes_are_equal(expectedMatchDf, matchDf, "match")
 
-    expectedCorrectedMatchDf = pd.read_csv(get_file_from_system_test_folder('matchDf_postcorrected.csv.gz'), compression='gzip')
+    expectedCorrectedMatchDf = pd.read_csv(
+        get_file_from_system_test_folder("matchDf_postcorrected.csv.gz"),
+        compression="gzip",
+    )
     matchDf = identifier._apply_correction_to_match_dataframe(matchDf)
-    assert_numeric_pandas_dataframes_are_equal(expectedCorrectedMatchDf, matchDf, "match")
+    assert_numeric_pandas_dataframes_are_equal(
+        expectedCorrectedMatchDf, matchDf, "match"
+    )
 
-    expectedScoreDf = pd.read_csv(get_file_from_system_test_folder('scoreDf_postcorrected.csv.gz'), compression='gzip')
+    expectedScoreDf = pd.read_csv(
+        get_file_from_system_test_folder("scoreDf_postcorrected.csv.gz"),
+        compression="gzip",
+    )
     scoreDf = identifier._score_spectra_matches(matchDf)
     assert_numeric_pandas_dataframes_are_equal(expectedScoreDf, scoreDf, "score")
 
-    expectedFullDf = pd.read_csv(get_file_from_system_test_folder('fullOutput.csv.gz'), compression='gzip')
-    expectedSpectralDf = pd.read_csv(get_file_from_system_test_folder('spectralOutput.csv.gz'), compression='gzip')
-    expectedPeptideDf = pd.read_csv(get_file_from_system_test_folder('peptideOutput.csv.gz'), compression='gzip')
-    expectedProteinDf = pd.read_csv(get_file_from_system_test_folder('proteinOutput.csv.gz'), compression='gzip')
-    outputDict = identifier._format_identification_data_with_fdr_outputs(matchDf, scoreDf)
+    expectedFullDf = pd.read_csv(
+        get_file_from_system_test_folder("fullOutput.csv.gz"), compression="gzip"
+    )
+    expectedSpectralDf = pd.read_csv(
+        get_file_from_system_test_folder("spectralOutput.csv.gz"), compression="gzip"
+    )
+    expectedPeptideDf = pd.read_csv(
+        get_file_from_system_test_folder("peptideOutput.csv.gz"), compression="gzip"
+    )
+    expectedProteinDf = pd.read_csv(
+        get_file_from_system_test_folder("proteinOutput.csv.gz"), compression="gzip"
+    )
+    outputDict = identifier._format_identification_data_with_fdr_outputs(
+        matchDf, scoreDf
+    )
 
-    assert_numeric_pandas_dataframes_are_equal(expectedFullDf, outputDict["fullOutput"], "full")
-    assert_numeric_pandas_dataframes_are_equal(expectedSpectralDf, outputDict["spectralFDR"], "spectral")
-    assert_numeric_pandas_dataframes_are_equal(expectedPeptideDf, outputDict["peptideFDR"], "peptide")
-    assert_numeric_pandas_dataframes_are_equal(expectedProteinDf, outputDict["proteinFDR"], "protein")
-
-
-
-
-
-
+    assert_numeric_pandas_dataframes_are_equal(
+        expectedFullDf, outputDict["fullOutput"], "full"
+    )
+    assert_numeric_pandas_dataframes_are_equal(
+        expectedSpectralDf, outputDict["spectralFDR"], "spectral"
+    )
+    assert_numeric_pandas_dataframes_are_equal(
+        expectedPeptideDf, outputDict["peptideFDR"], "peptide"
+    )
+    assert_numeric_pandas_dataframes_are_equal(
+        expectedProteinDf, outputDict["proteinFDR"], "protein"
+    )

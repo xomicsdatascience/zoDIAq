@@ -1,9 +1,13 @@
 import os.path
 import pandas as pd
 import numpy as np
-from csodiaq.identifier.scoringFunctions import calculate_fdr_rates_of_decoy_array, determine_index_of_fdr_cutoff
+from csodiaq.identifier.scoringFunctions import (
+    calculate_fdr_rates_of_decoy_array,
+    determine_index_of_fdr_cutoff,
+)
 from csodiaq.identifier.idpickerFunctions import identify_high_confidence_proteins
 from csodiaq.utils import format_protein_list_to_string, format_protein_string_to_list
+
 
 def format_output_line(libMetadata, queMetadata, matchMetadata):
     return [
@@ -81,31 +85,46 @@ def format_output_as_pandas_dataframe(inputFileName, outputData):
     outputDf.insert(0, "fileName", [inputFileName] * len(outputDf.index))
     return outputDf
 
+
 def drop_duplicate_values_from_df_in_given_column(df, column):
     return df.drop_duplicates(subset=column, keep="first").reset_index(drop=True)
 
-def generate_spectral_fdr_output_from_full_output(fullDf, fdrCutoff = 0.01):
+
+def generate_spectral_fdr_output_from_full_output(fullDf, fdrCutoff=0.01):
     fdrs = calculate_fdr_rates_of_decoy_array(fullDf["isDecoy"])
     scoreDfCutoffIdx = np.argmax(fdrs > fdrCutoff)
     fullDf["spectralFDR"] = fdrs
     return fullDf.iloc[:scoreDfCutoffIdx, :]
 
-def generate_peptide_fdr_output_from_full_output(fullDf, fdrCutoff = 0.01):
+
+def generate_peptide_fdr_output_from_full_output(fullDf, fdrCutoff=0.01):
     peptideDf = drop_duplicate_values_from_df_in_given_column(fullDf, "peptide")
     fdrs = calculate_fdr_rates_of_decoy_array(peptideDf["isDecoy"])
     scoreDfCutoffIdx = np.argmax(fdrs > fdrCutoff)
     peptideDf["peptideFDR"] = fdrs
     return peptideDf.iloc[:scoreDfCutoffIdx, :]
 
-def generate_protein_fdr_output_from_peptide_fdr_output(peptideDf): # TODO: no unit test made yet - tested in system test
+
+def generate_protein_fdr_output_from_peptide_fdr_output(peptideDf):
     highConfidenceProteins = identify_high_confidence_proteins(peptideDf)
-    proteinDf = organize_peptide_df_by_leading_proteins(peptideDf, highConfidenceProteins)
-    proteinFdrDict = identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff(proteinDf)
+    proteinDf = organize_peptide_df_by_leading_proteins(
+        peptideDf, highConfidenceProteins
+    )
+    proteinFdrDict = identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff(
+        proteinDf
+    )
     proteinDf = proteinDf[proteinDf["leadingProtein"].isin(proteinFdrDict.keys())]
-    proteinDf["proteinCosine"] = proteinDf.groupby("leadingProtein")["cosine"].transform("max")
-    proteinDf["leadingProteinFDR"] = proteinDf["leadingProtein"].apply(lambda x: proteinFdrDict[x])
-    proteinDf["uniquePeptide"] = determine_if_peptides_are_unique_to_leading_protein(proteinDf)
+    proteinDf["proteinCosine"] = proteinDf.groupby("leadingProtein")[
+        "cosine"
+    ].transform("max")
+    proteinDf["leadingProteinFDR"] = proteinDf["leadingProtein"].apply(
+        lambda x: proteinFdrDict[x]
+    )
+    proteinDf["uniquePeptide"] = determine_if_peptides_are_unique_to_leading_protein(
+        proteinDf
+    )
     return proteinDf
+
 
 def identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff(
     df, fdrCutoff=0.01
@@ -213,6 +232,7 @@ def create_dataframe_where_peptides_match_to_one_or_more_leading_proteins(
     proteinDf["leadingProtein"] = leadingProteinColumn
     proteinDf = proteinDf.drop_duplicates(keep="first").reset_index(drop=True)
     return proteinDf
+
 
 def determine_if_peptides_are_unique_to_leading_protein(proteinDf):
     """
