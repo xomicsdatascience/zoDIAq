@@ -36,14 +36,12 @@ def commandLineArgs():
 
 
 def assert_numeric_pandas_dataframes_are_equal(expectedDf, df, type):
-    assert len(expectedDf.index) == len(df.index)
     columns = get_columns_that_should_match(type)
+    expectedDf = expectedDf[columns].sort_values(columns)
+    df = df[columns].sort_values(columns)
     for columnName in columns:
-        assert columnName in df.columns
         expectedColumn = np.array(expectedDf[columnName])
         column = np.array(df[columnName])
-        expectedColumn.sort()
-        column.sort()
         if expectedColumn.dtype.kind in np.typecodes["AllFloat"]:
             np.testing.assert_array_almost_equal(expectedColumn, column)
         else:
