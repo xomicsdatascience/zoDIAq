@@ -13,8 +13,11 @@ from csodiaq.identifier.outputFormattingFunctions import (
     filter_to_only_keep_top_peptides_unique_to_protein,
     calculate_mz_of_heavy_isotope_of_each_peptide,
     make_bin_assignments_for_mz_values,
+    calculate_binning_information_by_compensation_voltage,
     create_targeted_reanalysis_dataframe,
-    create_mass_spec_input_files_for_targeted_reanalysis_of_identified_peptides,
+    organize_for_targeted_reanalysis_of_identified_peptides,
+    filter_out_peptides_based_on_user_settings,
+    create_targeted_reanalysis_dataframe_by_compensation_voltage__no_heavy,
 )
 import pandas as pd
 import pytest
@@ -441,6 +444,84 @@ def test__output_formatting_functions__filter_to_only_keep_top_peptides_unique_t
     outputDf = filter_to_only_keep_top_peptides_unique_to_protein(inputDf, topProteinsToKeep)
     assert expectedOutputDf.equals(outputDf)
 
+@pytest.fixture
+def filteringInputDf():
+    inputData = [
+        ["peptide01R", "protein1", 100.0, 1],
+        ["peptide02K", "protein1", 200.0, 1],
+        ["peptide03R", "protein1", 300.0, 1],
+        ["peptide04K", "protein1", 400.0, 1],
+        ["peptide05R", "protein2", 100.0, 1],
+        ["peptide06K", "protein2", 200.0, 1],
+        ["peptide07R", "protein2", 300.0, 1],
+        ["peptide08K", "protein3", 100.0, 1],
+        ["peptide09R", "protein3", 200.0, 1],
+        ["peptide10K", "protein4", 100.0, 1],
+        ["peptide11R", "protein5", 100.0, 0],
+        ["peptide12K", "protein6", 100.0, 0],
+        ["peptide13", "protein7", 100.0, 1],
+    ]
+    return pd.DataFrame(inputData, columns=["peptide","leadingProtein","ionCount","uniquePeptide"])
+
+def test__output_formatting_functions__filter_out_peptides_based_on_user_settings__no_heavy_no_proteins(filteringInputDf):
+    isIncludeHeavy = False
+    expectedOutputDf = filteringInputDf.copy()
+    outputDf = filter_out_peptides_based_on_user_settings(filteringInputDf, isIncludeHeavy=isIncludeHeavy)
+    assert expectedOutputDf.equals(outputDf)
+
+def test__output_formatting_functions__filter_out_peptides_based_on_user_settings__is_heavy_no_proteins(filteringInputDf):
+    isIncludeHeavy = True
+    expectedOutputData = [
+        ["peptide01R", "protein1", 100.0, 1],
+        ["peptide02K", "protein1", 200.0, 1],
+        ["peptide03R", "protein1", 300.0, 1],
+        ["peptide04K", "protein1", 400.0, 1],
+        ["peptide05R", "protein2", 100.0, 1],
+        ["peptide06K", "protein2", 200.0, 1],
+        ["peptide07R", "protein2", 300.0, 1],
+        ["peptide08K", "protein3", 100.0, 1],
+        ["peptide09R", "protein3", 200.0, 1],
+        ["peptide10K", "protein4", 100.0, 1],
+        ["peptide11R", "protein5", 100.0, 0],
+        ["peptide12K", "protein6", 100.0, 0],
+    ]
+    expectedOutputDf = pd.DataFrame(expectedOutputData, columns=filteringInputDf.columns)
+    outputDf = filter_out_peptides_based_on_user_settings(filteringInputDf, isIncludeHeavy=isIncludeHeavy)
+    assert expectedOutputDf.equals(outputDf)
+
+def test__output_formatting_functions__filter_out_peptides_based_on_user_settings__no_heavy_has_proteins(filteringInputDf):
+    isIncludeHeavy = False
+    maximumPeptidesPerProtein = 2
+    expectedOutputData = [
+        ["peptide04K", "protein1", 400.0, 1],
+        ["peptide03R", "protein1", 300.0, 1],
+        ["peptide07R", "protein2", 300.0, 1],
+        ["peptide06K", "protein2", 200.0, 1],
+        ["peptide09R", "protein3", 200.0, 1],
+        ["peptide08K", "protein3", 100.0, 1],
+        ["peptide10K", "protein4", 100.0, 1],
+        ["peptide13", "protein7", 100.0, 1],
+    ]
+    expectedOutputDf = pd.DataFrame(expectedOutputData, columns=filteringInputDf.columns)
+    outputDf = filter_out_peptides_based_on_user_settings(filteringInputDf, isIncludeHeavy=isIncludeHeavy, maximumPeptidesPerProtein=maximumPeptidesPerProtein)
+    assert expectedOutputDf.equals(outputDf)
+
+def test__output_formatting_functions__filter_out_peptides_based_on_user_settings__is_heavy_has_proteins(filteringInputDf):
+    isIncludeHeavy = True
+    maximumPeptidesPerProtein = 2
+    expectedOutputData = [
+        ["peptide04K", "protein1", 400.0, 1],
+        ["peptide03R", "protein1", 300.0, 1],
+        ["peptide07R", "protein2", 300.0, 1],
+        ["peptide06K", "protein2", 200.0, 1],
+        ["peptide09R", "protein3", 200.0, 1],
+        ["peptide08K", "protein3", 100.0, 1],
+        ["peptide10K", "protein4", 100.0, 1],
+    ]
+    expectedOutputDf = pd.DataFrame(expectedOutputData, columns=filteringInputDf.columns)
+    outputDf = filter_out_peptides_based_on_user_settings(filteringInputDf, isIncludeHeavy=isIncludeHeavy, maximumPeptidesPerProtein=maximumPeptidesPerProtein)
+    assert expectedOutputDf.equals(outputDf)
+
 def test__output_formatting_functions__calculate_mz_of_heavy_isotope_of_each_peptide():
     data = [
         ["KR",100.0, 1],
@@ -452,36 +533,117 @@ def test__output_formatting_functions__calculate_mz_of_heavy_isotope_of_each_pep
     output = calculate_mz_of_heavy_isotope_of_each_peptide(inputDf)
     np.testing.assert_array_almost_equal(np.array(expectedOutput), np.array(output))
 
-def test__output_formatting_functions__make_bin_assignments_for_mz_values():
-    binWidth = 0.75
-    mzValues = [
-        100.0,
-        100.3,
-        100.74,
-        100.75,
-        101.0,
-        107.4,
-        107.6
-    ]
-    expectedBins = np.array([
-        100.375,
-        100.375,
-        100.375,
-        101.125,
-        101.125,
-        107.125,
-        107.875,
-    ])
-    bins = make_bin_assignments_for_mz_values(np.array(mzValues), binWidth)
-    np.testing.assert_array_equal(np.array(expectedBins),bins)
-
-def test__output_formatting_functions__create_targeted_reanalysis_dataframe():
+@pytest.fixture
+def inputBinningDf():
     inputData = [
-        ["peptide1",20.0],
-        ["peptide2",20.0],
-        ["peptide3",10.0],
+        ["R", 100.0, 1],
+        ["R", 100.2, 1],
+        ["K", 100.49, 2],
+        ["K", 100.5, 2],
+        ["R", 102.0, 1],
+        ["K", 115.0, 1],
+        ["RK", 115.1, 1],
     ]
-    inputDf = pd.DataFrame(inputData, columns=["peptide","bin"])
+    return pd.DataFrame(inputData, columns=["peptide", "MzLIB", "zLIB"])
+
+@pytest.fixture
+def expectedLightMzBins():
+    return np.array([
+        99.75,
+        99.75,
+        99.75,
+        101.25,
+        102.75,
+        114.75,
+        114.75,
+    ])
+
+def test__output_formatting_functions__make_bin_assignments_for_mz_values(inputBinningDf, expectedLightMzBins):
+    bins = make_bin_assignments_for_mz_values(inputBinningDf["MzLIB"])
+    np.testing.assert_array_equal(expectedLightMzBins,bins)
+
+def test__output_formatting_functions__organize_for_targeted_reanalysis_of_identified_peptides__no_heavy(inputBinningDf, expectedLightMzBins):
+    isIncludeHeavy = False
+    expectedOutputDf = inputBinningDf.copy()
+    expectedOutputDf["lightMzBin"] = expectedLightMzBins
+    outputDf = organize_for_targeted_reanalysis_of_identified_peptides(inputBinningDf, isIncludeHeavy=isIncludeHeavy)
+    assert expectedOutputDf.equals(outputDf)
+
+@pytest.fixture
+def expectedHeavyMzColumn(inputBinningDf):
+    lightAndHeavyLysKMassDiff = 8.014199
+    lightAndHeavyArgRMassDiff = 10.00827
+    mzValues = inputBinningDf["MzLIB"]
+    chargeValues = inputBinningDf["zLIB"]
+    return [
+        mzValues[0] + lightAndHeavyArgRMassDiff / chargeValues[0],
+        mzValues[1] + lightAndHeavyArgRMassDiff / chargeValues[1],
+        mzValues[2] + lightAndHeavyLysKMassDiff / chargeValues[2],
+        mzValues[3] + lightAndHeavyLysKMassDiff / chargeValues[3],
+        mzValues[4] + lightAndHeavyArgRMassDiff / chargeValues[4],
+        mzValues[5] + lightAndHeavyLysKMassDiff / chargeValues[5],
+        mzValues[6] + lightAndHeavyArgRMassDiff / chargeValues[6] + lightAndHeavyLysKMassDiff / chargeValues[6],
+    ]
+
+@pytest.fixture
+def expectedHeavyMzBinColumn():
+    return np.array([
+        109.75,
+        109.75,
+        103.75,
+        105.25,
+        112.75,
+        123.25,
+        133.75,
+    ])
+
+def test__output_formatting_functions__organize_for_targeted_reanalysis_of_identified_peptides__has_heavy(inputBinningDf, expectedLightMzBins, expectedHeavyMzColumn, expectedHeavyMzBinColumn):
+    isIncludeHeavy = True
+    expectedOutputDf = inputBinningDf.copy()
+    expectedOutputDf["lightMzBin"] = expectedLightMzBins
+    expectedOutputDf["heavyMz"] = expectedHeavyMzColumn
+    expectedOutputDf["heavyMzBin"] = expectedHeavyMzBinColumn
+    outputDf = organize_for_targeted_reanalysis_of_identified_peptides(inputBinningDf, isIncludeHeavy=isIncludeHeavy)
+    assert expectedOutputDf.equals(outputDf)
+
+def test__output_formatting_functions__calculate_binning_information_by_compensation_voltage__no_heavy(inputBinningDf, expectedLightMzBins):
+    isIncludeHeavy = False
+    inputBinningDfCV30 = inputBinningDf.copy()
+    inputBinningDfCV30["CompensationVoltage"] = [-30] * len(inputBinningDfCV30.index)
+    inputBinningDfCV40 = inputBinningDf.copy()
+    inputBinningDfCV40["CompensationVoltage"] = [-40] * len(inputBinningDfCV40.index)
+    inputDf = pd.concat([inputBinningDfCV40, inputBinningDfCV30])
+    expectedOutputDf = inputDf.copy()
+    expectedOutputDf["lightMzBin"] = np.append(expectedLightMzBins, expectedLightMzBins)
+    outputDf = calculate_binning_information_by_compensation_voltage(inputDf, isIncludeHeavy=isIncludeHeavy)
+    assert expectedOutputDf.equals(outputDf)
+
+def test__output_formatting_functions__calculate_binning_information_by_compensation_voltage__with_heavy(inputBinningDf, expectedLightMzBins, expectedHeavyMzColumn, expectedHeavyMzBinColumn):
+    isIncludeHeavy = True
+    inputBinningDfCV30 = inputBinningDf.copy()
+    inputBinningDfCV30["CompensationVoltage"] = [-30] * len(inputBinningDfCV30.index)
+    inputBinningDfCV40 = inputBinningDf.copy()
+    inputBinningDfCV40["CompensationVoltage"] = [-40] * len(inputBinningDfCV40.index)
+    inputDf = pd.concat([inputBinningDfCV40, inputBinningDfCV30])
+    expectedOutputDf = inputDf.copy()
+    expectedOutputDf["lightMzBin"] = np.append(expectedLightMzBins, expectedLightMzBins)
+    expectedOutputDf["heavyMz"] = expectedHeavyMzColumn + expectedHeavyMzColumn
+    expectedOutputDf["heavyMzBin"] = np.append(expectedHeavyMzBinColumn, expectedHeavyMzBinColumn)
+    outputDf = calculate_binning_information_by_compensation_voltage(inputDf, isIncludeHeavy=isIncludeHeavy)
+    assert expectedOutputDf.equals(outputDf)
+
+
+@pytest.fixture
+def inputFormattedDf():
+    inputData = [
+        ["peptide1",20.0, 30.0],
+        ["peptide2",20.0, 30.0],
+        ["peptide3",10.0, 20.0],
+    ]
+    return pd.DataFrame(inputData, columns=["peptide","lightMzBin", "heavyMzBin"])
+
+@pytest.fixture
+def targetedReanalysisNoHeavyDf():
     formula = ""
     adduct = "(no adduct)"
     charge = 2
@@ -489,66 +651,59 @@ def test__output_formatting_functions__create_targeted_reanalysis_dataframe():
         ["1/peptide3", formula, adduct, 10.0, charge, 0],
         ["2/peptide1/peptide2", formula, adduct, 20.0, charge, 1],
     ]
-    expectedOutputDf = pd.DataFrame(expectedOutputData, columns=["Compound","Formula","Adduct","m.z","z","MSXID"])
-    outputDf = create_targeted_reanalysis_dataframe(inputDf)
-    assert expectedOutputDf.equals((outputDf))
+    return pd.DataFrame(expectedOutputData, columns=["Compound","Formula","Adduct","m.z","z","MSXID"])
 
-def test__output_formatting_functions__create_mass_spec_input_files_for_targeted_reanalysis_of_identified_peptides__no_heavy_no_proteins():
-    inputData = [
-        ["peptide1", 300.0],
-        ["peptide2", 400.0],
-        ["peptide3", 200.0],
-        ["peptide4", 300.0],
-        ["peptide5", 100.0],
-        ["peptide6", 200.0],
-        ["peptide7", 100.0],
-        ["peptide8", 100.0],
-    ]
-    inputDf = pd.DataFrame(inputData, columns=["peptide", "MzLIB"])
+def test__output_formatting_functions__create_targeted_reanalysis_dataframe__no_heavy(inputFormattedDf, targetedReanalysisNoHeavyDf):
+    isIncludeHeavy = False
+    outputDf = create_targeted_reanalysis_dataframe(inputFormattedDf, isIncludeHeavy=isIncludeHeavy)
+    assert targetedReanalysisNoHeavyDf.equals(outputDf)
+
+@pytest.fixture
+def targetedReanalysisWithHeavyDf():
     formula = ""
     adduct = "(no adduct)"
     charge = 2
     expectedOutputData = [
-        ["3/peptide5/peptide7/peptide8", formula, adduct, 100.375, charge, 0],
-        ["2/peptide3/peptide6", formula, adduct, 200.125, charge, 1],
-        ["2/peptide1/peptide4", formula, adduct, 299.875, charge, 2],
-        ["1/peptide2", formula, adduct, 400.375, charge, 3],
+        ["1/peptide3", formula, adduct, 10.0, charge, 0],
+        ["1/peptide3", formula, adduct, 20.0, charge, 0],
+        ["2/peptide1/peptide2", formula, adduct, 20.0, charge, 1],
+        ["2/peptide1/peptide2", formula, adduct, 30.0, charge, 1],
     ]
-    expectedOutputDf = pd.DataFrame(expectedOutputData, columns=["Compound","Formula","Adduct","m.z","z","MSXID"])
-    outputDf = create_mass_spec_input_files_for_targeted_reanalysis_of_identified_peptides(inputDf)
-    assert expectedOutputDf.equals(outputDf)
+    return pd.DataFrame(expectedOutputData, columns=["Compound","Formula","Adduct","m.z","z","MSXID"])
 
-def test__output_formatting_functions__create_mass_spec_input_files_for_targeted_reanalysis_of_identified_peptides__heavy_no_proteins():
-    inputData = [
-        ["peptide1R", 300.0],
-        ["peptide2R", 400.0],
-        ["peptide3R", 200.0],
-        ["peptide4R", 300.0],
-        ["peptide5R", 100.0],
-        ["peptide6K", 200.0],
-        ["peptide7K", 100.0],
-        ["peptide8K", 100.0],
-        ["peptide9", 100.0],
-        ["peptide10", 100.0],
-        ["peptide11", 100.0],
-    ]
-    lightAndHeavyLysKMassDiff = 8.014199
-    lightAndHeavyArgRMassDiff = 10.00827
-    inputDf = pd.DataFrame(inputData, columns=["peptide", "MzLIB"])
-    formula = ""
-    adduct = "(no adduct)"
-    charge = 2
+def test__output_formatting_functions__create_targeted_reanalysis_dataframe__with_heavy(inputFormattedDf, targetedReanalysisWithHeavyDf):
+    isIncludeHeavy = True
+    outputDf = create_targeted_reanalysis_dataframe(inputFormattedDf, isIncludeHeavy=isIncludeHeavy)
+    assert targetedReanalysisWithHeavyDf.equals(outputDf)
 
+def test__output_formatting_functions__create_targeted_reanalysis_dataframe_by_compensation_voltage__no_heavy(inputFormattedDf, targetedReanalysisNoHeavyDf):
+    isIncludeHeavy = False
+    inputFormattedDfCV30 = inputFormattedDf.copy()
+    inputFormattedDfCV30["CompensationVoltage"] = [-30] * len(inputFormattedDfCV30.index)
+    inputFormattedDfCV40 = inputFormattedDf.copy()
+    inputFormattedDfCV40["CompensationVoltage"] = [-40] * len(inputFormattedDfCV40.index)
+    inputDf = pd.concat([inputFormattedDfCV30, inputFormattedDfCV40])
+    expectedOutput = {
+        "-30": targetedReanalysisNoHeavyDf,
+        "-40": targetedReanalysisNoHeavyDf,
+    }
+    output = create_targeted_reanalysis_dataframe_by_compensation_voltage__no_heavy(inputDf, isIncludeHeavy)
+    for cv, expectedTargetedReanalysisDf in expectedOutput.items():
+        assert cv in output
+        assert expectedTargetedReanalysisDf.equals(output[cv])
 
-    expectedOutputData = [
-        ["3/peptide5/peptide7/peptide8", formula, adduct, 100.375, charge, 0],
-        ["3/peptide5/peptide7/peptide8", formula, adduct, 100.375, charge, 1],
-        ["2/peptide3/peptide6", formula, adduct, 200.125, charge, 2],
-        ["2/peptide3/peptide6", formula, adduct, 200.125, charge, 3],
-        ["2/peptide1/peptide4", formula, adduct, 299.875, charge, 4],
-        ["2/peptide1/peptide4", formula, adduct, 299.875, charge, 5],
-        ["1/peptide2", formula, adduct, 400.375, charge, 6],
-        ["1/peptide2", formula, adduct, 400.375, charge, 7],
-    ]
-    expectedOutputDf = pd.DataFrame(expectedOutputData, columns=["Compound","Formula","Adduct","m.z","z","MSXID"])
-    #outputDf = create_mass_spec_input_files_for_targeted_reanalysis_of_identified_peptides(inputDf, isHeavy)
+def test__output_formatting_functions__create_targeted_reanalysis_dataframe_by_compensation_voltage__with_heavy(inputFormattedDf, targetedReanalysisWithHeavyDf):
+    isIncludeHeavy = True
+    inputFormattedDfCV30 = inputFormattedDf.copy()
+    inputFormattedDfCV30["CompensationVoltage"] = [-30] * len(inputFormattedDfCV30.index)
+    inputFormattedDfCV40 = inputFormattedDf.copy()
+    inputFormattedDfCV40["CompensationVoltage"] = [-40] * len(inputFormattedDfCV40.index)
+    inputDf = pd.concat([inputFormattedDfCV30, inputFormattedDfCV40])
+    expectedOutput = {
+        "-30": targetedReanalysisWithHeavyDf,
+        "-40": targetedReanalysisWithHeavyDf,
+    }
+    output = create_targeted_reanalysis_dataframe_by_compensation_voltage__no_heavy(inputDf, isIncludeHeavy)
+    for cv, expectedTargetedReanalysisDf in expectedOutput.items():
+        assert cv in output
+        assert expectedTargetedReanalysisDf.equals(output[cv])
