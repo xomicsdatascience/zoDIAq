@@ -90,14 +90,14 @@ def drop_duplicate_values_from_df_in_given_column(df, column):
     return df.drop_duplicates(subset=column, keep="first").reset_index(drop=True)
 
 
-def generate_spectral_fdr_output_from_full_output(fullDf, fdrCutoff=0.01):
+def create_spectral_fdr_output_from_full_output(fullDf, fdrCutoff=0.01):
     fdrs = calculate_fdr_rates_of_decoy_array(fullDf["isDecoy"])
     scoreDfCutoffIdx = np.argmax(fdrs > fdrCutoff)
     fullDf["spectralFDR"] = fdrs
     return fullDf.iloc[:scoreDfCutoffIdx, :]
 
 
-def generate_peptide_fdr_output_from_full_output(fullDf, fdrCutoff=0.01):
+def create_peptide_fdr_output_from_full_output(fullDf, fdrCutoff=0.01):
     peptideDf = drop_duplicate_values_from_df_in_given_column(fullDf, "peptide")
     fdrs = calculate_fdr_rates_of_decoy_array(peptideDf["isDecoy"])
     scoreDfCutoffIdx = np.argmax(fdrs > fdrCutoff)
@@ -105,7 +105,7 @@ def generate_peptide_fdr_output_from_full_output(fullDf, fdrCutoff=0.01):
     return peptideDf.iloc[:scoreDfCutoffIdx, :]
 
 
-def generate_protein_fdr_output_from_peptide_fdr_output(peptideDf):
+def create_protein_fdr_output_from_peptide_fdr_output(peptideDf):
     highConfidenceProteins = identify_high_confidence_proteins(peptideDf)
     proteinDf = organize_peptide_df_by_leading_proteins(
         peptideDf, highConfidenceProteins
@@ -257,3 +257,54 @@ def determine_if_peptides_are_unique_to_leading_protein(proteinDf):
     uniquePeptides = np.array([0] * len(proteinDf.index))
     uniquePeptides[uniqueValuesDf.index] = 1
     return list(uniquePeptides)
+
+def calculate_mz_of_heavy_version_of_peptide(peptide, lightMz, z):
+    lightAndHeavyLysKMassDiff = 8.014199
+    lightAndHeavyArgRMassDiff = 10.00827
+
+    numLysK = peptide.count('K')
+    numArgR = peptide.count('R')
+
+    return (lightMz +
+            (numLysK * lightAndHeavyLysKMassDiff) / z +
+            (numArgR * lightAndHeavyArgRMassDiff) /  z)
+
+def filter_to_only_keep_peptides_with_possibly_heavy_K_or_R_terminal_residue(fdrDf):
+    return fdrDf[
+        fdrDf["peptide"].str.endswith("R") | fdrDf["peptide"].str.endswith("K")
+        ].reset_index(drop=True)
+
+def filter_to_only_keep_top_peptides_unique_to_protein(fdrDf, maxPeptidesPerProtein):
+    fdrDf = (
+        fdrDf[fdrDf["uniquePeptide"] == 1]
+        .sort_values("ionCount", ascending=False)
+        .reset_index(drop=True)
+    )
+    return fdrDf.groupby(["leadingProtein"]).head(maxPeptidesPerProtein).reset_index(drop=True)
+
+def calculate_mz_of_heavy_isotope_of_each_peptide(fdrDf):
+    return fdrDf.apply(lambda x: calculate_mz_of_heavy_version_of_peptide(x["peptide"],x["MzLIB"],x["zLIB"]), axis=1)
+
+def make_bin_assignments_for_mz_values(mzValues, binWidth=0.75):
+    bins = np.around(np.arange(min(mzValues), max(mzValues) + binWidth*2, binWidth), decimals=2)
+    values = np.digitize(mzValues, bins)
+    mzBinValues = bins[values]
+    set_bin_value_to_middle_of_bin = np.vectorize(lambda x: x - binWidth/2)
+    mzBinValues = set_bin_value_to_middle_of_bin(mzBinValues)
+    return mzBinValues
+
+def create_targeted_reanalysis_dataframe(df):
+    condensedDf = df.groupby(["bin"]).apply(lambda x: f'{len(x["peptide"])}/{"/".join(x["peptide"])}').reset_index(name="peptide").sort_values(["bin"])
+    formula = ""
+    adduct = "(no adduct)"
+    charge = 2
+    data = [
+        [condensedDf.loc[i]["peptide"],formula,adduct,condensedDf.loc[i]["bin"],charge,i] for i in range(len(condensedDf.index))
+    ]
+    targetedReanalysisDf = pd.DataFrame(data, columns=["Compound","Formula","Adduct","m.z","z","MSXID"])
+    return targetedReanalysisDf
+
+def create_mass_spec_input_files_for_targeted_reanalysis_of_identified_peptides(fdrDf):
+    fdrDf["bin"] = make_bin_assignments_for_mz_values(fdrDf["MzLIB"])
+    targetedReanalysisDf = create_targeted_reanalysis_dataframe(fdrDf)
+    return targetedReanalysisDf

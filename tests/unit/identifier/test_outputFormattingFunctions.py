@@ -3,18 +3,22 @@ from csodiaq.identifier.outputFormattingFunctions import (
     extract_metadata_from_match_and_score_dataframes,
     format_output_as_pandas_dataframe,
     drop_duplicate_values_from_df_in_given_column,
-    generate_spectral_fdr_output_from_full_output,
-    generate_peptide_fdr_output_from_full_output,
+    create_spectral_fdr_output_from_full_output,
+    create_peptide_fdr_output_from_full_output,
     identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff,
     organize_peptide_df_by_leading_proteins,
     determine_if_peptides_are_unique_to_leading_protein,
+    calculate_mz_of_heavy_version_of_peptide,
+    filter_to_only_keep_peptides_with_possibly_heavy_K_or_R_terminal_residue,
+    filter_to_only_keep_top_peptides_unique_to_protein,
+    calculate_mz_of_heavy_isotope_of_each_peptide,
+    make_bin_assignments_for_mz_values,
+    create_targeted_reanalysis_dataframe,
+    create_mass_spec_input_files_for_targeted_reanalysis_of_identified_peptides,
 )
 import pandas as pd
 import pytest
-
-pd.set_option("display.max_columns", None)
-pd.set_option("display.max_rows", None)
-
+import numpy as np
 
 @pytest.fixture
 def identifierOutputData():
@@ -39,7 +43,7 @@ def identifierOutputData():
     ]
 
 
-def test__output_writing_functions__format_output_line(identifierOutputData):
+def test__output_formatting_functions__format_output_line(identifierOutputData):
     libDict = {
         "peptide": "testPeptide",
         "proteinName": "testProtein",
@@ -67,7 +71,7 @@ def test__output_writing_functions__format_output_line(identifierOutputData):
     assert output == identifierOutputData
 
 
-def test__output_writing_functions__extract_metadata_from_match_and_score_dataframes():
+def test__output_formatting_functions__extract_metadata_from_match_and_score_dataframes():
     lib1Idx = 0
     lib2Idx = 1
     queryIdx = 0
@@ -164,7 +168,7 @@ def test__output_writing_functions__extract_metadata_from_match_and_score_datafr
             assert output[idKey][metadataType] == metadataValue
 
 
-def test__output_writing_functions__format_output_as_pandas_dataframe(
+def test__output_formatting_functions__format_output_as_pandas_dataframe(
     identifierOutputData,
 ):
     expectedColumns = [
@@ -195,7 +199,7 @@ def test__output_writing_functions__format_output_as_pandas_dataframe(
     assert expectedOutputDf.equals(outputDf)
 
 
-def test__output_writing_functions__drop_duplicate_values_from_df_in_given_column():
+def test__output_formatting_functions__drop_duplicate_values_from_df_in_given_column():
     columnName = "test"
     data = [
         [0],
@@ -215,7 +219,7 @@ def test__output_writing_functions__drop_duplicate_values_from_df_in_given_colum
     assert expectedOutputDf.equals(outputDf)
 
 
-def test__output_writing_functions__generate_spectral_fdr_output_from_full_output():
+def test__output_formatting_functions__create_spectral_fdr_output_from_full_output():
     numNonDecoys = 100
     numDecoys = 2
     isDecoyColumn = ([0] * numNonDecoys) + ([1] * numDecoys)
@@ -227,11 +231,11 @@ def test__output_writing_functions__generate_spectral_fdr_output_from_full_outpu
     expectedOutputDf["isDecoy"] = isDecoyColumn[:-1]
     expectedOutputDf["spectralFDR"] = [0] * numNonDecoys + [1 / (numNonDecoys + 1)]
 
-    outputDf = generate_spectral_fdr_output_from_full_output(inputDf)
+    outputDf = create_spectral_fdr_output_from_full_output(inputDf)
     assert expectedOutputDf.equals(outputDf)
 
 
-def test__output_writing_functions__generate_peptide_fdr_output_from_full_output():
+def test__output_formatting_functions__create_peptide_fdr_output_from_full_output():
     numDuplicatePeptides = 2
     numNonDuplicatePeptides = 99
     numNonDecoys = numDuplicatePeptides + numNonDuplicatePeptides
@@ -253,12 +257,12 @@ def test__output_writing_functions__generate_peptide_fdr_output_from_full_output
     expectedOutputDf["peptide"] = peptideColumn[1:-1]
     expectedOutputDf["isDecoy"] = isDecoyColumn[1:-1]
     expectedOutputDf["peptideFDR"] = [0] * (numNonDecoys - 1) + [1 / numNonDecoys]
-    outputDf = generate_peptide_fdr_output_from_full_output(inputDf)
+    outputDf = create_peptide_fdr_output_from_full_output(inputDf)
 
     assert expectedOutputDf.equals(outputDf)
 
 
-def test__output_writing_functions__organize_peptide_df_by_leading_proteins():
+def test__output_formatting_functions__organize_peptide_df_by_leading_proteins():
     peptideProteinData = [
         ["peptide01", "1/protein7"],
         ["peptide02", "3/protein4/protein6/protein9"],
@@ -302,7 +306,7 @@ def test__output_writing_functions__organize_peptide_df_by_leading_proteins():
     assert expectedOutputDf.equals(outputDf)
 
 
-def test__output_writing_functions__identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff():
+def test__output_formatting_functions__identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff():
     numLeadingProteins = 100
     duplicateLeadingProtein = 0
     decoyLeadingProteins = ["decoy1", "decoy2"]
@@ -329,7 +333,7 @@ def test__output_writing_functions__identify_leading_protein_to_fdr_dictionary_f
     assert expectedOutput == output
 
 
-def test__determine_if_peptides_are_unique_to_leading_protein():
+def test__output_formatting_functions__determine_if_peptides_are_unique_to_leading_protein():
     inputData = [
         ["peptide1", "protein1"],
         ["peptide2", "protein1"],
@@ -343,3 +347,208 @@ def test__determine_if_peptides_are_unique_to_leading_protein():
     ]
     output = determine_if_peptides_are_unique_to_leading_protein(inputDf)
     assert expectedOutput == output
+
+def test__output_formatting_functions__calculate_mz_of_heavy_version_of_peptide():
+    testMz = 0.0
+
+    charge = 1
+    numLys = 1
+    numArg = 1
+    peptide = numLys * 'K' + numArg * 'R'
+    expectedOneChargeOneLysOneArg = 18.022469
+    oneChargeOneLysOneArg = calculate_mz_of_heavy_version_of_peptide(peptide, testMz, z=charge)
+    assert expectedOneChargeOneLysOneArg == oneChargeOneLysOneArg
+
+    charge = 2
+    expectedTwoChargeOneLysOneArg = expectedOneChargeOneLysOneArg / 2
+    twoChargeOneLysOneArg = calculate_mz_of_heavy_version_of_peptide(peptide, testMz, z=charge)
+    assert expectedTwoChargeOneLysOneArg == twoChargeOneLysOneArg
+
+    numLys = 2
+    charge = 1
+    peptide = numLys * 'K' + numArg * 'R'
+    expectedOneChargeTwoLysOneArg = 26.036668
+    oneChargeTwoLysOneArg = calculate_mz_of_heavy_version_of_peptide(peptide, testMz, z=charge)
+    assert expectedOneChargeTwoLysOneArg == oneChargeTwoLysOneArg
+
+    charge = 2
+    expectedTwoChargeTwoLysOneArg = expectedOneChargeTwoLysOneArg / 2
+    twoChargeTwoLysOneArg = calculate_mz_of_heavy_version_of_peptide(peptide, testMz, z=charge)
+    assert expectedTwoChargeTwoLysOneArg == twoChargeTwoLysOneArg
+
+    numLys = 1
+    numArg = 2
+    charge = 1
+    peptide = numLys * 'K' + numArg * 'R'
+    expectedOneChargeOneLysTwoArg = 28.030738999999997
+    oneChargeOneLysTwoArg = calculate_mz_of_heavy_version_of_peptide(peptide, testMz, z=charge)
+    assert expectedOneChargeOneLysTwoArg == oneChargeOneLysTwoArg
+
+    charge = 2
+    expectedTwoChargeOneLysTwoArg = expectedOneChargeOneLysTwoArg / 2
+    twoChargeOneLysTwoArg = calculate_mz_of_heavy_version_of_peptide(peptide, testMz, z=charge)
+    assert expectedTwoChargeOneLysTwoArg == twoChargeOneLysTwoArg
+
+    testMz = 100.0
+    expectedTwoChargeOneLysTwoArgHundredMz = expectedTwoChargeOneLysTwoArg + testMz
+    twoChargeOneLysTwoArgHundredMz = calculate_mz_of_heavy_version_of_peptide(peptide, testMz, z=charge)
+    assert expectedTwoChargeOneLysTwoArgHundredMz == twoChargeOneLysTwoArgHundredMz
+
+def test__output_formatting_functions__filter_to_only_keep_peptides_with_possibly_heavy_K_or_R_terminal_residue():
+    data = [
+        ["A"],
+        ["B"],
+        ["C"],
+        ["K"],
+        ["K"],
+        ["R"],
+        ["R"],
+        ["R"],
+    ]
+    df = pd.DataFrame(data, columns=["peptide"])
+    expectedData = data[3:]
+    expectedOutput = pd.DataFrame(expectedData, columns=["peptide"])
+    output = filter_to_only_keep_peptides_with_possibly_heavy_K_or_R_terminal_residue(df)
+    assert expectedOutput.equals(output)
+    pass
+
+def test__output_formatting_functions__filter_to_only_keep_top_peptides_unique_to_protein():
+    inputData = [
+        ["protein1", 100.0, 1],
+        ["protein1", 200.0, 1],
+        ["protein1", 300.0, 1],
+        ["protein1", 400.0, 1],
+        ["protein2", 100.0, 1],
+        ["protein2", 200.0, 1],
+        ["protein2", 300.0, 1],
+        ["protein3", 100.0, 1],
+        ["protein3", 200.0, 1],
+        ["protein4", 100.0, 1],
+        ["protein5", 100.0, 0],
+    ]
+    inputDf = pd.DataFrame(inputData, columns=["leadingProtein","ionCount", "uniquePeptide"])
+    topProteinsToKeep = 2
+    expectedOutputData = [
+        ["protein1", 400.0, 1],
+        ["protein1", 300.0, 1],
+        ["protein2", 300.0, 1],
+        ["protein2", 200.0, 1],
+        ["protein3", 200.0, 1],
+        ["protein3", 100.0, 1],
+        ["protein4", 100.0, 1],
+    ]
+    expectedOutputDf = pd.DataFrame(expectedOutputData, columns=["leadingProtein","ionCount", "uniquePeptide"])
+    outputDf = filter_to_only_keep_top_peptides_unique_to_protein(inputDf, topProteinsToKeep)
+    assert expectedOutputDf.equals(outputDf)
+
+def test__output_formatting_functions__calculate_mz_of_heavy_isotope_of_each_peptide():
+    data = [
+        ["KR",100.0, 1],
+        ["KKR", 100.0, 1],
+        ["KRR", 100.0, 1],
+    ]
+    inputDf = pd.DataFrame(data, columns=["peptide", "MzLIB", "zLIB"])
+    expectedOutput = [118.022469, 126.036668, 128.030738999999997]
+    output = calculate_mz_of_heavy_isotope_of_each_peptide(inputDf)
+    np.testing.assert_array_almost_equal(np.array(expectedOutput), np.array(output))
+
+def test__output_formatting_functions__make_bin_assignments_for_mz_values():
+    binWidth = 0.75
+    mzValues = [
+        100.0,
+        100.3,
+        100.74,
+        100.75,
+        101.0,
+        107.4,
+        107.6
+    ]
+    expectedBins = np.array([
+        100.375,
+        100.375,
+        100.375,
+        101.125,
+        101.125,
+        107.125,
+        107.875,
+    ])
+    bins = make_bin_assignments_for_mz_values(np.array(mzValues), binWidth)
+    np.testing.assert_array_equal(np.array(expectedBins),bins)
+
+def test__output_formatting_functions__create_targeted_reanalysis_dataframe():
+    inputData = [
+        ["peptide1",20.0],
+        ["peptide2",20.0],
+        ["peptide3",10.0],
+    ]
+    inputDf = pd.DataFrame(inputData, columns=["peptide","bin"])
+    formula = ""
+    adduct = "(no adduct)"
+    charge = 2
+    expectedOutputData = [
+        ["1/peptide3", formula, adduct, 10.0, charge, 0],
+        ["2/peptide1/peptide2", formula, adduct, 20.0, charge, 1],
+    ]
+    expectedOutputDf = pd.DataFrame(expectedOutputData, columns=["Compound","Formula","Adduct","m.z","z","MSXID"])
+    outputDf = create_targeted_reanalysis_dataframe(inputDf)
+    assert expectedOutputDf.equals((outputDf))
+
+def test__output_formatting_functions__create_mass_spec_input_files_for_targeted_reanalysis_of_identified_peptides__no_heavy_no_proteins():
+    inputData = [
+        ["peptide1", 300.0],
+        ["peptide2", 400.0],
+        ["peptide3", 200.0],
+        ["peptide4", 300.0],
+        ["peptide5", 100.0],
+        ["peptide6", 200.0],
+        ["peptide7", 100.0],
+        ["peptide8", 100.0],
+    ]
+    inputDf = pd.DataFrame(inputData, columns=["peptide", "MzLIB"])
+    formula = ""
+    adduct = "(no adduct)"
+    charge = 2
+    expectedOutputData = [
+        ["3/peptide5/peptide7/peptide8", formula, adduct, 100.375, charge, 0],
+        ["2/peptide3/peptide6", formula, adduct, 200.125, charge, 1],
+        ["2/peptide1/peptide4", formula, adduct, 299.875, charge, 2],
+        ["1/peptide2", formula, adduct, 400.375, charge, 3],
+    ]
+    expectedOutputDf = pd.DataFrame(expectedOutputData, columns=["Compound","Formula","Adduct","m.z","z","MSXID"])
+    outputDf = create_mass_spec_input_files_for_targeted_reanalysis_of_identified_peptides(inputDf)
+    assert expectedOutputDf.equals(outputDf)
+
+def test__output_formatting_functions__create_mass_spec_input_files_for_targeted_reanalysis_of_identified_peptides__heavy_no_proteins():
+    inputData = [
+        ["peptide1R", 300.0],
+        ["peptide2R", 400.0],
+        ["peptide3R", 200.0],
+        ["peptide4R", 300.0],
+        ["peptide5R", 100.0],
+        ["peptide6K", 200.0],
+        ["peptide7K", 100.0],
+        ["peptide8K", 100.0],
+        ["peptide9", 100.0],
+        ["peptide10", 100.0],
+        ["peptide11", 100.0],
+    ]
+    lightAndHeavyLysKMassDiff = 8.014199
+    lightAndHeavyArgRMassDiff = 10.00827
+    inputDf = pd.DataFrame(inputData, columns=["peptide", "MzLIB"])
+    formula = ""
+    adduct = "(no adduct)"
+    charge = 2
+
+
+    expectedOutputData = [
+        ["3/peptide5/peptide7/peptide8", formula, adduct, 100.375, charge, 0],
+        ["3/peptide5/peptide7/peptide8", formula, adduct, 100.375, charge, 1],
+        ["2/peptide3/peptide6", formula, adduct, 200.125, charge, 2],
+        ["2/peptide3/peptide6", formula, adduct, 200.125, charge, 3],
+        ["2/peptide1/peptide4", formula, adduct, 299.875, charge, 4],
+        ["2/peptide1/peptide4", formula, adduct, 299.875, charge, 5],
+        ["1/peptide2", formula, adduct, 400.375, charge, 6],
+        ["1/peptide2", formula, adduct, 400.375, charge, 7],
+    ]
+    expectedOutputDf = pd.DataFrame(expectedOutputData, columns=["Compound","Formula","Adduct","m.z","z","MSXID"])
+    #outputDf = create_mass_spec_input_files_for_targeted_reanalysis_of_identified_peptides(inputDf, isHeavy)
