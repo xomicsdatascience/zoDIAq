@@ -1,4 +1,6 @@
 from .identifier import Identifier
 from .idpickerFunctions import identify_high_confidence_proteins
 from .scoringFunctions import calculate_fdr_rates_of_decoy_array
-from .targetedReanalysisFunctions import create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides
+from .targetedReanalysisFunctions import (
+    create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides,
+)

@@ -13,6 +13,7 @@ import pandas as pd
 import pytest
 import numpy as np
 
+
 @pytest.fixture
 def identifierOutputData():
     return [
@@ -340,5 +341,3 @@ def test__output_formatting_functions__determine_if_peptides_are_unique_to_leadi
     ]
     output = determine_if_peptides_are_unique_to_leading_protein(inputDf)
     assert expectedOutput == output
-
-

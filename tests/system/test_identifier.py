@@ -1,13 +1,16 @@
 import pandas as pd
 import numpy as np
-from csodiaq.identifier import Identifier, create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides
+from csodiaq.identifier import (
+    Identifier,
+    create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides,
+)
 from csodiaq.loaders.query import QueryLoaderContext
 import os
 import pickle
 import pytest
 
-pd.set_option("display.max_columns",None)
-pd.set_option("display.max_rows",None)
+pd.set_option("display.max_columns", None)
+pd.set_option("display.max_rows", None)
 
 
 def get_parent_dir():
@@ -148,17 +151,53 @@ def test__identifier__main_workflow(commandLineArgs):
         expectedProteinDf, outputDict["proteinFDR"], "protein"
     )
 
-    targetedOutputDict = create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides(outputDict["proteinFDR"], isIncludeHeavy=True, maximumPeptidesPerProtein=1)
-    targetedOutputDict["fullDf"] = targetedOutputDict["fullDf"].drop(["fileName"], axis=1)
+    targetedOutputDict = create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides(
+        outputDict["proteinFDR"],
+        isIncludeHeavyIsotopes=True,
+        maximumPeptidesPerProtein=1,
+    )
+    targetedOutputDict["fullDf"] = targetedOutputDict["fullDf"].drop(
+        ["fileName"], axis=1
+    )
 
     expectedAllCVDf = pd.read_csv(get_file_from_system_test_folder("allCVs.csv"))
     expectedAllCVDf = expectedAllCVDf.drop(["fileName"], axis=1)
-    expected30Df = pd.read_csv(get_file_from_system_test_folder("targetedReanalysis_mostIntenseTargs_CV_30.txt"), sep='\t').fillna('')
-    expected40Df = pd.read_csv(get_file_from_system_test_folder("targetedReanalysis_mostIntenseTargs_CV_40.txt"), sep='\t').fillna('')
-    expected50Df = pd.read_csv(get_file_from_system_test_folder("targetedReanalysis_mostIntenseTargs_CV_50.txt"), sep='\t').fillna('')
-    expected60Df = pd.read_csv(get_file_from_system_test_folder("targetedReanalysis_mostIntenseTargs_CV_60.txt"), sep='\t').fillna('')
-    expected70Df = pd.read_csv(get_file_from_system_test_folder("targetedReanalysis_mostIntenseTargs_CV_70.txt"), sep='\t').fillna('')
-    expected80Df = pd.read_csv(get_file_from_system_test_folder("targetedReanalysis_mostIntenseTargs_CV_80.txt"), sep='\t').fillna('')
+    expected30Df = pd.read_csv(
+        get_file_from_system_test_folder(
+            "targetedReanalysis_mostIntenseTargs_CV_30.txt"
+        ),
+        sep="\t",
+    ).fillna("")
+    expected40Df = pd.read_csv(
+        get_file_from_system_test_folder(
+            "targetedReanalysis_mostIntenseTargs_CV_40.txt"
+        ),
+        sep="\t",
+    ).fillna("")
+    expected50Df = pd.read_csv(
+        get_file_from_system_test_folder(
+            "targetedReanalysis_mostIntenseTargs_CV_50.txt"
+        ),
+        sep="\t",
+    ).fillna("")
+    expected60Df = pd.read_csv(
+        get_file_from_system_test_folder(
+            "targetedReanalysis_mostIntenseTargs_CV_60.txt"
+        ),
+        sep="\t",
+    ).fillna("")
+    expected70Df = pd.read_csv(
+        get_file_from_system_test_folder(
+            "targetedReanalysis_mostIntenseTargs_CV_70.txt"
+        ),
+        sep="\t",
+    ).fillna("")
+    expected80Df = pd.read_csv(
+        get_file_from_system_test_folder(
+            "targetedReanalysis_mostIntenseTargs_CV_80.txt"
+        ),
+        sep="\t",
+    ).fillna("")
 
     for column in targetedOutputDict["fullDf"].columns:
         expectedColumn = np.array(expectedAllCVDf[column])

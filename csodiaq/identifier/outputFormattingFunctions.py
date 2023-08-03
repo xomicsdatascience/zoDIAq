@@ -257,4 +257,3 @@ def determine_if_peptides_are_unique_to_leading_protein(proteinDf):
     uniquePeptides = np.array([0] * len(proteinDf.index))
     uniquePeptides[uniqueValuesDf.index] = 1
     return list(uniquePeptides)
-
