@@ -12,7 +12,7 @@ from . import csodiaq_identification_functions as cif
 from . import csodiaq_quantification_functions as cqf
 from . import csodiaq_mgf_cleaning_functions as cmf
 from . import peptide_quantification
-from csodiaq.identifier import Identifier, identify_high_confidence_proteins, calculate_fdr_rates_of_decoy_array
+from csodiaq.identifier import Identifier, identify_high_confidence_proteins, calculate_fdr_rates_of_decoy_array, create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides
 from csodiaq.utils import create_outfile_header
 import pandas as pd
 
@@ -39,7 +39,15 @@ def main():
                 if dfType != "fullOutput":
                     dfType += "FDR"
                 df.to_csv(f'{outFileHeader}_{dfType}.csv', index=False)
-
+            if args["proteinTargets"]:
+                targetedReanalysisDict = create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides(outputDict["proteinFDR"], isIncludeHeavy=args['heavyMz'], maximumPeptidesPerProtein=args['proteinTargets'])
+            else:
+                targetedReanalysisDict = create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides(outputDict["peptideFDR"], isIncludeHeavy=args['heavyMz'], maximumPeptidesPerProtein=args['proteinTargets'])
+            for dfType, df in targetedReanalysisDict.items():
+                if "CV" in dfType:
+                    df.to_csv(f'{outFileHeader}_mostIntenseTargs_{dfType}.txt', index=False, sep='\t')
+                else:
+                    df.to_csv(f'{outFileHeader}_{dfType}.csv', index=False)
         #lib = cif.library_file_to_dict(args['library'])
         #maxQuerySpectraToPool = queryPooling = args['query']
         #if not maxQuerySpectraToPool:

@@ -1,0 +1,7 @@
+Compound	Formula	Adduct	m.z	z	MSXID
+1/AFVDFLSDEIK		(no adduct)	642.25	2	1
+1/AFVDFLSDEIK		(no adduct)	646.75	2	1
+1/ILTFDQLALDSPK		(no adduct)	730.75	2	2
+1/ILTFDQLALDSPK		(no adduct)	735.25	2	2
+1/AAGVNVEPFWPGLFAK		(no adduct)	852.25	2	3
+1/AAGVNVEPFWPGLFAK		(no adduct)	855.25	2	3

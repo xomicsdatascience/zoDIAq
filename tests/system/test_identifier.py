@@ -1,10 +1,13 @@
 import pandas as pd
 import numpy as np
-from csodiaq.identifier import Identifier
+from csodiaq.identifier import Identifier, create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides
 from csodiaq.loaders.query import QueryLoaderContext
 import os
 import pickle
 import pytest
+
+pd.set_option("display.max_columns",None)
+pd.set_option("display.max_rows",None)
 
 
 def get_parent_dir():
@@ -110,7 +113,7 @@ def test__identifier__main_workflow(commandLineArgs):
     )
 
     expectedScoreDf = pd.read_csv(
-        get_file_from_system_test_folder("scoreDf_postcorrected.csv.gz"),
+        get_file_from_system_test_folder("scoreDf.csv.gz"),
         compression="gzip",
     )
     scoreDf = identifier._score_spectra_matches(matchDf)
@@ -144,3 +147,29 @@ def test__identifier__main_workflow(commandLineArgs):
     assert_numeric_pandas_dataframes_are_equal(
         expectedProteinDf, outputDict["proteinFDR"], "protein"
     )
+
+    targetedOutputDict = create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides(outputDict["proteinFDR"], isIncludeHeavy=True, maximumPeptidesPerProtein=1)
+    targetedOutputDict["fullDf"] = targetedOutputDict["fullDf"].drop(["fileName"], axis=1)
+
+    expectedAllCVDf = pd.read_csv(get_file_from_system_test_folder("allCVs.csv"))
+    expectedAllCVDf = expectedAllCVDf.drop(["fileName"], axis=1)
+    expected30Df = pd.read_csv(get_file_from_system_test_folder("targetedReanalysis_mostIntenseTargs_CV_30.txt"), sep='\t').fillna('')
+    expected40Df = pd.read_csv(get_file_from_system_test_folder("targetedReanalysis_mostIntenseTargs_CV_40.txt"), sep='\t').fillna('')
+    expected50Df = pd.read_csv(get_file_from_system_test_folder("targetedReanalysis_mostIntenseTargs_CV_50.txt"), sep='\t').fillna('')
+    expected60Df = pd.read_csv(get_file_from_system_test_folder("targetedReanalysis_mostIntenseTargs_CV_60.txt"), sep='\t').fillna('')
+    expected70Df = pd.read_csv(get_file_from_system_test_folder("targetedReanalysis_mostIntenseTargs_CV_70.txt"), sep='\t').fillna('')
+    expected80Df = pd.read_csv(get_file_from_system_test_folder("targetedReanalysis_mostIntenseTargs_CV_80.txt"), sep='\t').fillna('')
+
+    for column in targetedOutputDict["fullDf"].columns:
+        expectedColumn = np.array(expectedAllCVDf[column])
+        column = np.array(targetedOutputDict["fullDf"][column])
+        if expectedColumn.dtype.kind in np.typecodes["AllFloat"]:
+            np.testing.assert_array_almost_equal(expectedColumn, column)
+        else:
+            np.testing.assert_array_equal(expectedColumn, column)
+    assert expected30Df.equals(targetedOutputDict["CV_30"])
+    assert expected40Df.equals(targetedOutputDict["CV_40"])
+    assert expected50Df.equals(targetedOutputDict["CV_50"])
+    assert expected60Df.equals(targetedOutputDict["CV_60"])
+    assert expected70Df.equals(targetedOutputDict["CV_70"])
+    assert expected80Df.equals(targetedOutputDict["CV_80"])
