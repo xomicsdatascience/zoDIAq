@@ -36,13 +36,11 @@ def main():
             outFileHeader = create_outfile_header(args['outDirectory'], queryFile, args['correction'])
             for dfType, df in outputDict.items():
 
-                if dfType != "fullOutput":
-                    dfType += "FDR"
                 df.to_csv(f'{outFileHeader}_{dfType}.csv', index=False)
             if args["proteinTargets"]:
-                targetedReanalysisDict = create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides(outputDict["proteinFDR"], isIncludeHeavy=args['heavyMz'], maximumPeptidesPerProtein=args['proteinTargets'])
+                targetedReanalysisDict = create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides(outputDict["proteinFDR"], isIncludeHeavyIsotopes=args['heavyMz'], maximumPeptidesPerProtein=args['proteinTargets'])
             else:
-                targetedReanalysisDict = create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides(outputDict["peptideFDR"], isIncludeHeavy=args['heavyMz'], maximumPeptidesPerProtein=args['proteinTargets'])
+                targetedReanalysisDict = create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides(outputDict["peptideFDR"], isIncludeHeavyIsotopes=args['heavyMz'], maximumPeptidesPerProtein=args['proteinTargets'])
             for dfType, df in targetedReanalysisDict.items():
                 if "CV" in dfType:
                     df.to_csv(f'{outFileHeader}_mostIntenseTargs_{dfType}.txt', index=False, sep='\t')
@@ -96,7 +94,7 @@ def main():
         # Post-processing
         # Check whether we should do anything
         if args['commonpeptide']:
-            print(f'Performing protein quantification and identifying common peptpides...', flush=True)
+            print(f'Performing protein quantification and identifying common peptides...', flush=True)
             peptide_quantification.get_all_peptide_quantities(file_list=args['files'],
                                                               library_file=args['library'],
                                                               csodiaq_output_dir=args['outDirectory'],
