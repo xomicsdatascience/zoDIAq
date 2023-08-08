@@ -45,14 +45,21 @@ def calculate_mz_of_heavy_isotope_of_each_peptide(fdrDf):
     )
 
 
-def make_bin_assignments_for_mz_values(mzValues, binWidth=0.75):
+def make_bin_assignments_for_mz_values(mzValues, maxDistanceFromBinValue=0.75):
+    fullBinWidth = maxDistanceFromBinValue * 2
     bins = np.arange(
-        int(min(mzValues)) - 1, int(max(mzValues) + binWidth * 3) + 1, binWidth * 2
+        int(min(mzValues)) - 1, int(max(mzValues) + fullBinWidth) + 1, fullBinWidth
     )
     values = np.digitize(mzValues, bins)
     mzBinValues = bins[values]
-    mzBinValues -= binWidth
+    mzBinValues -= maxDistanceFromBinValue
     return mzBinValues
+
+
+def check_if_is_protein_fdr_analysis(maximumPeptidesPerProtein):
+    if maximumPeptidesPerProtein:
+        return True
+    return False
 
 
 def filter_out_peptides_based_on_user_settings(
@@ -64,7 +71,7 @@ def filter_out_peptides_based_on_user_settings(
                 fdrDf
             )
         )
-    if maximumPeptidesPerProtein:
+    if check_if_is_protein_fdr_analysis(maximumPeptidesPerProtein):
         fdrDf = filter_to_only_keep_top_peptides_unique_to_protein(
             fdrDf, maximumPeptidesPerProtein
         )
