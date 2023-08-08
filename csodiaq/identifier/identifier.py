@@ -19,9 +19,9 @@ from csodiaq.identifier.outputFormattingFunctions import (
     extract_metadata_from_match_and_score_dataframes,
     format_output_line,
     format_output_as_pandas_dataframe,
-    generate_spectral_fdr_output_from_full_output,
-    generate_peptide_fdr_output_from_full_output,
-    generate_protein_fdr_output_from_peptide_fdr_output,
+    create_spectral_fdr_output_from_full_output,
+    create_peptide_fdr_output_from_full_output,
+    create_protein_fdr_output_from_peptide_fdr_output,
 )
 import pandas as pd
 
@@ -208,13 +208,13 @@ class Identifier:
         outputDict["fullOutput"] = self._format_identifications_as_dataframe(
             matchDf, scoreDf
         )
-        outputDict["spectralFDR"] = generate_spectral_fdr_output_from_full_output(
+        outputDict["spectralFDR"] = create_spectral_fdr_output_from_full_output(
             outputDict["fullOutput"]
         )
-        outputDict["peptideFDR"] = generate_peptide_fdr_output_from_full_output(
+        outputDict["peptideFDR"] = create_peptide_fdr_output_from_full_output(
             outputDict["fullOutput"]
         )
-        outputDict["proteinFDR"] = generate_protein_fdr_output_from_peptide_fdr_output(
+        outputDict["proteinFDR"] = create_protein_fdr_output_from_peptide_fdr_output(
             outputDict["peptideFDR"]
         )
 

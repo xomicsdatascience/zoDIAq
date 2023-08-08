@@ -90,14 +90,14 @@ def drop_duplicate_values_from_df_in_given_column(df, column):
     return df.drop_duplicates(subset=column, keep="first").reset_index(drop=True)
 
 
-def generate_spectral_fdr_output_from_full_output(fullDf, fdrCutoff=0.01):
+def create_spectral_fdr_output_from_full_output(fullDf, fdrCutoff=0.01):
     fdrs = calculate_fdr_rates_of_decoy_array(fullDf["isDecoy"])
     scoreDfCutoffIdx = np.argmax(fdrs > fdrCutoff)
     fullDf["spectralFDR"] = fdrs
     return fullDf.iloc[:scoreDfCutoffIdx, :]
 
 
-def generate_peptide_fdr_output_from_full_output(fullDf, fdrCutoff=0.01):
+def create_peptide_fdr_output_from_full_output(fullDf, fdrCutoff=0.01):
     peptideDf = drop_duplicate_values_from_df_in_given_column(fullDf, "peptide")
     fdrs = calculate_fdr_rates_of_decoy_array(peptideDf["isDecoy"])
     scoreDfCutoffIdx = np.argmax(fdrs > fdrCutoff)
@@ -105,7 +105,7 @@ def generate_peptide_fdr_output_from_full_output(fullDf, fdrCutoff=0.01):
     return peptideDf.iloc[:scoreDfCutoffIdx, :]
 
 
-def generate_protein_fdr_output_from_peptide_fdr_output(peptideDf):
+def create_protein_fdr_output_from_peptide_fdr_output(peptideDf):
     highConfidenceProteins = identify_high_confidence_proteins(peptideDf)
     proteinDf = organize_peptide_df_by_leading_proteins(
         peptideDf, highConfidenceProteins

@@ -137,7 +137,14 @@ def get_peptide_quantities(file_list: list,
     if common_dataframe.shape[0] == 0:
         return
     # Load library
-    library_dataframe = pd.read_csv(library_file, sep='\t')
+    if library_file.endswith('.csv'):
+        sep = ','
+    elif library_file.endswith('.tsv'):
+        sep = '\t'
+    else:
+        raise ValueError('library must be either .csv or .tsv')
+
+    library_dataframe = pd.read_csv(library_file, sep=sep)
 
     # Get experimental spectra
     exp_data = []

@@ -3,17 +3,15 @@ from csodiaq.identifier.outputFormattingFunctions import (
     extract_metadata_from_match_and_score_dataframes,
     format_output_as_pandas_dataframe,
     drop_duplicate_values_from_df_in_given_column,
-    generate_spectral_fdr_output_from_full_output,
-    generate_peptide_fdr_output_from_full_output,
+    create_spectral_fdr_output_from_full_output,
+    create_peptide_fdr_output_from_full_output,
     identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff,
     organize_peptide_df_by_leading_proteins,
     determine_if_peptides_are_unique_to_leading_protein,
 )
 import pandas as pd
 import pytest
-
-pd.set_option("display.max_columns", None)
-pd.set_option("display.max_rows", None)
+import numpy as np
 
 
 @pytest.fixture
@@ -39,7 +37,7 @@ def identifierOutputData():
     ]
 
 
-def test__output_writing_functions__format_output_line(identifierOutputData):
+def test__output_formatting_functions__format_output_line(identifierOutputData):
     libDict = {
         "peptide": "testPeptide",
         "proteinName": "testProtein",
@@ -67,7 +65,7 @@ def test__output_writing_functions__format_output_line(identifierOutputData):
     assert output == identifierOutputData
 
 
-def test__output_writing_functions__extract_metadata_from_match_and_score_dataframes():
+def test__output_formatting_functions__extract_metadata_from_match_and_score_dataframes():
     lib1Idx = 0
     lib2Idx = 1
     queryIdx = 0
@@ -164,7 +162,7 @@ def test__output_writing_functions__extract_metadata_from_match_and_score_datafr
             assert output[idKey][metadataType] == metadataValue
 
 
-def test__output_writing_functions__format_output_as_pandas_dataframe(
+def test__output_formatting_functions__format_output_as_pandas_dataframe(
     identifierOutputData,
 ):
     expectedColumns = [
@@ -195,7 +193,7 @@ def test__output_writing_functions__format_output_as_pandas_dataframe(
     assert expectedOutputDf.equals(outputDf)
 
 
-def test__output_writing_functions__drop_duplicate_values_from_df_in_given_column():
+def test__output_formatting_functions__drop_duplicate_values_from_df_in_given_column():
     columnName = "test"
     data = [
         [0],
@@ -215,7 +213,7 @@ def test__output_writing_functions__drop_duplicate_values_from_df_in_given_colum
     assert expectedOutputDf.equals(outputDf)
 
 
-def test__output_writing_functions__generate_spectral_fdr_output_from_full_output():
+def test__output_formatting_functions__create_spectral_fdr_output_from_full_output():
     numNonDecoys = 100
     numDecoys = 2
     isDecoyColumn = ([0] * numNonDecoys) + ([1] * numDecoys)
@@ -227,11 +225,11 @@ def test__output_writing_functions__generate_spectral_fdr_output_from_full_outpu
     expectedOutputDf["isDecoy"] = isDecoyColumn[:-1]
     expectedOutputDf["spectralFDR"] = [0] * numNonDecoys + [1 / (numNonDecoys + 1)]
 
-    outputDf = generate_spectral_fdr_output_from_full_output(inputDf)
+    outputDf = create_spectral_fdr_output_from_full_output(inputDf)
     assert expectedOutputDf.equals(outputDf)
 
 
-def test__output_writing_functions__generate_peptide_fdr_output_from_full_output():
+def test__output_formatting_functions__create_peptide_fdr_output_from_full_output():
     numDuplicatePeptides = 2
     numNonDuplicatePeptides = 99
     numNonDecoys = numDuplicatePeptides + numNonDuplicatePeptides
@@ -253,12 +251,12 @@ def test__output_writing_functions__generate_peptide_fdr_output_from_full_output
     expectedOutputDf["peptide"] = peptideColumn[1:-1]
     expectedOutputDf["isDecoy"] = isDecoyColumn[1:-1]
     expectedOutputDf["peptideFDR"] = [0] * (numNonDecoys - 1) + [1 / numNonDecoys]
-    outputDf = generate_peptide_fdr_output_from_full_output(inputDf)
+    outputDf = create_peptide_fdr_output_from_full_output(inputDf)
 
     assert expectedOutputDf.equals(outputDf)
 
 
-def test__output_writing_functions__organize_peptide_df_by_leading_proteins():
+def test__output_formatting_functions__organize_peptide_df_by_leading_proteins():
     peptideProteinData = [
         ["peptide01", "1/protein7"],
         ["peptide02", "3/protein4/protein6/protein9"],
@@ -302,7 +300,7 @@ def test__output_writing_functions__organize_peptide_df_by_leading_proteins():
     assert expectedOutputDf.equals(outputDf)
 
 
-def test__output_writing_functions__identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff():
+def test__output_formatting_functions__identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff():
     numLeadingProteins = 100
     duplicateLeadingProtein = 0
     decoyLeadingProteins = ["decoy1", "decoy2"]
@@ -329,7 +327,7 @@ def test__output_writing_functions__identify_leading_protein_to_fdr_dictionary_f
     assert expectedOutput == output
 
 
-def test__determine_if_peptides_are_unique_to_leading_protein():
+def test__output_formatting_functions__determine_if_peptides_are_unique_to_leading_protein():
     inputData = [
         ["peptide1", "protein1"],
         ["peptide2", "protein1"],
