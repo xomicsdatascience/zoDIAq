@@ -1,9 +1,7 @@
 import pandas as pd
 import numpy as np
-from csodiaq.identifier import (
-    Identifier,
-    create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides,
-)
+from csodiaq.identification import Identifier
+from csodiaq.targetedReanalysis import create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides
 from csodiaq.loaders.query import QueryLoaderContext
 import os
 import pickle

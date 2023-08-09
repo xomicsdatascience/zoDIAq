@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.spatial.distance import cosine
 import matplotlib.pyplot as pyplot
-from csodiaq.identifier.matchingFunctions import eliminate_low_count_matches
+from csodiaq.identification.matchingFunctions import eliminate_low_count_matches
 
 
 def score_library_to_query_matches(matches):
@@ -30,11 +30,6 @@ def calculate_macc_score(vectorA, vectorB):
     return len(vectorA.index) ** (1 / 5) * calculate_cosine_similarity_score(
         vectorA, vectorB
     )
-
-
-def identify_all_decoys(decoySet, scoreDf):
-    return np.where(scoreDf["libraryIdx"].isin(decoySet), 1, 0)
-
 
 def determine_index_of_fdr_cutoff(isDecoyArray, fdrCutoff=1e-2):
     if isDecoyArray[0]:

@@ -138,7 +138,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
     expectedOutputDict = {
         (516.801083027, "YRPGTVALR"): {
             "precursorCharge": 2,
-            "identifier": "51327_YRPGTVALR_2",
+            "identification": "51327_YRPGTVALR_2",
             "proteinName": "5/sp|Q71DI3|H32_HUMAN/sp|Q6NXT2|H3C_HUMAN/sp|Q16695|H31T_HUMAN/sp|P84243|H33_HUMAN/sp|P68431|H31_HUMAN",
             "peaks": [
                 (429.745245163, 39.7, 0),
@@ -170,7 +170,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
     expectedOutputDict = {
         (300.83985497, "FVVGSHVR"): {
             "precursorCharge": 3,
-            "identifier": "1_FVVGSHVR_3",
+            "identification": "1_FVVGSHVR_3",
             "proteinName": "1/sp|P49736|MCM2_HUMAN",
             "peaks": [
                 (411.24627802, 1499.7, 0),
@@ -184,7 +184,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
         },
         (300.83985497, "SVHGVVFR"): {
             "precursorCharge": 3,
-            "identifier": "2_SVHGVVFR_3",
+            "identification": "2_SVHGVVFR_3",
             "proteinName": "1/DECOY_0_sp|P49736|MCM2_HUMAN",
             "peaks": [
                 (421.255780064, 1499.7, 1),
@@ -259,7 +259,7 @@ def test__library_loader_strategy_table__organize_data_by_csodiaq_library_dict_k
     expectedTupleToDictMetadataDict = {
         (516.801083027, "YRPGTVALR"): {
             "precursorCharge": 2,
-            "identifier": "51327_YRPGTVALR_2",
+            "identification": "51327_YRPGTVALR_2",
             "proteinName": "5/sp|Q71DI3|H32_HUMAN/sp|Q6NXT2|H3C_HUMAN/sp|Q16695|H31T_HUMAN/sp|P84243|H33_HUMAN/sp|P68431|H31_HUMAN",
         }
     }
@@ -338,7 +338,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
     expectedOutputDict = {
         (375.873226, "FANYIDKVR"): {
             "precursorCharge": 3,
-            "identifier": "FANYIDKVR",
+            "identification": "FANYIDKVR",
             "proteinName": "P08670",
             "peaks": [
                 (175.118953, 2926.18, 0),
@@ -371,7 +371,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
     expectedOutputDict = {
         (375.873226, "FANYIDKVR"): {
             "precursorCharge": 3,
-            "identifier": "FANYIDKVR",
+            "identification": "FANYIDKVR",
             "proteinName": "P08670",
             "peaks": [
                 (175.118953, 2926.18, 0),
@@ -390,7 +390,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
         },
         (375.885354, "FGTINIVHPK"): {
             "precursorCharge": 3,
-            "identifier": "FGTINIVHPK",
+            "identification": "FGTINIVHPK",
             "proteinName": "Q9Y617",
             "peaks": [
                 (205.097155, 1987.8866, 1),
@@ -478,7 +478,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
     expectedOutputDict = {
         (374.1867597566666, "_MMPAAALIM[Oxidation (O)]R_"): {
             "precursorCharge": 3,
-            "identifier": "MMPAAALIMR",
+            "identification": "MMPAAALIMR",
             "proteinName": "noloss",
             "peaks": [
                 (175.11895751953125, 1.0, 0),
@@ -511,7 +511,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
     expectedOutputDict = {
         (254.3121828783333, "_MRALLLIPPPPM[Oxidation (O)]R_"): {
             "precursorCharge": 6,
-            "identifier": "MRALLLIPPPPMR",
+            "identification": "MRALLLIPPPPMR",
             "proteinName": "noloss",
             "peaks": [
                 (175.11895751953125, 0.6478143930435181, 0),
@@ -530,7 +530,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
         },
         (374.1867597566666, "_MMPAAALIM[Oxidation (O)]R_"): {
             "precursorCharge": 3,
-            "identifier": "MMPAAALIMR",
+            "identification": "MMPAAALIMR",
             "proteinName": "noloss",
             "peaks": [
                 (175.11895751953125, 1.0, 1),
@@ -549,7 +549,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
         },
         (507.272473135, "_MLAPPPIM[Oxidation (O)]K_"): {
             "precursorCharge": 2,
-            "identifier": "MLAPPPIMK",
+            "identification": "MLAPPPIMK",
             "proteinName": "noloss",
             "peaks": [
                 (245.1318206787109, 0.8553705215454102, 2),

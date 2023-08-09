@@ -3,6 +3,7 @@ import os
 import time
 import numpy as np
 from abc import ABC, abstractmethod
+import re
 
 def set_command_line_settings():
     parser = argparse.ArgumentParser(description="")
@@ -69,9 +70,35 @@ def add_id_parser(commandParser):
 
 def add_score_parser(commandParser):
     scoringParser = commandParser.add_parser('score', help='Scores confidence in identified peptides and removes those above a False Discovery Rate (FDR) of 0.01.\nNOTE: The identification output must include decoys for accurate FDR scoring.')
+    scoringParser.add_argument(
+        "-i",
+        "--input",
+        type=IdentificationOutputDirectory(),
+        required=True,
+        help="Directory that contains outputs of the identification step of CsoDIAq.\nRequired."
+    )
+    scoringParser.add_argument(
+        "-s",
+        "--score",
+        choices=["macc","cosine"],
+        default="macc",
+        help="Type of scoring to apply for calculating the False Discovery Rate (FDR). Default is MaCC score (see paper for explanation). \nOptional. Choices are cosine and MaCC."
+    )
+
+
+
 
 def add_reanalysis_parser(commandParser):
     reanalysisParser = commandParser.add_parser('targetedReanalysis', help='Creates files readable by a mass spectrometer for targeted reanalysis of identified peptides.')
+    '''
+    reanalysisParser.add_argument(
+        "-p",
+        "--protein",
+        type=RestrictedFloat("protein", minValue=1),
+        default=0,
+        help="Determines the maximum number of peptides per identified protein to include.\nOptional. Not setting this variable will result in "
+    )
+    '''
 
 def create_output_name(commandName):
     return f"csodiaq-{commandName}-{time.strftime('%Y%m%d-%H%M%S')}"
@@ -201,3 +228,20 @@ class RestrictedFloat(RestrictedNumber):
 
     def coerce_into_expected_type(self, value):
         return float(value)
+
+class IdentificationOutputDirectory:
+    def __call__(self, idDir):
+        outputDict = {}
+        if not os.path.isdir(idDir):
+            raise argparse.ArgumentTypeError(
+                "The -i or --input argument must be a directory."
+            )
+        idOutputPattern = re.compile(r'^CsoDIAq-file.*fullOutput\.csv')
+        files = os.listdir(idDir)
+        idOutputFiles = [file for file in os.listdir(idDir) if idOutputPattern.search(file)]
+        if len(idOutputFiles) == 0:
+            raise argparse.ArgumentTypeError(
+                "The -i or --input argument directory must contain .csv files that are outputs from the identification workflow in CsoDIAq."
+            )
+        outputDict['idFiles'] = idOutputFiles
+        return outputDict

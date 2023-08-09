@@ -4,7 +4,7 @@ newColumns = [
     "peakMz",
     "peakIntensity",
     "precursorCharge",
-    "identifier",
+    "identification",
     "proteinName",
 ]
 

@@ -1,11 +1,9 @@
-import os.path
 import pandas as pd
 import numpy as np
-from csodiaq.identifier.scoringFunctions import (
+from csodiaq.scoring.scoringFunctions import (
     calculate_fdr_rates_of_decoy_array,
-    determine_index_of_fdr_cutoff,
 )
-from csodiaq.identifier.idpickerFunctions import identify_high_confidence_proteins
+from csodiaq.identification.idpickerFunctions import identify_high_confidence_proteins
 from csodiaq.utils import format_protein_list_to_string, format_protein_string_to_list
 
 
@@ -19,7 +17,7 @@ def format_output_line(libMetadata, queMetadata, matchMetadata):
         libMetadata["precursorMz"],
         libMetadata["precursorCharge"],
         matchMetadata["cosineSimilarityScore"],
-        libMetadata["identifier"],
+        libMetadata["identification"],
         queMetadata["peaksCount"],
         len(libMetadata["peaks"]),
         matchMetadata["shared"],
@@ -257,3 +255,6 @@ def determine_if_peptides_are_unique_to_leading_protein(proteinDf):
     uniquePeptides = np.array([0] * len(proteinDf.index))
     uniquePeptides[uniqueValuesDf.index] = 1
     return list(uniquePeptides)
+
+def identify_all_decoys(decoySet, scoreDf):
+    return np.where(scoreDf["libraryIdx"].isin(decoySet), 1, 0)

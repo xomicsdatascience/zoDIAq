@@ -1,5 +1,5 @@
 from csodiaq import set_command_line_settings
-from csodiaq.identifier import Identifier
+from csodiaq.identification import Identifier
 from csodiaq.utils import create_outfile_header
 
 def main():

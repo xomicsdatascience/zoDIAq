@@ -1,4 +1,4 @@
-from csodiaq.identifier.outputFormattingFunctions import (
+from csodiaq.identification.outputFormattingFunctions import (
     format_output_line,
     extract_metadata_from_match_and_score_dataframes,
     format_output_as_pandas_dataframe,
@@ -8,6 +8,7 @@ from csodiaq.identifier.outputFormattingFunctions import (
     identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff,
     organize_peptide_df_by_leading_proteins,
     determine_if_peptides_are_unique_to_leading_protein,
+    identify_all_decoys,
 )
 import pandas as pd
 import pytest
@@ -44,7 +45,7 @@ def test__output_formatting_functions__format_output_line(identifierOutputData):
         "isDecoy": 0,
         "precursorMz": 0,
         "precursorCharge": 1,
-        "identifier": "testIdentifiers",
+        "identification": "testIdentifiers",
         "peaks": list(range(2)),
     }
     queryDict = {
@@ -341,3 +342,17 @@ def test__output_formatting_functions__determine_if_peptides_are_unique_to_leadi
     ]
     output = determine_if_peptides_are_unique_to_leading_protein(inputDf)
     assert expectedOutput == output
+
+def test__score_functions__identify_all_decoys():
+    isNotDecoy, isDecoy = 0, 1
+    targetLibraryIdx, decoyLibraryIdx, queryIdx = 0, 1, 0
+
+    scoreData = [
+        [targetLibraryIdx, queryIdx],
+        [decoyLibraryIdx, queryIdx],
+    ]
+    scoreDf = pd.DataFrame(scoreData, columns=["libraryIdx", "queryIdx"])
+    expectedOutput = np.array([isNotDecoy, isDecoy])
+    decoySet = set([decoyLibraryIdx])
+    output = identify_all_decoys(decoySet, scoreDf)
+    assert np.array_equal(output, expectedOutput)

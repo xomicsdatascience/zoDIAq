@@ -4,14 +4,12 @@ import re
 import numpy as np
 from math import isclose
 
-from csodiaq.identifier.scoringFunctions import (
+from csodiaq.scoring.scoringFunctions import (
     score_library_to_query_matches,
     calculate_cosine_similarity_score,
     calculate_macc_score,
-    identify_all_decoys,
     determine_index_of_fdr_cutoff,
     calculate_fdr_rates_of_decoy_array,
-    calculate_ppm_offset_tolerance,
     calculate_ppm_offset_tolerance_using_mean_and_standard_deviation,
     calculate_ppm_offset_tolerance_using_tallest_bin_peak,
     filter_matches_by_ppm_offset_and_tolerance,
@@ -85,21 +83,6 @@ def test__score_functions__score_library_to_query_matches(vectorA, vectorB):
     )
     sortedOutputDf = score_library_to_query_matches(unsortedMatchesDf)
     assert expectedOutputDf.equals(sortedOutputDf)
-
-
-def test__score_functions__identify_all_decoys():
-    isNotDecoy, isDecoy = 0, 1
-    targetLibraryIdx, decoyLibraryIdx, queryIdx = 0, 1, 0
-
-    scoreData = [
-        [targetLibraryIdx, queryIdx],
-        [decoyLibraryIdx, queryIdx],
-    ]
-    scoreDf = pd.DataFrame(scoreData, columns=["libraryIdx", "queryIdx"])
-    expectedOutput = np.array([isNotDecoy, isDecoy])
-    decoySet = set([decoyLibraryIdx])
-    output = identify_all_decoys(decoySet, scoreDf)
-    assert np.array_equal(output, expectedOutput)
 
 
 def test__score_functions__calculate_fdr_rates_of_decoy_array():

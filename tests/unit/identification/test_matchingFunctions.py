@@ -1,6 +1,6 @@
 import pandas as pd
 
-from csodiaq.identifier.matchingFunctions import (
+from csodiaq.identification.matchingFunctions import (
     match_library_to_query_pooled_spectra,
     calculate_parts_per_million_relative_difference,
     is_within_tolerance,

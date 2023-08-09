@@ -3,7 +3,7 @@ import argparse
 import re
 import os
 from csodiaq import set_command_line_settings
-from csodiaq.csodiaqParser import OutputDirectory, InputQueryFile, LibraryFile, RestrictedInt, RestrictedFloat
+from csodiaq.csodiaqParser import OutputDirectory, InputQueryFile, LibraryFile, RestrictedInt, RestrictedFloat, IdentificationOutputDirectory
 from unittest.mock import Mock
 from tempfile import TemporaryDirectory, NamedTemporaryFile
 
@@ -174,6 +174,27 @@ def test__csodiaq__restricted_float_parsing_class__succeeds_when_value_is_equal_
     assert output == 3
 
 @pytest.fixture
+def identificationOutputDirectory():
+    return IdentificationOutputDirectory()
+
+def test__csodiaq__identification_output_directory_parsing_class__fails_when_not_a_directory(identificationOutputDirectory):
+    testFile = NamedTemporaryFile(prefix="csodiaq_test_file_", suffix=".txt")
+    errorOutput = "The -i or --input argument must be a directory."
+    with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
+        identificationOutputDirectory(testFile.name)
+
+def test__csodiaq__identification_output_directory_parsing_class__fails_when_directory_has_no_csodiaq_identification_outputs(identificationOutputDirectory):
+    testDir = TemporaryDirectory(prefix="csodiaq_test_directory_")
+    testFile1 = NamedTemporaryFile(prefix="csodiaq_test_file1_", suffix=".txt", dir=testDir.name, delete=False)
+    testFile2 = NamedTemporaryFile(prefix="csodiaq_test_file2_", suffix="fullOutput.csv", dir=testDir.name, delete=False)
+    testFile3 = NamedTemporaryFile(prefix="CsoDIAq-file_3", suffix=".csv", dir=testDir.name, delete=False)
+    testFile4 = NamedTemporaryFile(prefix="stuffCsoDIAq-file_4", suffix="fullOutput.csv", dir=testDir.name, delete=False)
+    errorOutput = "The -i or --input argument directory must contain .csv files that are outputs from the identification workflow in CsoDIAq."
+    with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
+        identificationOutputDirectory(testDir.name)
+
+
+@pytest.fixture
 def idFiles():
     class fileObj:
         def __init__(self):
@@ -255,11 +276,6 @@ def test__csodiaq__set_command_line_settings__id_fails_when_match_tolerance_grea
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
         args = vars(parser.parse_args(idArgs))
 
-def test__csodiaq__set_command_line_settings__id_succeeds_with_custom_match_tolerance(parser, idArgs):
-    idArgs += ['-t', '10']
-    args = vars(parser.parse_args(idArgs))
-    assert args['matchTolerance'] == 10
-
 def test__csodiaq__set_command_line_settings__id_succeeds_with_no_correction_flag(parser, idArgs):
     idArgs += ['-nc']
     args = vars(parser.parse_args(idArgs))
@@ -300,8 +316,21 @@ def test__csodiaq__set_command_line_settings__id_fails_with_histogram_argument_a
         args = vars(parser.parse_args(idArgs))
 
 @pytest.fixture
-def scoreArgs():
-    return ["score"]
+def scoreFiles():
+    class fileObj:
+        def __init__(self):
+            self.idOutputDir = TemporaryDirectory(prefix="test_csodiaq_id_output_dir")
+            self.idOutputFile1 = NamedTemporaryFile(prefix="CsoDIAq-file", suffix="fullOutput.csv", dir=self.idOutputDir.name, delete=False)
+            self.idOutputFile2 = NamedTemporaryFile(prefix="CsoDIAq-file", suffix="fullOutput.csv", dir=self.idOutputDir.name, delete=False)
+    return fileObj()
+
+@pytest.fixture
+def scoreArgs(scoreFiles):
+    return [
+        "score",
+        "-i",
+        scoreFiles.idOutputDir.name,
+    ]
 
 @pytest.fixture
 def parsedScoreArgs(parser, scoreArgs):
@@ -309,6 +338,25 @@ def parsedScoreArgs(parser, scoreArgs):
 
 def test__csodiaq__set_command_line_settings__initialize_scoring(parsedScoreArgs):
     assert parsedScoreArgs["command"] == "score"
+    assert parsedScoreArgs["input"]
+    assert len(parsedScoreArgs["input"]["idFiles"]) == 2
+    assert parsedScoreArgs["score"] == "macc"
+
+def test__csodiaq__set_command_line_settings__score_succeeds_with_cosine_input(parser, scoreArgs):
+    scoreArgs += ['-s', 'cosine']
+    args = vars(parser.parse_args(scoreArgs))
+    assert args["score"] == "cosine"
+
+def test__csodiaq__set_command_line_settings__score_succeeds_with_macc_input(parser, scoreArgs):
+    scoreArgs += ['-s', 'macc']
+    args = vars(parser.parse_args(scoreArgs))
+    assert args["score"] == "macc"
+
+def test__csodiaq__set_command_line_settings__score_fails_with_other_input(parser, scoreArgs):
+    scoreArgs += ['-s', 'shouldFail']
+    errorOutput = "argument -s/--score: invalid choice: 'shouldFail' (choose from 'macc', 'cosine')"
+    with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
+        args = vars(parser.parse_args(scoreArgs))
 
 @pytest.fixture
 def reanalysisArgs():
