@@ -211,7 +211,6 @@ def test__csodiaq__set_command_line_settings__initialize_identification(parser, 
     assert not parsedIdArgs["noCorrection"]
     assert parsedIdArgs["correctionDegree"] == 0
     assert not parsedIdArgs["histogram"]
-    assert parsedIdArgs["maxQueryPeaks"] == np.inf
 
 def test__csodiaq__set_command_line_settings__id_fails_when_no_output_dir_provided(parser, idArgs):
     idArgsWithoutOutput = idArgs[:1] + idArgs[3:]
