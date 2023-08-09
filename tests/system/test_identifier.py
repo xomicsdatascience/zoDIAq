@@ -25,18 +25,13 @@ def get_file_from_system_test_folder(file):
 def commandLineArgs():
     args = {
         "command": "id",
-        "files": [get_file_from_system_test_folder("20190412_DI2A_1to1_tMS2_n3.mzXML")],
+        "input": [get_file_from_system_test_folder("20190412_DI2A_1to1_tMS2_n3.mzXML")],
         "library": get_file_from_system_test_folder("system_test_library.csv"),
-        "outDirectory": "",
-        "fragmentMassTolerance": 30,
-        "correction": 0,
+        "output": "",
+        "matchTolerance": 30,
+        "noCorrection": False,
+        "correctionDegree": 0,
         "histogram": False,
-        "proteinTargets": 1,
-        "query": 0,
-        "heavyMz": True,
-        "peaks": 0,
-        "commonpeptide": False,
-        "commonprotein": False,
     }
     return args
 
@@ -96,7 +91,7 @@ def get_columns_that_should_match(type):
 
 def test__identifier__main_workflow(commandLineArgs):
     identifier = Identifier(commandLineArgs)
-    queryFile = commandLineArgs["files"][0]
+    queryFile = commandLineArgs["input"][0]
     identifier._queryContext = QueryLoaderContext(queryFile)
 
     expectedMatchDf = pd.read_csv(

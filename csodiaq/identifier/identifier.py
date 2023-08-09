@@ -24,7 +24,7 @@ from csodiaq.identifier.outputFormattingFunctions import (
     create_protein_fdr_output_from_peptide_fdr_output,
 )
 import pandas as pd
-
+import os
 
 class Identifier:
     """
@@ -92,7 +92,7 @@ class Identifier:
             matchDf = match_library_to_query_pooled_spectra(
                 pooledLibPeaks,
                 pooledQueryPeaks,
-                self._commandLineArgs["fragmentMassTolerance"],
+                self._commandLineArgs["matchTolerance"],
             )
             matchDf = eliminate_low_count_matches(matchDf)
             matchDfs.append(matchDf)
@@ -125,7 +125,7 @@ class Identifier:
         return score_library_to_query_matches(matchDf)
 
     def _correction_process_is_to_be_applied(self):
-        return self._commandLineArgs["correction"] != -1
+        return not self._commandLineArgs["noCorrection"]
 
     def _apply_correction_to_match_dataframe(self, matchDf):
         """
@@ -154,22 +154,16 @@ class Identifier:
                 with fewer than 3 peak matches is repeated as well.
         """
         offset, tolerance = calculate_ppm_offset_tolerance(
-            matchDf["ppmDifference"], self._commandLineArgs["correction"]
+            matchDf["ppmDifference"], self._commandLineArgs["correctionDegree"]
         )
+        queryFile = self._queryContext.filePath.split('/')[-1]
+        outFile = '.'.join(queryFile.split('.')[:-1]) + '_correctionHistogram.png'
         if self._commandLineArgs["histogram"]:
-            outFileHeader = (
-                self._commandLineArgs["outDirectory"]
-                + "CsoDIAq-file"
-                + "_"
-                + ".".join(self._queryContext.filePath.split("/")[-1].split(".")[:-1])
-                + "_corrected"
-            )
-
             create_ppm_histogram(
                 matchDf["ppmDifference"],
                 offset,
                 tolerance,
-                outFileHeader + "_histogram.png",
+                os.path.join(self._commandLineArgs["output"], outFile)
             )
         matchDf = filter_matches_by_ppm_offset_and_tolerance(matchDf, offset, tolerance)
         return eliminate_low_count_matches(matchDf)
