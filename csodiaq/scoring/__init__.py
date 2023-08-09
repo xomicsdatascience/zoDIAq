@@ -1,7 +1,13 @@
 from .scoringFunctions import (
     score_library_to_query_matches,
     determine_index_of_fdr_cutoff,
-    filter_matches_by_ppm_offset_and_tolerance,
-    calculate_ppm_offset_tolerance,
-    create_ppm_histogram,
+    calculate_fdr_rates_of_decoy_array,
+)
+
+from .idpickerFunctions import identify_high_confidence_proteins
+
+from .fdrCalculationFunctions import (
+    create_peptide_fdr_output_from_full_output,
+    create_protein_fdr_output_from_peptide_fdr_output,
+    create_spectral_fdr_output_from_full_output,
 )

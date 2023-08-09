@@ -336,12 +336,14 @@ def scoreArgs(scoreFiles):
 def parsedScoreArgs(parser, scoreArgs):
     return vars(parser.parse_args(scoreArgs))
 
-def test__csodiaq__set_command_line_settings__initialize_scoring(parsedScoreArgs):
+def test__csodiaq__set_command_line_settings__initialize_scoring(scoreFiles, parsedScoreArgs):
     assert parsedScoreArgs["command"] == "score"
-    assert parsedScoreArgs["input"]
+    assert isinstance(parsedScoreArgs["input"], dict)
+    assert parsedScoreArgs["input"]["identificationDirectory"] == scoreFiles.idOutputDir.name
     assert len(parsedScoreArgs["input"]["idFiles"]) == 2
     assert parsedScoreArgs["score"] == "macc"
 
+@pytest.mark.skip('we may want to make an fdr scoring metric based purely on cosine. Keeping this here in case that becomes used.')
 def test__csodiaq__set_command_line_settings__score_succeeds_with_cosine_input(parser, scoreArgs):
     scoreArgs += ['-s', 'cosine']
     args = vars(parser.parse_args(scoreArgs))
@@ -354,7 +356,7 @@ def test__csodiaq__set_command_line_settings__score_succeeds_with_macc_input(par
 
 def test__csodiaq__set_command_line_settings__score_fails_with_other_input(parser, scoreArgs):
     scoreArgs += ['-s', 'shouldFail']
-    errorOutput = "argument -s/--score: invalid choice: 'shouldFail' (choose from 'macc', 'cosine')"
+    errorOutput = "argument -s/--score: invalid choice: 'shouldFail' (choose from 'macc')"
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
         args = vars(parser.parse_args(scoreArgs))
 

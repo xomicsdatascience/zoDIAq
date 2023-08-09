@@ -5,23 +5,25 @@ from csodiaq.identification.poolingFunctions import (
 from csodiaq.identification.matchingFunctions import (
     match_library_to_query_pooled_spectra,
     eliminate_low_count_matches,
+    filter_matches_by_ppm_offset_and_tolerance,
+    calculate_ppm_offset_tolerance,
+    create_ppm_histogram,
 )
 from csodiaq.scoring import (
     score_library_to_query_matches,
     determine_index_of_fdr_cutoff,
-    filter_matches_by_ppm_offset_and_tolerance,
-    calculate_ppm_offset_tolerance,
-    create_ppm_histogram,
 )
 from csodiaq.identification.outputFormattingFunctions import (
     extract_metadata_from_match_and_score_dataframes,
     format_output_line,
     format_output_as_pandas_dataframe,
-    create_spectral_fdr_output_from_full_output,
+    identify_all_decoys,
+)
+
+from csodiaq.scoring.fdrCalculationFunctions import (
     create_peptide_fdr_output_from_full_output,
     create_protein_fdr_output_from_peptide_fdr_output,
-    identify_all_decoys,
-
+    create_spectral_fdr_output_from_full_output,
 )
 import pandas as pd
 import os
@@ -67,7 +69,7 @@ class Identifier:
         if self._correction_process_is_to_be_applied():
             matchDf = self._apply_correction_to_match_dataframe(matchDf)
         scoreDf = self._score_spectra_matches(matchDf)
-        return self._format_identification_data_with_fdr_outputs(matchDf, scoreDf)
+        return self._format_identifications_as_dataframe(matchDf, scoreDf)
 
     def _match_library_to_query_spectra(self):
         """
@@ -196,23 +198,6 @@ class Identifier:
             )
             outputs.append(outputLine)
         return format_output_as_pandas_dataframe(self._queryContext.filePath, outputs)
-
-    def _format_identification_data_with_fdr_outputs(self, matchDf, scoreDf):
-        outputDict = {}
-        outputDict["fullOutput"] = self._format_identifications_as_dataframe(
-            matchDf, scoreDf
-        )
-        outputDict["spectralFDR"] = create_spectral_fdr_output_from_full_output(
-            outputDict["fullOutput"]
-        )
-        outputDict["peptideFDR"] = create_peptide_fdr_output_from_full_output(
-            outputDict["fullOutput"]
-        )
-        outputDict["proteinFDR"] = create_protein_fdr_output_from_peptide_fdr_output(
-            outputDict["peptideFDR"]
-        )
-
-        return outputDict
 
     def _prepare_library_dictionary_for_output(self, libKeyIdx, sortedLibKeys):
         libKey = sortedLibKeys[libKeyIdx]

@@ -1,2 +1,1 @@
 from .identifier import Identifier
-from .idpickerFunctions import identify_high_confidence_proteins

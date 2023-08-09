@@ -80,7 +80,7 @@ def add_score_parser(commandParser):
     scoringParser.add_argument(
         "-s",
         "--score",
-        choices=["macc","cosine"],
+        choices=["macc"],
         default="macc",
         help="Type of scoring to apply for calculating the False Discovery Rate (FDR). Default is MaCC score (see paper for explanation). \nOptional. Choices are cosine and MaCC."
     )
@@ -243,5 +243,6 @@ class IdentificationOutputDirectory:
             raise argparse.ArgumentTypeError(
                 "The -i or --input argument directory must contain .csv files that are outputs from the identification workflow in CsoDIAq."
             )
+        outputDict['identificationDirectory'] = idDir
         outputDict['idFiles'] = idOutputFiles
         return outputDict

@@ -1,5 +1,5 @@
 import pandas as pd
-from csodiaq.identification.idpickerFunctions import (
+from csodiaq.scoring.idpickerFunctions import (
     initialize__format_peptide_protein_connections,
     collapse__group_identically_connected_peptides_and_proteins,
     separate__identify_and_label_independent_clusters,

@@ -1,6 +1,11 @@
 import pandas as pd
 import numpy as np
 from csodiaq.identification import Identifier
+from csodiaq.scoring import (
+    create_peptide_fdr_output_from_full_output,
+    create_protein_fdr_output_from_peptide_fdr_output,
+    create_spectral_fdr_output_from_full_output,
+)
 from csodiaq.targetedReanalysis import create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides
 from csodiaq.loaders.query import QueryLoaderContext
 import os
@@ -116,36 +121,55 @@ def test__identifier__main_workflow(commandLineArgs):
     assert_numeric_pandas_dataframes_are_equal(expectedScoreDf, scoreDf, "score")
 
     expectedFullDf = pd.read_csv(
-        get_file_from_system_test_folder("fullOutput.csv.gz"), compression="gzip"
+        get_file_from_system_test_folder("v1FullOutput.csv.gz"), compression="gzip"
+    )
+
+    fullDf = identifier._format_identifications_as_dataframe(matchDf, scoreDf)
+
+    assert_numeric_pandas_dataframes_are_equal(
+        expectedFullDf, fullDf, "full"
+    )
+    fullDf.to_csv(get_file_from_system_test_folder("v2FullOutput.csv.gz"), index=False, compression="gzip")
+
+
+def test__scoring_workflow():
+
+    fullDf = pd.read_csv(
+        get_file_from_system_test_folder("v2FullOutput.csv.gz"), compression="gzip"
     )
     expectedSpectralDf = pd.read_csv(
-        get_file_from_system_test_folder("spectralOutput.csv.gz"), compression="gzip"
+        get_file_from_system_test_folder("v1SpectralOutput.csv.gz"), compression="gzip"
     )
     expectedPeptideDf = pd.read_csv(
-        get_file_from_system_test_folder("peptideOutput.csv.gz"), compression="gzip"
+        get_file_from_system_test_folder("v1PeptideOutput.csv.gz"), compression="gzip"
     )
     expectedProteinDf = pd.read_csv(
-        get_file_from_system_test_folder("proteinOutput.csv.gz"), compression="gzip"
-    )
-    outputDict = identifier._format_identification_data_with_fdr_outputs(
-        matchDf, scoreDf
+        get_file_from_system_test_folder("v1ProteinOutput.csv.gz"), compression="gzip"
     )
 
+    spectralDf = create_spectral_fdr_output_from_full_output(fullDf)
     assert_numeric_pandas_dataframes_are_equal(
-        expectedFullDf, outputDict["fullOutput"], "full"
-    )
-    assert_numeric_pandas_dataframes_are_equal(
-        expectedSpectralDf, outputDict["spectralFDR"], "spectral"
-    )
-    assert_numeric_pandas_dataframes_are_equal(
-        expectedPeptideDf, outputDict["peptideFDR"], "peptide"
-    )
-    assert_numeric_pandas_dataframes_are_equal(
-        expectedProteinDf, outputDict["proteinFDR"], "protein"
+        expectedSpectralDf, spectralDf, "spectral"
     )
 
+    peptideDf = create_peptide_fdr_output_from_full_output(fullDf)
+    assert_numeric_pandas_dataframes_are_equal(
+        expectedPeptideDf, peptideDf, "peptide"
+    )
+
+    proteinDf = create_protein_fdr_output_from_peptide_fdr_output(peptideDf)
+    assert_numeric_pandas_dataframes_are_equal(
+        expectedProteinDf, proteinDf, "protein"
+    )
+    proteinDf.to_csv(get_file_from_system_test_folder("v2ProteinOutput.csv.gz"), index=False, compression="gzip")
+
+
+def test__targeted_reanalysis_worflow():
+    proteinDf = pd.read_csv(
+        get_file_from_system_test_folder("v2ProteinOutput.csv.gz"), compression="gzip"
+    )
     targetedOutputDict = create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides(
-        outputDict["proteinFDR"],
+        proteinDf,
         isIncludeHeavyIsotopes=True,
         maximumPeptidesPerProtein=1,
     )
