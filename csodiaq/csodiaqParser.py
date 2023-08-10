@@ -102,7 +102,7 @@ def add_reanalysis_parser(commandParser):
         "--protein",
         type=RestrictedInt("protein", minValue=1),
         default=0,
-        help="Determines the maximum number of peptides per identified protein to include.\nOptional. Not setting this variable will result in "
+        help="Determines the maximum number of peptides per identified protein to include.\nOptional. Not setting this variable will result in evaluating peptides only with no reference to proteins."
     )
     reanalysisParser.add_argument(
         "-heavy",
@@ -110,6 +110,13 @@ def add_reanalysis_parser(commandParser):
         default=False,
         action='store_true',
         help="This flag indicates that files for targeted re-analysis should include heavy fragment isotopes for SILAC quantification.\nOptional."
+    )
+    reanalysisParser.add_argument(
+        "-b",
+        "--binValueProximity",
+        type=RestrictedFloat("binValueProximity", minValue=0.01),
+        default=0.75,
+        help="When setting bin values, this option indicates how close an m/z value must be to the bin value. Default is 0.75.\nOptional.\nNOTE: Multiple targeted m/z values may fall within a range that a mass spectrometer can identify in one scan. Thus, m/z values are binned to prevent redundant reanalysis.\nExample: let's say we have the m/z values of 199.5 and 200.5, a binValueProximity value of 0.75, and a bin value of 200.0.\nBoth of these m/z values would be in the same bin, as they are both with 0.75 of 200.0."
     )
 
 def check_for_conflicting_args(args):
@@ -186,30 +193,6 @@ class LibraryFile:
             )
         return libraryFile
 
-class RestrictedInt:
-    def __init__(self, type, minValue=-np.inf, maxValue=np.inf):
-        self.type = type
-        self.minValue = minValue
-        self.maxValue = maxValue
-        assert self.minValue <= self.maxValue
-
-    def __call__(self, intValue):
-        try:
-            intValue = int(intValue)
-        except ValueError:
-            raise argparse.ArgumentTypeError(
-                f"The {self.type} argument must be an integer."
-            )
-        if intValue < self.minValue:
-            raise argparse.ArgumentTypeError(
-                f"The {self.type} argument must be an integer greater than or equal to {self.minValue}."
-            )
-        if intValue > self.maxValue:
-            raise argparse.ArgumentTypeError(
-                f"The {self.type} argument must be an integer less than or equal to {self.maxValue}."
-            )
-        return intValue
-
 class RestrictedNumber(ABC):
     def __init__(self, type, minValue=-np.inf, maxValue=np.inf):
         self.type = type
@@ -253,6 +236,14 @@ class RestrictedFloat(RestrictedNumber):
 
     def coerce_into_expected_type(self, value):
         return float(value)
+
+    def __call__(self, value):
+        value = super().__call__(value)
+        if self.type == "binValueProximity" and not round(value, 2) == value:
+            raise argparse.ArgumentTypeError(
+                f"The {self.type} argument cannot have values beyond 2 decimal places (mass spectrometers are typically not sensitive enough for that specificity)."
+            )
+        return value
 
 class CsodiaqOutputDirectory(ABC):
     def __call__(self, idDir):

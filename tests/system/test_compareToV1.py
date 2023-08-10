@@ -12,10 +12,6 @@ import os
 import pickle
 import pytest
 
-pd.set_option("display.max_columns", None)
-pd.set_option("display.max_rows", None)
-
-
 def get_parent_dir():
     return os.path.dirname(os.path.abspath(__file__))
 
@@ -170,6 +166,7 @@ def test__targeted_reanalysis_worflow():
         proteinDf,
         isIncludeHeavyIsotopes=True,
         maximumPeptidesPerProtein=1,
+        binValueProximity=0.75,
     )
     targetedOutputDict["fullDf"] = targetedOutputDict["fullDf"].drop(
         ["fileName"], axis=1

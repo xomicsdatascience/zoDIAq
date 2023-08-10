@@ -295,18 +295,36 @@ def expectedLightMzBins():
 def test__output_formatting_functions__make_bin_assignments_for_mz_values(
     inputBinningDf, expectedLightMzBins
 ):
-    bins = make_bin_assignments_for_mz_values(inputBinningDf["MzLIB"])
+    binValueProximity = 0.75
+    bins = make_bin_assignments_for_mz_values(inputBinningDf["MzLIB"], maxDistanceFromBinValue=binValueProximity)
     np.testing.assert_array_equal(expectedLightMzBins, bins)
+
+def test__output_formatting_functions__make_bin_assignments_for_mz_values__custom_bin_value_works(
+    inputBinningDf
+):
+    expectedLightMzBinsForBinValues1 = [
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        102.0,
+        116.0,
+        116.0,
+    ]
+    binValueProximity = 1.0
+    bins = make_bin_assignments_for_mz_values(inputBinningDf["MzLIB"], maxDistanceFromBinValue=binValueProximity)
+    np.testing.assert_array_equal(expectedLightMzBinsForBinValues1, bins)
 
 
 def test__output_formatting_functions__organize_for_targeted_reanalysis_of_identified_peptides__no_heavy(
     inputBinningDf, expectedLightMzBins
 ):
     isIncludeHeavyIsotopes = False
+    binValueProximity = 0.75
     expectedOutputDf = inputBinningDf.copy()
     expectedOutputDf["lightMzBin"] = expectedLightMzBins
     outputDf = organize_for_targeted_reanalysis_of_identified_peptides(
-        inputBinningDf, isIncludeHeavyIsotopes=isIncludeHeavyIsotopes
+        inputBinningDf, isIncludeHeavyIsotopes=isIncludeHeavyIsotopes, binValueProximity=binValueProximity
     )
     assert expectedOutputDf.equals(outputDf)
 
@@ -349,12 +367,13 @@ def test__output_formatting_functions__organize_for_targeted_reanalysis_of_ident
     inputBinningDf, expectedLightMzBins, expectedHeavyMzColumn, expectedHeavyMzBinColumn
 ):
     isIncludeHeavyIsotopes = True
+    binValueProximity = 0.75
     expectedOutputDf = inputBinningDf.copy()
     expectedOutputDf["lightMzBin"] = expectedLightMzBins
     expectedOutputDf["heavyMz"] = expectedHeavyMzColumn
     expectedOutputDf["heavyMzBin"] = expectedHeavyMzBinColumn
     outputDf = organize_for_targeted_reanalysis_of_identified_peptides(
-        inputBinningDf, isIncludeHeavyIsotopes=isIncludeHeavyIsotopes
+        inputBinningDf, isIncludeHeavyIsotopes=isIncludeHeavyIsotopes, binValueProximity=binValueProximity
     )
     assert expectedOutputDf.equals(outputDf)
 
@@ -363,6 +382,7 @@ def test__output_formatting_functions__calculate_binning_information_by_compensa
     inputBinningDf, expectedLightMzBins
 ):
     isIncludeHeavyIsotopes = False
+    binValueProximity = 0.75
     inputBinningDfCV30 = inputBinningDf.copy()
     inputBinningDfCV30["CompensationVoltage"] = [-30] * len(inputBinningDfCV30.index)
     inputBinningDfCV40 = inputBinningDf.copy()
@@ -371,7 +391,7 @@ def test__output_formatting_functions__calculate_binning_information_by_compensa
     expectedOutputDf = inputDf.copy()
     expectedOutputDf["lightMzBin"] = np.append(expectedLightMzBins, expectedLightMzBins)
     outputDf = calculate_binning_information_by_compensation_voltage(
-        inputDf, isIncludeHeavyIsotopes=isIncludeHeavyIsotopes
+        inputDf, isIncludeHeavyIsotopes=isIncludeHeavyIsotopes, binValueProximity=binValueProximity
     )
     assert expectedOutputDf.equals(outputDf)
 
@@ -379,6 +399,7 @@ def test__output_formatting_functions__calculate_binning_information_by_compensa
 def test__output_formatting_functions__calculate_binning_information_by_compensation_voltage__with_heavy(
     inputBinningDf, expectedLightMzBins, expectedHeavyMzColumn, expectedHeavyMzBinColumn
 ):
+    binValueProximity = 0.75
     isIncludeHeavyIsotopes = True
     inputBinningDfCV30 = inputBinningDf.copy()
     inputBinningDfCV30["CompensationVoltage"] = [-30] * len(inputBinningDfCV30.index)
@@ -392,7 +413,7 @@ def test__output_formatting_functions__calculate_binning_information_by_compensa
         expectedHeavyMzBinColumn, expectedHeavyMzBinColumn
     )
     outputDf = calculate_binning_information_by_compensation_voltage(
-        inputDf, isIncludeHeavyIsotopes=isIncludeHeavyIsotopes
+        inputDf, isIncludeHeavyIsotopes=isIncludeHeavyIsotopes, binValueProximity=binValueProximity
     )
     assert expectedOutputDf.equals(outputDf)
 
@@ -546,6 +567,7 @@ def test__output_formatting_functions__create_mass_spec_input_dataframes_for_tar
 ):
     isIncludeHeavyIsotopes = False
     maximumPeptidesPerProtein = 0
+    binValueProximity = 0.75
     fullDf = inputProteinFdrDf.copy()
     fullDf["lightMzBin"] = [
         99.75,
@@ -584,6 +606,7 @@ def test__output_formatting_functions__create_mass_spec_input_dataframes_for_tar
         inputProteinFdrDf,
         isIncludeHeavyIsotopes=isIncludeHeavyIsotopes,
         maximumPeptidesPerProtein=maximumPeptidesPerProtein,
+        binValueProximity=binValueProximity,
     )
     for type, df in expectedOutputDict.items():
         assert type in outputDict
@@ -595,6 +618,7 @@ def test__output_formatting_functions__create_mass_spec_input_dataframes_for_tar
 ):
     isIncludeHeavyIsotopes = True
     maximumPeptidesPerProtein = 2
+    binValueProximity = 0.75
     filteredSortedIdxs = [3, 2, 6, 5, 8, 7, 9]
     filteredDf = inputProteinFdrDf.loc[filteredSortedIdxs].reset_index(drop=True)
     inputDfCV30 = inputProteinFdrDf.copy()
@@ -682,6 +706,7 @@ def test__output_formatting_functions__create_mass_spec_input_dataframes_for_tar
         inputDf,
         isIncludeHeavyIsotopes=isIncludeHeavyIsotopes,
         maximumPeptidesPerProtein=maximumPeptidesPerProtein,
+        binValueProximity=binValueProximity,
     )
     expectedFullDf = (
         expectedOutputDict["fullDf"]

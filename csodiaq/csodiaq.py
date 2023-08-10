@@ -55,6 +55,7 @@ def run_targeted_reanalysis(args):
             scoreDf,
             isIncludeHeavyIsotopes=args["heavyIsotope"],
             maximumPeptidesPerProtein=args["protein"],
+            binValueProximity=args["binValueProximity"]
         )
         for name, df in targetedOutputDict.items():
             if name == "fullDf":
@@ -71,7 +72,8 @@ def make_targeted_reanalysis_output_directory_name(args):
         heavyHeader = 'includesHeavyIsotopes'
     else:
         heavyHeader = 'noHeavyIsotopes'
-    newDirectoryName = f'targetedReanalysis_{proteinHeader}_{heavyHeader}'
+    binWidthHeader = f'binValueProximity{str(args["binValueProximity"]).replace(".","p")}'
+    newDirectoryName = f'targetedReanalysis_{proteinHeader}_{heavyHeader}_{binWidthHeader}'
     return os.path.join(args["input"]["csodiaqDirectory"], newDirectoryName)
 
 def extract_file_name_without_file_type(file):

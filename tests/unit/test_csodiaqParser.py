@@ -173,6 +173,21 @@ def test__csodiaq_parser__restricted_float_parsing_class__succeeds_when_value_is
     assert isinstance(output, float)
     assert output == 3
 
+def test__csodiaq_parser__restricted_float_parsing_class__bin_proximity__fails_when_decimal_place_further_than_2():
+    binProximityFloat = RestrictedFloat("binValueProximity")
+    inputValue = "1.001"
+    errorOutput = "The binValueProximity argument cannot have values beyond 2 decimal places (mass spectrometers are typically not sensitive enough for that specificity)."
+    with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
+        binProximityFloat(inputValue)
+
+def test__csodiaq_parser__restricted_float_parsing_class__succeeds_when_decimal_place_further_than_2_when_not_bin_proximity(restrictedFloat):
+    inputValue = "1.001"
+    expectedOutput = 1.001
+    output = restrictedFloat(inputValue)
+    assert expectedOutput == output
+
+
+
 @pytest.fixture
 def identificationOutputDirectory():
     return IdentificationOutputDirectory()
@@ -387,11 +402,8 @@ def scoreArgs(scoreFiles):
         scoreFiles.idOutputDir.name,
     ]
 
-@pytest.fixture
-def parsedScoreArgs(parser, scoreArgs):
-    return vars(parser.parse_args(scoreArgs))
-
-def test__csodiaq_parser__set_args_from_command_line_input__initialize_scoring(scoreFiles, parsedScoreArgs):
+def test__csodiaq_parser__set_args_from_command_line_input__initialize_scoring(parser, scoreFiles, scoreArgs):
+    parsedScoreArgs = vars(parser.parse_args(scoreArgs))
     assert parsedScoreArgs["command"] == "score"
     assert isinstance(parsedScoreArgs["input"], dict)
     assert parsedScoreArgs["input"]["csodiaqDirectory"] == scoreFiles.idOutputDir.name
@@ -435,11 +447,8 @@ def reanalysisArgs(reanalysisFiles):
         reanalysisFiles.scoreOutputDir.name,
     ]
 
-@pytest.fixture
-def parsedReanalysisArgs(parser, reanalysisArgs):
-    return vars(parser.parse_args(reanalysisArgs))
-
-def test__csodiaq_parser__set_args_from_command_line_input__initialize_targeted_reanalysis(reanalysisFiles, parsedReanalysisArgs):
+def test__csodiaq_parser__set_args_from_command_line_input__initialize_targeted_reanalysis(parser, reanalysisFiles, reanalysisArgs):
+    parsedReanalysisArgs = vars(parser.parse_args(reanalysisArgs))
     assert parsedReanalysisArgs["command"] == "targetedReanalysis"
     assert parsedReanalysisArgs["input"]["csodiaqDirectory"] == reanalysisFiles.scoreOutputDir.name
     assert isinstance(parsedReanalysisArgs["input"], dict)
@@ -447,6 +456,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__initialize_targeted_
     assert set(parsedReanalysisArgs["input"]["protein"]) == set([reanalysisFiles.proteinFdrFile1.name.split('/')[-1], reanalysisFiles.proteinFdrFile2.name.split('/')[-1]])
     assert parsedReanalysisArgs["protein"] == 0
     assert not parsedReanalysisArgs["heavyIsotope"]
+    assert parsedReanalysisArgs["binValueProximity"] == 0.75
 
 def test__csodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_fails_when_below_1(parser, reanalysisArgs):
     reanalysisArgs += ['-p', '0']
@@ -476,6 +486,23 @@ def test__csodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
         args = vars(parser.parse_args(reanalysisArgs))
 
+def test__csodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_succeeds_with_custom_bin_value_proximity_input(parser, reanalysisArgs):
+    reanalysisArgs += ['-b', '1']
+    args = vars(parser.parse_args(reanalysisArgs))
+    assert args['binValueProximity'] == 1
+
+def test__csodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_fails_with_bin_value_proximity_with_more_than_2_decimal_places(parser, reanalysisArgs):
+    reanalysisArgs += ['-b', '1.001']
+    errorOutput = "The binValueProximity argument cannot have values beyond 2 decimal places (mass spectrometers are typically not sensitive enough for that specificity)."
+    with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
+        args = vars(parser.parse_args(reanalysisArgs))
+
+def test__csodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_fails_with_bin_value_proximity_of_0(parser, reanalysisArgs):
+    reanalysisArgs += ['-b', '0']
+    errorOutput = "argument -b/--binValueProximity: The binValueProximity argument must be a float greater than or equal to 0.01."
+    with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
+        args = vars(parser.parse_args(reanalysisArgs))
+
 def test__csodiaq_parser__check_for_conflicting_args__presence_of_histogram_tag_fails_if_no_correction_tag_set(parser, idArgs):
     idArgs += ['-nc', '-hist']
     errorOutput = "The histogram flag is invalidated by the noCorrection flag. Please inspect your input and remove one of the tags."
@@ -498,7 +525,7 @@ def test__csodiaq_parser__check_for_conflicting_args__presence_of_protein_arg_fa
         "-i",
         testDir.name,
         "-p",
-        "1"
+        "1",
     ]
     errorOutput = "The protein argument requires the presence of protein FDR files to function. Please run the protein scoring workflow or remove the protein argument from your commands."
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
