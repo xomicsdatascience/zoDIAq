@@ -5,7 +5,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 import re
 
-def set_command_line_settings():
+def set_args_from_command_line_input():
     parser = argparse.ArgumentParser(description="")
     commandParser = parser.add_subparsers(dest="command", help="CsoDIAq Functions")
     guiParser = commandParser.add_parser(
@@ -112,8 +112,19 @@ def add_reanalysis_parser(commandParser):
         help="This flag indicates that files for targeted re-analysis should include heavy fragment isotopes for SILAC quantification.\nOptional."
     )
 
-
-
+def check_for_conflicting_args(args):
+    if args["command"] == 'id' and args['histogram'] and args['noCorrection']:
+        raise argparse.ArgumentTypeError(
+            "The histogram flag is invalidated by the noCorrection flag. Please inspect your input and remove one of the tags."
+        )
+    if args["command"] == 'id' and args['correctionDegree'] and args['noCorrection']:
+        raise argparse.ArgumentTypeError(
+            "The correctionDegree parameter is invalidated by the noCorrection flag. Please inspect your input and remove one of them."
+        )
+    if args["command"] == 'targetedReanalysis' and args['protein'] and len(args['input']['protein']) == 0:
+        raise argparse.ArgumentTypeError(
+            "The protein argument requires the presence of protein FDR files to function. Please run the protein scoring workflow or remove the protein argument from your commands."
+        )
 def create_output_name(commandName):
     return f"csodiaq-{commandName}-{time.strftime('%Y%m%d-%H%M%S')}"
 

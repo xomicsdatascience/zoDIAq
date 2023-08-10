@@ -1,14 +1,15 @@
 import os
 import pandas as pd
-from csodiaq import set_command_line_settings
+from csodiaq import set_args_from_command_line_input, check_for_conflicting_args
 from csodiaq.identification import Identifier
-from csodiaq.utils import create_outfile_header
+from csodiaq.utils import create_outfile_header, confirm_proteins_in_list_are_in_appropriate_format
 from csodiaq.scoring import create_spectral_fdr_output_from_full_output, create_peptide_fdr_output_from_full_output, create_protein_fdr_output_from_peptide_fdr_output
 from csodiaq.targetedReanalysis import create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides
 
 def main():
-    parser = set_command_line_settings()
+    parser = set_args_from_command_line_input()
     args = vars(parser.parse_args())
+    check_for_conflicting_args(args)
     if args['command'] == 'gui' or args['command'] is None: pass
     elif args['command'] == 'id':
         run_identification(args)
@@ -35,8 +36,9 @@ def run_scoring(args):
         spectralDf.to_csv(os.path.join(outputDir, f'{fileHeader}_spectralFDR.csv'), index=False)
         peptideDf = create_peptide_fdr_output_from_full_output(idDf)
         peptideDf.to_csv(os.path.join(outputDir, f'{fileHeader}_peptideFDR.csv'), index=False)
-        proteinDf = create_protein_fdr_output_from_peptide_fdr_output(peptideDf) #TODO: This should be conditional on the presence of an appropriately-formatted protein column
-        proteinDf.to_csv(os.path.join(outputDir, f'{fileHeader}_proteinFDR.csv'), index=False)
+        if confirm_proteins_in_list_are_in_appropriate_format(peptideDf["protein"]):
+            proteinDf = create_protein_fdr_output_from_peptide_fdr_output(peptideDf)
+            proteinDf.to_csv(os.path.join(outputDir, f'{fileHeader}_proteinFDR.csv'), index=False)
 
 def run_targeted_reanalysis(args):
     outputDir = make_targeted_reanalysis_output_directory_name(args)
@@ -59,9 +61,6 @@ def run_targeted_reanalysis(args):
                 df.to_csv(os.path.join(outputDir, f'{name}_{fileHeader}.csv'), index=False)
             else:
                 df.to_csv(os.path.join(outputDir, f'{name}_{fileHeader}.txt'), sep='\t', index=False)
-
-
-
 
 def make_targeted_reanalysis_output_directory_name(args):
     if args['protein']:
