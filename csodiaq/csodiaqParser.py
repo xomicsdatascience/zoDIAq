@@ -90,15 +90,29 @@ def add_score_parser(commandParser):
 
 def add_reanalysis_parser(commandParser):
     reanalysisParser = commandParser.add_parser('targetedReanalysis', help='Creates files readable by a mass spectrometer for targeted reanalysis of identified peptides.')
-    '''
+    reanalysisParser.add_argument(
+        "-i",
+        "--input",
+        type=ScoringOutputDirectory(),
+        required=True,
+        help="Directory that contains outputs of the scoring step of CsoDIAq.\nRequired."
+    )
     reanalysisParser.add_argument(
         "-p",
         "--protein",
-        type=RestrictedFloat("protein", minValue=1),
+        type=RestrictedInt("protein", minValue=1),
         default=0,
         help="Determines the maximum number of peptides per identified protein to include.\nOptional. Not setting this variable will result in "
     )
-    '''
+    reanalysisParser.add_argument(
+        "-heavy",
+        "--heavyIsotope",
+        default=False,
+        action='store_true',
+        help="This flag indicates that files for targeted re-analysis should include heavy fragment isotopes for SILAC quantification.\nOptional."
+    )
+
+
 
 def create_output_name(commandName):
     return f"csodiaq-{commandName}-{time.strftime('%Y%m%d-%H%M%S')}"
@@ -229,20 +243,45 @@ class RestrictedFloat(RestrictedNumber):
     def coerce_into_expected_type(self, value):
         return float(value)
 
-class IdentificationOutputDirectory:
+class CsodiaqOutputDirectory(ABC):
     def __call__(self, idDir):
-        outputDict = {}
         if not os.path.isdir(idDir):
             raise argparse.ArgumentTypeError(
                 "The -i or --input argument must be a directory."
             )
-        idOutputPattern = re.compile(r'^CsoDIAq-file.*fullOutput\.csv')
-        files = os.listdir(idDir)
-        idOutputFiles = [file for file in os.listdir(idDir) if idOutputPattern.search(file)]
-        if len(idOutputFiles) == 0:
+        outputDict = self.add_necessary_directory_contents(idDir)
+        outputDict['csodiaqDirectory'] = idDir
+        return outputDict
+
+    def find_files_with_necessary_format(self, dir, regexPattern):
+        filePattern = re.compile(regexPattern)
+        dirContentList = os.listdir(dir)
+        files = [file for file in dirContentList if filePattern.search(file)]
+        return files
+
+    @abstractmethod
+    def add_necessary_directory_contents(self, directory): pass
+
+class IdentificationOutputDirectory(CsodiaqOutputDirectory):
+    def add_necessary_directory_contents(self, idDir):
+        idFiles = self.find_files_with_necessary_format(idDir, r'^CsoDIAq-file.*fullOutput\.csv')
+        if len(idFiles) == 0:
             raise argparse.ArgumentTypeError(
                 "The -i or --input argument directory must contain .csv files that are outputs from the identification workflow in CsoDIAq."
             )
-        outputDict['identificationDirectory'] = idDir
-        outputDict['idFiles'] = idOutputFiles
-        return outputDict
+        return {'idFiles': idFiles}
+
+class ScoringOutputDirectory(CsodiaqOutputDirectory):
+    def add_necessary_directory_contents(self, scoreDir):
+
+        peptideFdrFiles = self.find_files_with_necessary_format(scoreDir, r'peptideFDR\.csv$')
+        proteinFdrFiles = self.find_files_with_necessary_format(scoreDir, r'proteinFDR\.csv$')
+        if len(peptideFdrFiles) == 0 and len(proteinFdrFiles) == 0:
+            raise argparse.ArgumentTypeError(
+                "The -i or --input argument directory must contain .csv files that are outputs from the scoring workflow in CsoDIAq (peptide or protein score outputs required)."
+            )
+
+        return {
+            'peptide': peptideFdrFiles,
+            'protein': proteinFdrFiles,
+        }

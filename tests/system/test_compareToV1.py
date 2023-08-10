@@ -129,7 +129,6 @@ def test__identifier__main_workflow(commandLineArgs):
     assert_numeric_pandas_dataframes_are_equal(
         expectedFullDf, fullDf, "full"
     )
-    fullDf.to_csv(get_file_from_system_test_folder("v2FullOutput.csv.gz"), index=False, compression="gzip")
 
 
 def test__scoring_workflow():
@@ -161,7 +160,6 @@ def test__scoring_workflow():
     assert_numeric_pandas_dataframes_are_equal(
         expectedProteinDf, proteinDf, "protein"
     )
-    proteinDf.to_csv(get_file_from_system_test_folder("v2ProteinOutput.csv.gz"), index=False, compression="gzip")
 
 
 def test__targeted_reanalysis_worflow():

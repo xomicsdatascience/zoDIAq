@@ -3,7 +3,7 @@ import argparse
 import re
 import os
 from csodiaq import set_command_line_settings
-from csodiaq.csodiaqParser import OutputDirectory, InputQueryFile, LibraryFile, RestrictedInt, RestrictedFloat, IdentificationOutputDirectory
+from csodiaq.csodiaqParser import OutputDirectory, InputQueryFile, LibraryFile, RestrictedInt, RestrictedFloat, IdentificationOutputDirectory, ScoringOutputDirectory
 from unittest.mock import Mock
 from tempfile import TemporaryDirectory, NamedTemporaryFile
 
@@ -193,6 +193,61 @@ def test__csodiaq__identification_output_directory_parsing_class__fails_when_dir
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
         identificationOutputDirectory(testDir.name)
 
+@pytest.fixture
+def scoringOutputDirectory():
+    return ScoringOutputDirectory()
+
+def test__csodiaq__scoring_output_directory_parsing_class__fails_when_not_a_directory(scoringOutputDirectory):
+    testFile = NamedTemporaryFile(prefix="csodiaq_test_file_", suffix=".txt")
+    errorOutput = "The -i or --input argument must be a directory."
+    with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
+        scoringOutputDirectory(testFile.name)
+
+def test__csodiaq__scoring_output_directory_parsing_class__succeeds_when_directory_has_a_single_peptide_fdr_file(scoringOutputDirectory):
+    testDir = TemporaryDirectory(prefix="csodiaq_test_directory_")
+    testFile1 = NamedTemporaryFile(prefix="csodiaq_test_file1_", suffix=".txt", dir=testDir.name, delete=False)
+    testFile2 = NamedTemporaryFile(prefix="csodiaq_test_file2_", suffix="peptideFDR.csv", dir=testDir.name, delete=False)
+    outputDict = scoringOutputDirectory(testDir.name)
+    assert 'peptide' in outputDict
+    assert len(outputDict['peptide']) == 1
+    assert outputDict['peptide'][0] == testFile2.name.split('/')[-1]
+
+def test__csodiaq__scoring_output_directory_parsing_class__succeeds_when_directory_has_multiple_peptide_fdr_files(scoringOutputDirectory):
+    testDir = TemporaryDirectory(prefix="csodiaq_test_directory_")
+    testFile1 = NamedTemporaryFile(prefix="csodiaq_test_file1_", suffix=".txt", dir=testDir.name, delete=False)
+    testFile2 = NamedTemporaryFile(prefix="csodiaq_test_file2_", suffix="peptideFDR.csv", dir=testDir.name, delete=False)
+    testFile3 = NamedTemporaryFile(prefix="csodiaq_test_file3_", suffix="peptideFDR.csv", dir=testDir.name, delete=False)
+    outputDict = scoringOutputDirectory(testDir.name)
+    assert 'peptide' in outputDict
+    assert len(outputDict['peptide']) == 2
+    assert set(outputDict['peptide']) == set([testFile2.name.split('/')[-1], testFile3.name.split('/')[-1]])
+
+def test__csodiaq__scoring_output_directory_parsing_class__succeeds_when_directory_has_a_single_protein_fdr_file(scoringOutputDirectory):
+    testDir = TemporaryDirectory(prefix="csodiaq_test_directory_")
+    testFile1 = NamedTemporaryFile(prefix="csodiaq_test_file1_", suffix=".txt", dir=testDir.name, delete=False)
+    testFile2 = NamedTemporaryFile(prefix="csodiaq_test_file2_", suffix="proteinFDR.csv", dir=testDir.name, delete=False)
+    outputDict = scoringOutputDirectory(testDir.name)
+    assert 'protein' in outputDict
+    assert len(outputDict['protein']) == 1
+    assert outputDict['protein'][0] == testFile2.name.split('/')[-1]
+
+def test__csodiaq__scoring_output_directory_parsing_class__succeeds_when_directory_has_multiple_protein_fdr_files(scoringOutputDirectory):
+    testDir = TemporaryDirectory(prefix="csodiaq_test_directory_")
+    testFile1 = NamedTemporaryFile(prefix="csodiaq_test_file1_", suffix=".txt", dir=testDir.name, delete=False)
+    testFile2 = NamedTemporaryFile(prefix="csodiaq_test_file2_", suffix="proteinFDR.csv", dir=testDir.name, delete=False)
+    testFile3 = NamedTemporaryFile(prefix="csodiaq_test_file3_", suffix="proteinFDR.csv", dir=testDir.name, delete=False)
+    outputDict = scoringOutputDirectory(testDir.name)
+    assert 'protein' in outputDict
+    assert len(outputDict['protein']) == 2
+    assert set(outputDict['protein']) == set([testFile2.name.split('/')[-1], testFile3.name.split('/')[-1]])
+
+def test__csodiaq__scoring_output_directory_parsing_class__fails_when_directory_has_no_csodiaq_identification_outputs(scoringOutputDirectory):
+    testDir = TemporaryDirectory(prefix="csodiaq_test_directory_")
+    testFile1 = NamedTemporaryFile(prefix="csodiaq_test_file1_", suffix=".txt", dir=testDir.name, delete=False)
+    testFile2 = NamedTemporaryFile(prefix="csodiaq_test_file2_", suffix="FDR.csv", dir=testDir.name, delete=False)
+    errorOutput = "The -i or --input argument directory must contain .csv files that are outputs from the scoring workflow in CsoDIAq (peptide or protein score outputs required)."
+    with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
+        scoringOutputDirectory(testDir.name)
 
 @pytest.fixture
 def idFiles():
@@ -339,7 +394,7 @@ def parsedScoreArgs(parser, scoreArgs):
 def test__csodiaq__set_command_line_settings__initialize_scoring(scoreFiles, parsedScoreArgs):
     assert parsedScoreArgs["command"] == "score"
     assert isinstance(parsedScoreArgs["input"], dict)
-    assert parsedScoreArgs["input"]["identificationDirectory"] == scoreFiles.idOutputDir.name
+    assert parsedScoreArgs["input"]["csodiaqDirectory"] == scoreFiles.idOutputDir.name
     assert len(parsedScoreArgs["input"]["idFiles"]) == 2
     assert parsedScoreArgs["score"] == "macc"
 
@@ -361,15 +416,66 @@ def test__csodiaq__set_command_line_settings__score_fails_with_other_input(parse
         args = vars(parser.parse_args(scoreArgs))
 
 @pytest.fixture
-def reanalysisArgs():
-    return ["targetedReanalysis"]
+def reanalysisFiles():
+    class fileObj:
+        def __init__(self):
+            self.scoreOutputDir = TemporaryDirectory(prefix="test_csodiaq_score_output_dir")
+            self.peptideFdrFile1 = NamedTemporaryFile(suffix="peptideFDR.csv", dir=self.scoreOutputDir.name, delete=False)
+            self.peptideFdrFile2 = NamedTemporaryFile(suffix="peptideFDR.csv", dir=self.scoreOutputDir.name, delete=False)
+            self.proteinFdrFile1 = NamedTemporaryFile(suffix="proteinFDR.csv", dir=self.scoreOutputDir.name, delete=False)
+            self.proteinFdrFile2 = NamedTemporaryFile(suffix="proteinFDR.csv", dir=self.scoreOutputDir.name, delete=False)
+    return fileObj()
+
+
+@pytest.fixture
+def reanalysisArgs(reanalysisFiles):
+    return [
+        "targetedReanalysis",
+        "-i",
+        reanalysisFiles.scoreOutputDir.name,
+    ]
 
 @pytest.fixture
 def parsedReanalysisArgs(parser, reanalysisArgs):
     return vars(parser.parse_args(reanalysisArgs))
 
-def test__csodiaq__set_command_line_settings__initialize_targeted_reanalysis(parsedReanalysisArgs):
+def test__csodiaq__set_command_line_settings__initialize_targeted_reanalysis(reanalysisFiles, parsedReanalysisArgs):
     assert parsedReanalysisArgs["command"] == "targetedReanalysis"
+    assert parsedReanalysisArgs["input"]["csodiaqDirectory"] == reanalysisFiles.scoreOutputDir.name
+    assert isinstance(parsedReanalysisArgs["input"], dict)
+    assert set(parsedReanalysisArgs["input"]["peptide"]) == set([reanalysisFiles.peptideFdrFile1.name.split('/')[-1], reanalysisFiles.peptideFdrFile2.name.split('/')[-1]])
+    assert set(parsedReanalysisArgs["input"]["protein"]) == set([reanalysisFiles.proteinFdrFile1.name.split('/')[-1], reanalysisFiles.proteinFdrFile2.name.split('/')[-1]])
+    assert parsedReanalysisArgs["protein"] == 0
+    assert not parsedReanalysisArgs["heavyIsotope"]
+
+def test__csodiaq__set_command_line_settings__targeted_reanalysis_fails_when_below_1(parser, reanalysisArgs):
+    reanalysisArgs += ['-p', '0']
+    errorOutput = "argument -p/--protein: The protein argument must be an integer greater than or equal to 1."
+    with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
+        args = vars(parser.parse_args(reanalysisArgs))
+
+def test__csodiaq__set_command_line_settings__targeted_reanalysis_fails_when_float_provided(parser, reanalysisArgs):
+    reanalysisArgs += ['-p', '0.2']
+    errorOutput = "argument -p/--protein: The protein argument must be an integer."
+    with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
+        args = vars(parser.parse_args(reanalysisArgs))
+
+def test__csodiaq__set_command_line_settings__targeted_reanalysis_succeeds_with_custom_protein_input(parser, reanalysisArgs):
+    reanalysisArgs += ['-p', '1']
+    args = vars(parser.parse_args(reanalysisArgs))
+    assert args['protein'] == 1
+
+def test__csodiaq__set_command_line_settings__targeted_reanalysis_succeeds_with_heavy_isotope_flag(parser, reanalysisArgs):
+    reanalysisArgs += ['-heavy']
+    args = vars(parser.parse_args(reanalysisArgs))
+    assert args['heavyIsotope']
+
+def test__csodiaq__set_command_line_settings__targeted_reanalysis_fails_with_heavy_isotope_argument_added(parser, reanalysisArgs):
+    reanalysisArgs += ['-heavy', 'randomBadValue']
+    errorOutput = "unrecognized arguments: randomBadValue"
+    with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
+        args = vars(parser.parse_args(reanalysisArgs))
 
 #TODO: make test that checks if the noCorrection tag, histogram tag and correctionDegree values are in conflict
+#TODO: make test that checks if a protein number is provided to targetedReanalysis then proteinFDRs should be present
 #TODO: evaluate if the -peaks tag should be included, or if we should move past that (currently just used to count the number peaks that contribute to the ionCount for the output)
