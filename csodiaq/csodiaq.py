@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from csodiaq import set_args_from_command_line_input, check_for_conflicting_args
 from csodiaq.identification import Identifier
-from csodiaq.utils import create_outfile_header, confirm_proteins_in_list_are_in_appropriate_format
+from csodiaq.utils import create_outfile_header, confirm_proteins_in_list_are_in_appropriate_format, Printer
 from csodiaq.scoring import create_spectral_fdr_output_from_full_output, create_peptide_fdr_output_from_full_output, create_protein_fdr_output_from_peptide_fdr_output, calculate_ion_count_for_each_protein_in_protein_fdr_df, compile_ion_count_comparison_across_runs_df
 from csodiaq.targetedReanalysis import create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides
 from csodiaq.gui import run_gui
@@ -22,14 +22,20 @@ def main():
         run_targeted_reanalysis(args)
 
 def run_identification(args):
+    printer = Printer()
+    printer("Begin Peptide Identification Process")
     identifier = Identifier(args)
     os.mkdir(args['output'])
     for queryFile in args["input"]:
+        printer(f"Beginning Identification for {queryFile} input file")
         identificationFullOutputDf = identifier.identify_library_spectra_in_query_file(queryFile)
         outFileHeader = create_outfile_header(args['output'], queryFile, args['correctionDegree'])
         identificationFullOutputDf.to_csv(f'{outFileHeader}_fullOutput.csv', index=False)
-
+    printer("End Peptide Identification Process")
+    
 def run_scoring(args):
+    printer = Printer()
+    printer("Begin Scoring")
     outputDir = os.path.join(args["input"]["csodiaqDirectory"], f'fdrScores-{args["score"]}')
     if not os.path.exists(outputDir):
         os.mkdir(outputDir)
@@ -47,13 +53,18 @@ def run_scoring(args):
             proteinDf = create_protein_fdr_output_from_peptide_fdr_output(peptideDf)
             proteinDf.to_csv(os.path.join(outputDir, f'{fileHeader}_proteinFDR.csv'), index=False)
             proteinDfs[fileHeader] = calculate_ion_count_for_each_protein_in_protein_fdr_df(proteinDf)
+    printer("Begin Quantifying Common Peptides")
     commonPeptideDf = compile_ion_count_comparison_across_runs_df(peptideDfs, "peptide")
     commonPeptideDf.to_csv(os.path.join(outputDir, 'commonPeptides.csv'))
     if len(proteinDfs) > 0:
+        printer("Begin Quantifying Common Proteins")
         commonProteinDf = compile_ion_count_comparison_across_runs_df(proteinDfs, "protein")
         commonProteinDf.to_csv(os.path.join(outputDir, 'commonProteins.csv'))
+    printer("Finish Scoring")
 
 def run_targeted_reanalysis(args):
+    printer = Printer()
+    printer("Begin Targeted Reanalysis File Generation")
     outputDir = make_targeted_reanalysis_output_directory_name(args)
     if not os.path.exists(outputDir):
         os.mkdir(outputDir)
@@ -75,6 +86,8 @@ def run_targeted_reanalysis(args):
                 df.to_csv(os.path.join(outputDir, f'{name}_{fileHeader}.csv'), index=False)
             else:
                 df.to_csv(os.path.join(outputDir, f'{name}_{fileHeader}.txt'), sep='\t', index=False)
+    printer("End Targeted Reanalysis File Generation")
+
 
 def make_targeted_reanalysis_output_directory_name(args):
     if args['protein']:

@@ -27,6 +27,7 @@ from csodiaq.scoring.fdrCalculationFunctions import (
 )
 import pandas as pd
 import os
+from csodiaq.utils import Printer
 
 class Identifier:
     """
@@ -64,11 +65,16 @@ class Identifier:
         The primary function called for matching library spectra to query spectra.
             This is the only public-facing function of the class.
         """
+        printer = Printer()
         self._queryContext = QueryLoaderContext(queryFile)
+        printer("Begin matching library spectra to query spectra")
         matchDf = self._match_library_to_query_spectra()
+        printer(f"Total number of peaks matched (pre-correction): {len(matchDf.index)}")
         if self._correction_process_is_to_be_applied():
             matchDf = self._apply_correction_to_match_dataframe(matchDf)
+            printer(f"Total number of peaks matched (post-correction): {len(matchDf.index)}")
         scoreDf = self._score_spectra_matches(matchDf)
+        printer("Formatting spectral matches for output")
         return self._format_identifications_as_dataframe(matchDf, scoreDf)
 
     def _match_library_to_query_spectra(self):
