@@ -295,7 +295,6 @@ def test__csodiaq_parser__set_args_from_command_line_input__initialize_identific
     parsedIdArgs = vars(parser.parse_args(idArgs))
     assert parsedIdArgs["command"] == "id"
     assert parsedIdArgs["output"]
-    assert os.path.isdir(parsedIdArgs["output"])
     assert parsedIdArgs["input"]
     assert parsedIdArgs["matchTolerance"] == 30
     assert isinstance(parsedIdArgs["matchTolerance"], float)

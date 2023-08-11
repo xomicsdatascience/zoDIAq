@@ -1,4 +1,5 @@
 from csodiaq.gui.windows.tabs.TabWindow import TabWindow
+from csodiaq.csodiaqParser import IdentificationOutputDirectory
 from PyQt5.QtWidgets import (
     QLabel,
     QPushButton,
@@ -15,6 +16,11 @@ class ScoringTabWindow(TabWindow):
         args = ["score"]
         args.extend(self.get_arg_from_text_field_if_present(self.idOutputDir, '-i'))
         return args
+
+    def check_args_for_invalid_input(self, args):
+        argsConfirmedChecks = []
+        argsConfirmedChecks.append(self.check_if_arg_is_invalid_using_parsing_object(args, '-i', IdentificationOutputDirectory(), self.idOutputDirText, isRequired=True))
+        return 0 not in argsConfirmedChecks
 
     def add_identification_output_directory_field(self, fileLayout):
         self.idOutputDirText = QLabel('CsoDIAq Identification Output Directory:')

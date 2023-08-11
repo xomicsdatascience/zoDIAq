@@ -1,4 +1,5 @@
 from csodiaq.gui.windows.tabs.TabWindow import TabWindow
+from csodiaq.csodiaqParser import ScoringOutputDirectory, RestrictedInt, RestrictedFloat
 from PyQt5.QtWidgets import (
     QLabel,
     QPushButton,
@@ -21,6 +22,13 @@ class TargetedReanalysisTabWindow(TabWindow):
         args.extend(self.get_flag_from_checkbox_if_checked(self.heavyCheckBox, '-heavy'))
         args.extend(self.get_arg_from_text_field_if_present(self.binValue, '-b'))
         return args
+
+    def check_args_for_invalid_input(self, args):
+        argsConfirmedChecks = []
+        argsConfirmedChecks.append(self.check_if_arg_is_invalid_using_parsing_object(args, '-i', ScoringOutputDirectory(), self.scoringOutputDirText, isRequired=True))
+        argsConfirmedChecks.append(self.check_if_arg_is_invalid_using_parsing_object(args, '-p', RestrictedInt("protein", minValue=1), self.proteinText))
+        argsConfirmedChecks.append(self.check_if_arg_is_invalid_using_parsing_object(args, '-b', RestrictedFloat("binValueProximity", minValue=0.01), self.binValueText))
+        return 0 not in argsConfirmedChecks
 
     def add_identification_output_directory_field(self, fileLayout):
         self.scoringOutputDirText = QLabel('CsoDIAq Scoring Output Directory:')

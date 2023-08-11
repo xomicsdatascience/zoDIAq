@@ -23,6 +23,7 @@ def main():
 
 def run_identification(args):
     identifier = Identifier(args)
+    os.mkdir(args['output'])
     for queryFile in args["input"]:
         identificationFullOutputDf = identifier.identify_library_spectra_in_query_file(queryFile)
         outFileHeader = create_outfile_header(args['output'], queryFile, args['correctionDegree'])

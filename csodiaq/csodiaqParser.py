@@ -160,7 +160,6 @@ class OutputDirectory:
                 "The -o or --output argument directory requires an existing parent directory."
             )
         newDirectoryPath = create_new_output_directory_path(newDirectoryLocation, self.commandName)
-        os.mkdir(newDirectoryPath)
         return newDirectoryPath
 
 class InputQueryFile:

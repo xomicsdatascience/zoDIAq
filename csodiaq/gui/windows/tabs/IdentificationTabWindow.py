@@ -1,4 +1,5 @@
 from csodiaq.gui.windows.tabs.TabWindow import TabWindow
+from csodiaq.csodiaqParser import InputQueryFile, LibraryFile, OutputDirectory, RestrictedFloat
 from PyQt5.QtWidgets import (
     QListWidget,
     QPushButton,
@@ -28,6 +29,15 @@ class IdentificationTabWindow(TabWindow):
         if len(shouldDoCorrection) == 0:
             args.append('--noCorrection')
         return args
+
+    def check_args_for_invalid_input(self, args):
+        argsConfirmedChecks = []
+        argsConfirmedChecks.append(self.check_if_arg_is_invalid_using_parsing_object(args, '-i', InputQueryFile(), self.diaFileText, isRequired=True))
+        argsConfirmedChecks.append(self.check_if_arg_is_invalid_using_parsing_object(args, '-l', LibraryFile(), self.libFileText, isRequired=True))
+        argsConfirmedChecks.append(self.check_if_arg_is_invalid_using_parsing_object(args, '-o', OutputDirectory("id"), self.outDirText, isRequired=True))
+        argsConfirmedChecks.append(self.check_if_arg_is_invalid_using_parsing_object(args, '-t', RestrictedFloat("matchTolerance", minValue=1, maxValue=60), self.matchToleranceText))
+        argsConfirmedChecks.append(self.check_if_arg_is_invalid_using_parsing_object(args, '-c', RestrictedFloat("correctionDegree", minValue=0.5, maxValue=2), self.correctionDegreeText))
+        return 0 not in argsConfirmedChecks
 
     def add_dia_input_file_field(self, fileLayout):
         self.diaFiles = QListWidget()

@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import QProcess
 from PyQt5.QtGui import QFont
 from abc import ABC, ABCMeta, abstractmethod
+import numpy as np
 
 class AbstractTabWindow(ABCMeta, type(QWidget)):
     pass
@@ -20,6 +21,8 @@ class TabWindow(QWidget, metaclass=AbstractTabWindow):
     def __init__(self):
         super().__init__()
         self.process = None
+        self.VALID_COLOR = 'lightgreen'
+        self.INVALID_COLOR = 'rgb(255,99,71)'
         fullTabLayout = QVBoxLayout()
         self.add_instruction_link_field(fullTabLayout)
         self.add_file_input_fields(fullTabLayout)
@@ -82,6 +85,10 @@ class TabWindow(QWidget, metaclass=AbstractTabWindow):
     def set_args(self) -> list:
         pass
 
+    @abstractmethod
+    def check_args_for_invalid_input(self, args) -> bool:
+        pass
+
     def message(self, s):
         self.text.appendPlainText(s)
 
@@ -105,9 +112,8 @@ class TabWindow(QWidget, metaclass=AbstractTabWindow):
 
     def start_process(self):
         args = self.set_args()
-        self.killBtn.setEnabled(True)
-
-        if not self.check_if_process_is_running():
+        if not self.check_if_process_is_running() and self.check_args_for_invalid_input(args):
+            self.killBtn.setEnabled(True)
             self.message("Executing process")
             self.message("csodiaq " + " ".join(args))
             self.process = (
@@ -149,3 +155,17 @@ class TabWindow(QWidget, metaclass=AbstractTabWindow):
             return [flag]
         else:
             return []
+
+    def check_if_arg_is_invalid_using_parsing_object(self, args, targetFlag, parsingObject, textObject, isRequired=False):
+        targetIndices = np.array([index for (index, flag) in enumerate(args) if flag == targetFlag]) + 1
+        targets = [args[i] for i in targetIndices]
+        try:
+            if len(targets) == 0 and isRequired:
+                raise ValueError
+            for target in targets:
+                parsingObject(target)
+        except:
+            textObject.setStyleSheet('background-color: ' + self.INVALID_COLOR)
+            return 0
+        textObject.setStyleSheet('background-color: ' + self.VALID_COLOR)
+        return 1
