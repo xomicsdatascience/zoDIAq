@@ -5,12 +5,15 @@ from csodiaq.identification import Identifier
 from csodiaq.utils import create_outfile_header, confirm_proteins_in_list_are_in_appropriate_format
 from csodiaq.scoring import create_spectral_fdr_output_from_full_output, create_peptide_fdr_output_from_full_output, create_protein_fdr_output_from_peptide_fdr_output, calculate_ion_count_for_each_protein_in_protein_fdr_df, compile_ion_count_comparison_across_runs_df
 from csodiaq.targetedReanalysis import create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides
+from csodiaq.gui import run_gui
+
 
 def main():
     parser = set_args_from_command_line_input()
     args = vars(parser.parse_args())
     check_for_conflicting_args(args)
-    if args['command'] == 'gui' or args['command'] is None: pass
+    if args['command'] == 'gui' or args['command'] is None:
+        run_gui()
     elif args['command'] == 'id':
         run_identification(args)
     elif args["command"] == 'score':
@@ -25,7 +28,6 @@ def run_identification(args):
         outFileHeader = create_outfile_header(args['output'], queryFile, args['correctionDegree'])
         identificationFullOutputDf.to_csv(f'{outFileHeader}_fullOutput.csv', index=False)
 
-#TODO: this function needs to be refactored
 def run_scoring(args):
     outputDir = os.path.join(args["input"]["csodiaqDirectory"], f'fdrScores-{args["score"]}')
     if not os.path.exists(outputDir):

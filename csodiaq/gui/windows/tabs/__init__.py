@@ -1,0 +1,3 @@
+from .IdentificationTabWindow import IdentificationTabWindow
+from .ScoringTabWindow import ScoringTabWindow
+from .TargetedReanalysisTabWindow import TargetedReanalysisTabWindow

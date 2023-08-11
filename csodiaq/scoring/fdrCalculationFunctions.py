@@ -178,7 +178,6 @@ def determine_if_peptides_are_unique_to_leading_protein(proteinDf):
     uniquePeptides[uniqueValuesDf.index] = 1
     return list(uniquePeptides)
 
-#TODO: currently just returns the mean ion count of peptides in the protein. Experimentation required to determine if this is optimal/if multiple options should be allowed.
 def calculate_ion_count_from_peptides_of_protein(ionCountList):
     return mean(ionCountList)
 
