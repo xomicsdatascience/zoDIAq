@@ -12,15 +12,17 @@ class ScoringTabWindow(TabWindow):
         self.add_no_setting_disclaimer_field(settingLayout)
 
     def set_args(self) -> list:
-        return []
+        args = ["score"]
+        args.extend(self.get_arg_from_text_field_if_present(self.idOutputDir, '-i'))
+        return args
 
     def add_identification_output_directory_field(self, fileLayout):
         self.idOutputDirText = QLabel('CsoDIAq Identification Output Directory:')
+        self.idOutputDir = QLineEdit()
         self.idOutputDirBtn = QPushButton('Browse')
-        self.idOutputDirBtn.clicked.connect(lambda: self.open_browser_to_find_file_or_directory(self.libFile))
-        self.idOutputDirFile = QLineEdit()
+        self.idOutputDirBtn.clicked.connect(lambda: self.open_browser_to_find_file_or_directory(self.idOutputDir, isFile=False))
         fileLayout.addRow(self.idOutputDirText, self.idOutputDirBtn)
-        fileLayout.addRow(self.idOutputDirFile)
+        fileLayout.addRow(self.idOutputDir)
 
     def add_no_setting_disclaimer_field(self, settingLayout):
         disclaimerText = QLabel('No settings currently implemented for the score step.')

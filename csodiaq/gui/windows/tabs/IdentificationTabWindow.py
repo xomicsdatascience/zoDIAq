@@ -17,7 +17,17 @@ class IdentificationTabWindow(TabWindow):
         self.add_correction_setting_fields(settingLayout)
 
     def set_args(self) -> list:
-        return []
+        args = ["id"]
+        args.extend(self.get_dia_input_file_args())
+        args.extend(self.get_arg_from_text_field_if_present(self.libFile, '-l'))
+        args.extend(self.get_arg_from_text_field_if_present(self.outDir, '-o'))
+        args.extend(self.get_arg_from_text_field_if_present(self.matchTolerance, '-t'))
+        args.extend(self.get_arg_from_text_field_if_present(self.correctionDegree, '-c'))
+        args.extend(self.get_flag_from_checkbox_if_checked(self.histCheckBox, '-hist'))
+        shouldDoCorrection = self.get_flag_from_checkbox_if_checked(self.correctionCheckBox, '-correction')
+        if len(shouldDoCorrection) == 0:
+            args.append('--noCorrection')
+        return args
 
     def add_dia_input_file_field(self, fileLayout):
         self.diaFiles = QListWidget()
@@ -37,11 +47,11 @@ class IdentificationTabWindow(TabWindow):
 
     def add_library_file_field(self, fileLayout):
         self.libFileText = QLabel('Library File:')
+        self.libFile = QLineEdit()
         self.libBtn = QPushButton('Browse')
         self.libBtn.clicked.connect(lambda: self.open_browser_to_find_file_or_directory(self.libFile))
         self.libFileText.setToolTip(
             'Library Spectra File Requirements:\n-Required, must be populated\n-Must be in MGF (.mgf) or TraML (.csv or .tsv) format')
-        self.libFile = QLineEdit()
         fileLayout.addRow(self.libFileText, self.libBtn)
         fileLayout.addRow(self.libFile)
 
@@ -64,19 +74,40 @@ class IdentificationTabWindow(TabWindow):
         settingLayout.addRow(self.matchToleranceText, self.matchTolerance)
 
     def add_correction_setting_fields(self, settingLayout):
-        self.corr = QLineEdit()
-        self.corrCheckBox = QCheckBox()
-        self.corrText = QLabel('Corrective Standard Deviations:')
-        self.corrText.setToolTip(
+        self.correctionDegree = QLineEdit()
+        self.correctionCheckBox = QCheckBox()
+        self.correctionDegreeText = QLabel('Corrective Standard Deviations:')
+        self.correctionDegreeText.setToolTip(
             'Corrective Standard Deviations Requirements:\n-Must be blank or a float (decimal value) between or equal to 0.5 and 2.0')
         self.histCheckBox = QCheckBox()
-        self.corrCheckBox.stateChanged.connect(
-            lambda: self.enable_line_edits_only_if_checkbox_is_checked(self.corrCheckBox, self.corr))
-        self.corrCheckBox.stateChanged.connect(
-            lambda: self.enable_second_checkbox_only_if_first_checkbox_is_checked(self.corrCheckBox, self.histCheckBox))
-        settingLayout.addRow('Correction (recommended):', self.corrCheckBox)
-        settingLayout.addRow(self.corrText, self.corr)
+        self.correctionCheckBox.stateChanged.connect(
+            lambda: self.enable_line_edits_only_if_checkbox_is_checked(self.correctionCheckBox, self.correctionDegree))
+        self.correctionCheckBox.stateChanged.connect(
+            lambda: self.enable_second_checkbox_only_if_first_checkbox_is_checked(self.correctionCheckBox, self.histCheckBox))
+        settingLayout.addRow('Correction (recommended):', self.correctionCheckBox)
+        settingLayout.addRow(self.correctionDegreeText, self.correctionDegree)
         settingLayout.addRow('Create Histogram:', self.histCheckBox)
-        self.corr.setPlaceholderText('customized')
-        self.corrCheckBox.setCheckState(2)
+        self.correctionDegree.setPlaceholderText('customized')
+        self.correctionCheckBox.setCheckState(2)
         self.histCheckBox.setCheckState(2)
+
+    def get_dia_input_file_args(self):
+        files = [self.diaFiles.item(i).text() for i in range(self.diaFiles.count())]
+        return [idArg for file in files for idArg in ('-i',file)]
+
+    def enable_line_edits_only_if_checkbox_is_checked(self, checkBox, lineEdit, filledText=''):
+        if checkBox.isChecked():
+            lineEdit.setText(filledText)
+            lineEdit.setPlaceholderText('customized')
+            lineEdit.setEnabled(True)
+        else:
+            lineEdit.clear()
+            lineEdit.setPlaceholderText('no correction')
+            lineEdit.setEnabled(False)
+
+    def enable_second_checkbox_only_if_first_checkbox_is_checked(self, checkBox1, checkBox2):
+        if checkBox1.isChecked():
+            checkBox2.setEnabled(True)
+        else:
+            checkBox2.setCheckState(False)
+            checkBox2.setEnabled(False)

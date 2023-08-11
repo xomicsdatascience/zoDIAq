@@ -13,16 +13,13 @@ from PyQt5.QtCore import QProcess
 from PyQt5.QtGui import QFont
 from abc import ABC, ABCMeta, abstractmethod
 
-
 class AbstractTabWindow(ABCMeta, type(QWidget)):
     pass
-
 
 class TabWindow(QWidget, metaclass=AbstractTabWindow):
     def __init__(self):
         super().__init__()
-
-        self.p = None
+        self.process = None
         fullTabLayout = QVBoxLayout()
         self.add_instruction_link_field(fullTabLayout)
         self.add_file_input_fields(fullTabLayout)
@@ -85,61 +82,44 @@ class TabWindow(QWidget, metaclass=AbstractTabWindow):
     def set_args(self) -> list:
         pass
 
-    def enable_line_edits_only_if_checkbox_is_checked(self, checkBox, lineEdit, filledText=''):
-        if checkBox.isChecked():
-            lineEdit.setText(filledText)
-            lineEdit.setPlaceholderText('customized')
-            lineEdit.setEnabled(True)
-        else:
-            lineEdit.clear()
-            lineEdit.setPlaceholderText('no correction')
-            lineEdit.setEnabled(False)
-
-    def enable_second_checkbox_only_if_first_checkbox_is_checked(self, checkBox1, checkBox2):
-        if checkBox1.isChecked():
-            checkBox2.setEnabled(True)
-        else:
-            checkBox2.setCheckState(False)
-            checkBox2.setEnabled(False)
-
-
-
     def message(self, s):
         self.text.appendPlainText(s)
 
     def kill_process(self):
-        self.p.kill()
+        self.process.kill()
 
     def process_finished(self):
         self.message("Process finished.")
         self.killBtn.setEnabled(False)
-        self.p = None
+        self.process = None
 
     def handle_stderr(self):
-        data = self.p.readAllStandardError()
+        data = self.process.readAllStandardError()
         stderr = bytes(data).decode("utf8")
         self.message(stderr)
 
     def handle_stdout(self):
-        data = self.p.readAllStandardOutput()
+        data = self.process.readAllStandardOutput()
         stdout = bytes(data).decode("utf8")
         self.message(stdout)
 
     def start_process(self):
-        args = []
         args = self.set_args()
         self.killBtn.setEnabled(True)
 
-        if self.p is None:  # No process running.
+        if not self.check_if_process_is_running():
             self.message("Executing process")
             self.message("csodiaq " + " ".join(args))
-            self.p = (
+            self.process = (
                 QProcess()
-            )  # Keep a reference to the QProcess (e.g. on self) while it's running.
-            self.p.readyReadStandardOutput.connect(self.handle_stdout)
-            self.p.readyReadStandardError.connect(self.handle_stderr)
-            self.p.finished.connect(self.process_finished)  # Clean up once complete.
-            self.p.start("csodiaq", args)
+            )
+            self.process.readyReadStandardOutput.connect(self.handle_stdout)
+            self.process.readyReadStandardError.connect(self.handle_stderr)
+            self.process.finished.connect(self.process_finished)
+            self.process.start("csodiaq", args)
+
+    def check_if_process_is_running(self):
+        return self.process
 
     def delete_selected_values(self):
         for x in self.diaFiles.selectedItems():
@@ -157,3 +137,15 @@ class TabWindow(QWidget, metaclass=AbstractTabWindow):
             fname = QFileDialog.getExistingDirectory(
                 self, 'Open Directory', 'c:\\')
             text.setText(fname)
+
+    def get_arg_from_text_field_if_present(self, textObject, flag):
+        if textObject.text():
+            return [flag, textObject.text()]
+        else:
+            return []
+
+    def get_flag_from_checkbox_if_checked(self, checkBox, flag):
+        if checkBox.isChecked():
+            return [flag]
+        else:
+            return []

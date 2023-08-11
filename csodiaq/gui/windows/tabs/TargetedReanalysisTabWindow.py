@@ -15,15 +15,20 @@ class TargetedReanalysisTabWindow(TabWindow):
         self.add_heavy_isotope_field(settingLayout)
 
     def set_args(self) -> list:
-        return []
+        args = ["targetedReanalysis"]
+        args.extend(self.get_arg_from_text_field_if_present(self.scoringOutputDir, '-i'))
+        args.extend(self.get_arg_from_text_field_if_present(self.protein, '-p'))
+        args.extend(self.get_flag_from_checkbox_if_checked(self.heavyCheckBox, '-heavy'))
+        args.extend(self.get_arg_from_text_field_if_present(self.binValue, '-b'))
+        return args
 
     def add_identification_output_directory_field(self, fileLayout):
         self.scoringOutputDirText = QLabel('CsoDIAq Scoring Output Directory:')
+        self.scoringOutputDir = QLineEdit()
         self.scoringOutputDirBtn = QPushButton('Browse')
-        self.scoringOutputDirBtn.clicked.connect(lambda: self.open_browser_to_find_file_or_directory(self.libFile))
-        self.scoringOutputDirFile = QLineEdit()
+        self.scoringOutputDirBtn.clicked.connect(lambda: self.open_browser_to_find_file_or_directory(self.scoringOutputDir, isFile=False))
         fileLayout.addRow(self.scoringOutputDirText, self.scoringOutputDirBtn)
-        fileLayout.addRow(self.scoringOutputDirFile)
+        fileLayout.addRow(self.scoringOutputDir)
 
     def add_max_peptide_per_protein_setting_field(self, settingLayout):
         self.proteinText = QLabel(
