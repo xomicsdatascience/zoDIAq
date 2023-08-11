@@ -1,3 +1,6 @@
+import pytest
+import pandas as pd
+
 from csodiaq.scoring.fdrCalculationFunctions import (
     drop_duplicate_values_from_df_in_given_column,
     create_spectral_fdr_output_from_full_output,
@@ -5,10 +8,13 @@ from csodiaq.scoring.fdrCalculationFunctions import (
     identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff,
     organize_peptide_df_by_leading_proteins,
     determine_if_peptides_are_unique_to_leading_protein,
+    calculate_ion_count_from_peptides_of_protein,
+    calculate_ion_count_for_each_protein_in_protein_fdr_df,
+    compile_ion_count_comparison_across_runs_df,
 )
 import pandas as pd
 
-def test__output_formatting_functions__drop_duplicate_values_from_df_in_given_column():
+def test__fdr_calculation_functions__drop_duplicate_values_from_df_in_given_column():
     columnName = "test"
     data = [
         [0],
@@ -28,7 +34,7 @@ def test__output_formatting_functions__drop_duplicate_values_from_df_in_given_co
     assert expectedOutputDf.equals(outputDf)
 
 
-def test__output_formatting_functions__create_spectral_fdr_output_from_full_output():
+def test__fdr_calculation_functions__create_spectral_fdr_output_from_full_output():
     numNonDecoys = 100
     numDecoys = 2
     isDecoyColumn = ([0] * numNonDecoys) + ([1] * numDecoys)
@@ -44,7 +50,7 @@ def test__output_formatting_functions__create_spectral_fdr_output_from_full_outp
     assert expectedOutputDf.equals(outputDf)
 
 
-def test__output_formatting_functions__create_peptide_fdr_output_from_full_output():
+def test__fdr_calculation_functions__create_peptide_fdr_output_from_full_output():
     numDuplicatePeptides = 2
     numNonDuplicatePeptides = 99
     numNonDecoys = numDuplicatePeptides + numNonDuplicatePeptides
@@ -71,7 +77,7 @@ def test__output_formatting_functions__create_peptide_fdr_output_from_full_outpu
     assert expectedOutputDf.equals(outputDf)
 
 
-def test__output_formatting_functions__organize_peptide_df_by_leading_proteins():
+def test__fdr_calculation_functions__organize_peptide_df_by_leading_proteins():
     peptideProteinData = [
         ["peptide01", "1/protein7"],
         ["peptide02", "3/protein4/protein6/protein9"],
@@ -115,7 +121,7 @@ def test__output_formatting_functions__organize_peptide_df_by_leading_proteins()
     assert expectedOutputDf.equals(outputDf)
 
 
-def test__output_formatting_functions__identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff():
+def test__fdr_calculation_functions__identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff():
     numLeadingProteins = 100
     duplicateLeadingProtein = 0
     decoyLeadingProteins = ["decoy1", "decoy2"]
@@ -141,7 +147,7 @@ def test__output_formatting_functions__identify_leading_protein_to_fdr_dictionar
     )
     assert expectedOutput == output
 
-def test__output_formatting_functions__determine_if_peptides_are_unique_to_leading_protein():
+def test__fdr_calculation_functions__determine_if_peptides_are_unique_to_leading_protein():
     inputData = [
         ["peptide1", "protein1"],
         ["peptide2", "protein1"],
@@ -155,3 +161,68 @@ def test__output_formatting_functions__determine_if_peptides_are_unique_to_leadi
     ]
     output = determine_if_peptides_are_unique_to_leading_protein(inputDf)
     assert expectedOutput == output
+
+@pytest.fixture
+def ionCountList():
+    return [
+        100.0,
+        200.0,
+        300.0,
+    ]
+
+def test__fdr_calculation_functions__calculate_ion_count_from_peptides_of_protein(ionCountList):
+    expectedOutput = 200.0
+    output = calculate_ion_count_from_peptides_of_protein(ionCountList)
+    assert expectedOutput == output
+
+def test__fdr_calculation_functions__calculate_ion_count_for_each_protein_in_protein_fdr_df():
+    inputData = [
+        ['1/protein1', 100.0],
+        ['1/protein1', 200.0],
+        ['1/protein1', 300.0],
+        ['2/protein2/protein3', 400.0],
+        ['2/protein2/protein3', 500.0],
+    ]
+
+    inputDf = pd.DataFrame(inputData, columns=["leadingProtein","ionCount"])
+    expectedOutputData = [
+        ['protein1',200.0],
+        ['protein2',450.0],
+        ['protein3',450.0],
+    ]
+    expectedOutputDf = pd.DataFrame(expectedOutputData, columns=["protein","ionCount"])
+    outputDf = calculate_ion_count_for_each_protein_in_protein_fdr_df(inputDf)
+    assert expectedOutputDf.equals(outputDf)
+
+def test__fdr_calculation_functions__compile_ion_count_comparison_across_runs_df():
+    columnName = "value"
+    inputDf1 = pd.DataFrame([
+        ['p1', 100.0],
+        ['p2', 200.0],
+        ['p3', 300.0],
+    ], columns=[columnName, "ionCount"])
+    inputDf2 = pd.DataFrame([
+        ['p3', 400.0],
+        ['p4', 500.0],
+        ['p5', 600.0],
+    ], columns=[columnName, "ionCount"])
+    inputDf3 = pd.DataFrame([
+        ['p2', 700.0],
+        ['p3', 800.0],
+        ['p4', 900.0],
+        ['p6', 1000.0],
+    ], columns=[columnName, "ionCount"])
+    inputDfs = {
+        'df1': inputDf1,
+        'df2': inputDf2,
+        'df3': inputDf3,
+    }
+    expectedOutputDf = pd.DataFrame([
+        [100.0, 200.0, 300.0, 0, 0, 0],
+        [0, 0, 400.0, 500.0, 600.0, 0],
+        [0, 700.0, 800.0, 900.0, 0, 1000.0],
+    ], columns=[f'p{i}' for i in range(1,7)], index=['df1', 'df2', 'df3'])
+    outputDf = compile_ion_count_comparison_across_runs_df(inputDfs, columnName)
+    assert expectedOutputDf.equals(outputDf)
+
+
