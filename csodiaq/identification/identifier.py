@@ -56,6 +56,8 @@ class Identifier:
 
     def __init__(self, commandLineArgs):
         self._commandLineArgs = commandLineArgs
+        printer = Printer()
+        printer("Loading Library File")
         self._libraryDict = LibraryLoaderContext(
             self._commandLineArgs["library"]
         ).load_csodiaq_library_dict()

@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from numba import njit
+from numba.experimental import jitclass
 from enum import Enum
 import matplotlib.pyplot as plt
 
@@ -8,7 +9,6 @@ class Increment(Enum):
     NEITHER = 0
     LIBRARY = 1
     QUERY = 2
-
 
 @njit
 def calculate_parts_per_million_relative_difference(referenceMz, targetMz):
@@ -33,19 +33,18 @@ def determine_smallest_peak_outside_ppm_tolerance(libMz, queryMz, ppmTolerance):
 
 @njit
 def match_query_peak_to_all_succeeding_library_peaks_within_tolerance(
-    baselineLibraryIdx, libraryPeaks, queryPeak, ppmTolerance
+    baselineLibraryIdx: int, libraryPeaks, queryPeak, ppmTolerance
 ):
     tempLibraryIdx = baselineLibraryIdx + 0
     mzIdx, intensityIdx, tagIdx = 0, 1, 2
-    data = []
+
     while tempLibraryIdx < len(libraryPeaks):
         ppm = calculate_parts_per_million_relative_difference(
             libraryPeaks[tempLibraryIdx][mzIdx], queryPeak[mzIdx]
         )
         if not is_within_tolerance(ppm, ppmTolerance):
-            return data
-        data.append(
-            [
+            return
+        yield [
                 libraryPeaks[tempLibraryIdx][tagIdx],
                 libraryPeaks[tempLibraryIdx][intensityIdx],
                 queryPeak[tagIdx],
@@ -53,18 +52,20 @@ def match_query_peak_to_all_succeeding_library_peaks_within_tolerance(
                 queryPeak[mzIdx],
                 ppm,
             ]
-        )
+
         tempLibraryIdx += 1
-    return data
+    return
 
 
 @njit
 def numba_enhanced_matching_of_library_to_query_pooled_spectra(
     libraryPeaks, queryPeaks, ppmTolerance
 ):
-    baselineLibraryIdx, baselineQueryIdx = 0, 0
+    baselineLibraryIdx, baselineQueryIdx = np.int64(0), np.int64(0)
     mzIdx, intensityIdx, tagIdx = 0, 1, 2
-    data = []
+    rowNum = 8000
+    data = np.empty(shape=(rowNum, 6))
+    dataInsertIdx = 0
     while baselineLibraryIdx < len(libraryPeaks) and baselineQueryIdx < len(queryPeaks):
         incrementation = determine_smallest_peak_outside_ppm_tolerance(
             libraryPeaks[baselineLibraryIdx][mzIdx],
@@ -77,17 +78,20 @@ def numba_enhanced_matching_of_library_to_query_pooled_spectra(
         if incrementation == Increment.QUERY:
             baselineQueryIdx += 1
             continue
-
-        data.extend(
-            match_query_peak_to_all_succeeding_library_peaks_within_tolerance(
+        for match in match_query_peak_to_all_succeeding_library_peaks_within_tolerance(
                 baselineLibraryIdx,
                 libraryPeaks,
                 queryPeaks[baselineQueryIdx],
                 ppmTolerance,
-            )
-        )
+                ):
+            if dataInsertIdx == rowNum:
+                yield data
+                data = np.empty(shape=(rowNum, 6))
+                dataInsertIdx = 0
+            data[dataInsertIdx] = match
+            dataInsertIdx += 1
         baselineQueryIdx += 1
-    return data
+    yield data[:dataInsertIdx]
 
 
 def match_library_to_query_pooled_spectra(libraryPeaks, queryPeaks, ppmTolerance):
@@ -124,9 +128,12 @@ def match_library_to_query_pooled_spectra(libraryPeaks, queryPeaks, ppmTolerance
     """
     libraryArray = np.array(libraryPeaks)
     queryArray = np.array(queryPeaks)
-    data = numba_enhanced_matching_of_library_to_query_pooled_spectra(
+    dataArrays = [dataArray for dataArray in numba_enhanced_matching_of_library_to_query_pooled_spectra(
         libraryArray, queryArray, ppmTolerance
-    )
+    )]
+    data = dataArrays
+    if len(dataArrays):
+        data = np.concatenate(dataArrays, axis=0)
     matchDf = pd.DataFrame(
         data,
         columns=[
