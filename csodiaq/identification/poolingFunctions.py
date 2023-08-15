@@ -2,6 +2,7 @@ from csodiaq.loaders.library.libraryLoaderContext import LibraryLoaderContext
 from csodiaq.loaders.query.queryLoaderContext import QueryLoaderContext
 import pandas as pd
 import warnings
+from bisect import bisect
 
 
 def generate_pooled_library_and_query_spectra_by_mz_windows(libDict, queryContext):
@@ -23,16 +24,14 @@ def _pool_library_spectra_by_mz_window(mzWindow, libDict):
 
 
 def _find_keys_of_library_spectra_in_mz_window(mzWindow, libDictKeys):
+    sortedLibDictKeys = sorted(libDictKeys)
     topMz = mzWindow[0] + mzWindow[1] / 2
     bottomMz = mzWindow[0] - mzWindow[1] / 2
-    libKeysDf = pd.DataFrame(libDictKeys, columns=["precursorMz", "peptide"])
-    libKeysDf = libKeysDf[
-        (libKeysDf["precursorMz"] <= topMz) & (libKeysDf["precursorMz"] >= bottomMz)
-    ]
-    libKeys = list(libKeysDf.itertuples(index=False, name=None))
-    if len(libKeys) == 0:
+    topIndex = bisect(sortedLibDictKeys, (topMz, 'z'))
+    bottomIndex = bisect(sortedLibDictKeys, (bottomMz, ''))
+    if topIndex == bottomIndex:
         warnings.warn(
             f"No library spectra found in the {mzWindow} m/z window. Skipping",
             SyntaxWarning,
         )
-    return libKeys
+    return sortedLibDictKeys[bottomIndex:topIndex]
