@@ -126,6 +126,3 @@ def test__score_functions__determine_index_of_fdr_cutoff__returns_original_df_wh
     isDecoySeries = np.array([0] * numberOfNonDecoys + decoys)
     indexCutoff = determine_index_of_fdr_cutoff(isDecoySeries)
     assert indexCutoff == numberOfNonDecoys
-
-
-

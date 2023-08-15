@@ -8,6 +8,7 @@ from csodiaq.gui.windows.tabs import IdentificationTabWindow
 from csodiaq.gui.windows.tabs import ScoringTabWindow
 from csodiaq.gui.windows.tabs import TargetedReanalysisTabWindow
 
+
 class TableWindow(QWidget):
     def __init__(self, parent=None):
         super(QWidget, self).__init__(parent)

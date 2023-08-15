@@ -5,10 +5,12 @@ from numba.experimental import jitclass
 from enum import Enum
 import matplotlib.pyplot as plt
 
+
 class Increment(Enum):
     NEITHER = 0
     LIBRARY = 1
     QUERY = 2
+
 
 @njit
 def calculate_parts_per_million_relative_difference(referenceMz, targetMz):
@@ -45,13 +47,13 @@ def match_query_peak_to_all_succeeding_library_peaks_within_tolerance(
         if not is_within_tolerance(ppm, ppmTolerance):
             return
         yield [
-                libraryPeaks[tempLibraryIdx][tagIdx],
-                libraryPeaks[tempLibraryIdx][intensityIdx],
-                queryPeak[tagIdx],
-                queryPeak[intensityIdx],
-                queryPeak[mzIdx],
-                ppm,
-            ]
+            libraryPeaks[tempLibraryIdx][tagIdx],
+            libraryPeaks[tempLibraryIdx][intensityIdx],
+            queryPeak[tagIdx],
+            queryPeak[intensityIdx],
+            queryPeak[mzIdx],
+            ppm,
+        ]
 
         tempLibraryIdx += 1
     return
@@ -79,11 +81,11 @@ def numba_enhanced_matching_of_library_to_query_pooled_spectra(
             baselineQueryIdx += 1
             continue
         for match in match_query_peak_to_all_succeeding_library_peaks_within_tolerance(
-                baselineLibraryIdx,
-                libraryPeaks,
-                queryPeaks[baselineQueryIdx],
-                ppmTolerance,
-                ):
+            baselineLibraryIdx,
+            libraryPeaks,
+            queryPeaks[baselineQueryIdx],
+            ppmTolerance,
+        ):
             if dataInsertIdx == rowNum:
                 yield data
                 data = np.empty(shape=(rowNum, 6))
@@ -128,9 +130,12 @@ def match_library_to_query_pooled_spectra(libraryPeaks, queryPeaks, ppmTolerance
     """
     libraryArray = np.array(libraryPeaks)
     queryArray = np.array(queryPeaks)
-    dataArrays = [dataArray for dataArray in numba_enhanced_matching_of_library_to_query_pooled_spectra(
-        libraryArray, queryArray, ppmTolerance
-    )]
+    dataArrays = [
+        dataArray
+        for dataArray in numba_enhanced_matching_of_library_to_query_pooled_spectra(
+            libraryArray, queryArray, ppmTolerance
+        )
+    ]
     data = dataArrays
     if len(dataArrays):
         data = np.concatenate(dataArrays, axis=0)
@@ -164,6 +169,7 @@ def eliminate_matches_below_fdr_cutoff(matches, groupsAboveCutoff):
         lambda x: x.name in groupsAboveCutoff
     )
 
+
 def create_ppm_histogram(ppms, offset, tolerance, histogramFile):
     binHeights, bins = create_standardized_histogram(ppms)
     barReductionForVisibility = 0.7
@@ -185,6 +191,7 @@ def filter_matches_by_ppm_offset_and_tolerance(matchDf, offset, tolerance):
         & (matchDf["ppmDifference"] < ppmUpperBound)
     ]
     return eliminate_low_count_matches(matchDf)
+
 
 def calculate_ppm_offset_tolerance(ppms, numStandardDeviations):
     if numStandardDeviations:

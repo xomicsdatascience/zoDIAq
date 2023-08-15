@@ -74,49 +74,67 @@ def test__utils__create_outfile_header__stdev_correction(
     output = create_outfile_header(outputDirectory, inputFilePath, correction=1)
     assert expectedOutput == output
 
+
 @pytest.fixture
 def validProtein():
-    return '2/protein1/protein2'
+    return "2/protein1/protein2"
 
-def test__utils__confirm_proteins_in_list_are_in_appropriate_format__multiple_digits_returns_true(validProtein):
+
+def test__utils__confirm_proteins_in_list_are_in_appropriate_format__multiple_digits_returns_true(
+    validProtein,
+):
     proteinList = [
         validProtein,
-        '10/protein1/protein2/protein3/protein4/protein5/protein6/protein7/protein8/protein9/protein10'
+        "10/protein1/protein2/protein3/protein4/protein5/protein6/protein7/protein8/protein9/protein10",
     ]
     assert confirm_proteins_in_list_are_in_appropriate_format(proteinList)
 
-def test__utils__confirm_proteins_in_list_are_in_appropriate_format__extra_prefix_returns_false(validProtein):
+
+def test__utils__confirm_proteins_in_list_are_in_appropriate_format__extra_prefix_returns_false(
+    validProtein,
+):
     proteinList = [
         validProtein,
-        'extraStuff' + validProtein,
+        "extraStuff" + validProtein,
     ]
     assert not confirm_proteins_in_list_are_in_appropriate_format(proteinList)
 
-def test__utils__confirm_proteins_in_list_are_in_appropriate_format__ends_in_slash_returns_false(validProtein):
+
+def test__utils__confirm_proteins_in_list_are_in_appropriate_format__ends_in_slash_returns_false(
+    validProtein,
+):
     proteinList = [
         validProtein,
-        validProtein + '/',
+        validProtein + "/",
     ]
     assert not confirm_proteins_in_list_are_in_appropriate_format(proteinList)
 
-def test__utils__confirm_proteins_in_list_are_in_appropriate_format__gibberish_returns_false(validProtein):
+
+def test__utils__confirm_proteins_in_list_are_in_appropriate_format__gibberish_returns_false(
+    validProtein,
+):
     proteinList = [
         validProtein,
-        'gibberish',
+        "gibberish",
     ]
     assert not confirm_proteins_in_list_are_in_appropriate_format(proteinList)
 
-def test__utils__confirm_proteins_in_list_are_in_appropriate_format__wrong_count_returns_false(validProtein):
+
+def test__utils__confirm_proteins_in_list_are_in_appropriate_format__wrong_count_returns_false(
+    validProtein,
+):
     proteinList = [
         validProtein,
-        '1/protein1/protein2',
+        "1/protein1/protein2",
     ]
     assert not confirm_proteins_in_list_are_in_appropriate_format(proteinList)
 
-def test__utils__confirm_proteins_in_list_are_in_appropriate_format__blank_value_returns_false(validProtein):
+
+def test__utils__confirm_proteins_in_list_are_in_appropriate_format__blank_value_returns_false(
+    validProtein,
+):
     proteinList = [
         validProtein,
-        '',
+        "",
     ]
     assert not confirm_proteins_in_list_are_in_appropriate_format(proteinList)
-

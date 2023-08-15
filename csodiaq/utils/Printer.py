@@ -1,6 +1,7 @@
 from timeit import default_timer as timer
 import time
 
+
 class Printer:
     _singletonInstance = None
 

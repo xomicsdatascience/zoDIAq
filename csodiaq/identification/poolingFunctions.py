@@ -27,8 +27,8 @@ def _find_keys_of_library_spectra_in_mz_window(mzWindow, libDictKeys):
     sortedLibDictKeys = sorted(libDictKeys)
     topMz = mzWindow[0] + mzWindow[1] / 2
     bottomMz = mzWindow[0] - mzWindow[1] / 2
-    topIndex = bisect(sortedLibDictKeys, (topMz, 'z'))
-    bottomIndex = bisect(sortedLibDictKeys, (bottomMz, ''))
+    topIndex = bisect(sortedLibDictKeys, (topMz, "z"))
+    bottomIndex = bisect(sortedLibDictKeys, (bottomMz, ""))
     if topIndex == bottomIndex:
         warnings.warn(
             f"No library spectra found in the {mzWindow} m/z window. Skipping",

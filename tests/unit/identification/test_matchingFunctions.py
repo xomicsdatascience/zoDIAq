@@ -11,7 +11,6 @@ from csodiaq.identification.matchingFunctions import (
     calculate_ppm_offset_tolerance_using_tallest_bin_peak,
     filter_matches_by_ppm_offset_and_tolerance,
     identify_index_of_max_distance_to_noise_from_tallest_bin,
-
 )
 
 
@@ -119,6 +118,7 @@ def test__matchingFunctions__eliminate_matches_below_fdr_cutoff():
     expectedOutput = pd.DataFrame(aboveCutoffMatches, columns=columns)
     output = eliminate_matches_below_fdr_cutoff(input, groupsAboveCutoff)
     assert expectedOutput.equals(output)
+
 
 def test__score_functions__calculate_ppm_offset_tolerance_using_mean_and_standard_deviation():
     mean = 10

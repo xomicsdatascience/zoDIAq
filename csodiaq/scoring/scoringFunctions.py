@@ -2,6 +2,7 @@ import numpy as np
 from scipy.spatial.distance import cosine
 import matplotlib.pyplot as pyplot
 
+
 def score_library_to_query_matches(matches):
     scoreDf = (
         matches.groupby(["libraryIdx", "queryIdx"])
@@ -29,6 +30,7 @@ def calculate_macc_score(vectorA, vectorB):
         vectorA, vectorB
     )
 
+
 def determine_index_of_fdr_cutoff(isDecoyArray, fdrCutoff=1e-2):
     if isDecoyArray[0]:
         raise ValueError(
@@ -45,8 +47,3 @@ def calculate_fdr_rates_of_decoy_array(isDecoyArray):
     isDecoyArrayIdx = np.arange(1, len(isDecoyArray) + 1)
     decoyCumSum = np.array(isDecoyArray).cumsum()
     return decoyCumSum / isDecoyArrayIdx
-
-
-
-
-

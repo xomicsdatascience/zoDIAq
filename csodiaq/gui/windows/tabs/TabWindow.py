@@ -14,15 +14,17 @@ from PyQt5.QtGui import QFont
 from abc import ABC, ABCMeta, abstractmethod
 import numpy as np
 
+
 class AbstractTabWindow(ABCMeta, type(QWidget)):
     pass
+
 
 class TabWindow(QWidget, metaclass=AbstractTabWindow):
     def __init__(self):
         super().__init__()
         self.process = None
-        self.VALID_COLOR = 'lightgreen'
-        self.INVALID_COLOR = 'rgb(255,99,71)'
+        self.VALID_COLOR = "lightgreen"
+        self.INVALID_COLOR = "rgb(255,99,71)"
         fullTabLayout = QVBoxLayout()
         self.add_instruction_link_field(fullTabLayout)
         self.add_file_input_fields(fullTabLayout)
@@ -69,9 +71,7 @@ class TabWindow(QWidget, metaclass=AbstractTabWindow):
         self.runBtn.clicked.connect(self.start_process)
 
     def set_instruction_link(self, instructionLinkText: type(QFormLayout)) -> None:
-        instructionLinkText.setText(
-            "https://github.com/xomicsdatascience/CsoDIAq"
-        )
+        instructionLinkText.setText("https://github.com/xomicsdatascience/CsoDIAq")
 
     @abstractmethod
     def set_file_layout(self, fileLayout: type(QFormLayout)) -> None:
@@ -112,13 +112,13 @@ class TabWindow(QWidget, metaclass=AbstractTabWindow):
 
     def start_process(self):
         args = self.set_args()
-        if not self.check_if_process_is_running() and self.check_args_for_invalid_input(args):
+        if not self.check_if_process_is_running() and self.check_args_for_invalid_input(
+            args
+        ):
             self.killBtn.setEnabled(True)
             self.message("Executing process")
             self.message("csodiaq " + " ".join(args))
-            self.process = (
-                QProcess()
-            )
+            self.process = QProcess()
             self.process.readyReadStandardOutput.connect(self.handle_stdout)
             self.process.readyReadStandardError.connect(self.handle_stderr)
             self.process.finished.connect(self.process_finished)
@@ -134,14 +134,13 @@ class TabWindow(QWidget, metaclass=AbstractTabWindow):
     def open_browser_to_find_file_or_directory(self, text, isFile=True):
         dialog = QFileDialog()
         if type(text) is QListWidget and isFile:
-            fname = QFileDialog.getOpenFileNames(self, 'Open File', 'c:\\')
+            fname = QFileDialog.getOpenFileNames(self, "Open File", "c:\\")
             text.addItems([x for x in fname[0]])
         elif type(text) is QLineEdit and isFile:
-            fname = QFileDialog.getOpenFileName(self, 'Open File', 'c:\\')
+            fname = QFileDialog.getOpenFileName(self, "Open File", "c:\\")
             text.setText(fname[0])
         else:
-            fname = QFileDialog.getExistingDirectory(
-                self, 'Open Directory', 'c:\\')
+            fname = QFileDialog.getExistingDirectory(self, "Open Directory", "c:\\")
             text.setText(fname)
 
     def get_arg_from_text_field_if_present(self, textObject, flag):
@@ -156,8 +155,13 @@ class TabWindow(QWidget, metaclass=AbstractTabWindow):
         else:
             return []
 
-    def check_if_arg_is_invalid_using_parsing_object(self, args, targetFlag, parsingObject, textObject, isRequired=False):
-        targetIndices = np.array([index for (index, flag) in enumerate(args) if flag == targetFlag]) + 1
+    def check_if_arg_is_invalid_using_parsing_object(
+        self, args, targetFlag, parsingObject, textObject, isRequired=False
+    ):
+        targetIndices = (
+            np.array([index for (index, flag) in enumerate(args) if flag == targetFlag])
+            + 1
+        )
         targets = [args[i] for i in targetIndices]
         try:
             if len(targets) == 0 and isRequired:
@@ -165,7 +169,7 @@ class TabWindow(QWidget, metaclass=AbstractTabWindow):
             for target in targets:
                 parsingObject(target)
         except:
-            textObject.setStyleSheet('background-color: ' + self.INVALID_COLOR)
+            textObject.setStyleSheet("background-color: " + self.INVALID_COLOR)
             return 0
-        textObject.setStyleSheet('background-color: ' + self.VALID_COLOR)
+        textObject.setStyleSheet("background-color: " + self.VALID_COLOR)
         return 1

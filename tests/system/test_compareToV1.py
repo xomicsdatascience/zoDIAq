@@ -6,11 +6,14 @@ from csodiaq.scoring import (
     create_protein_fdr_output_from_peptide_fdr_output,
     create_spectral_fdr_output_from_full_output,
 )
-from csodiaq.targetedReanalysis import create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides
+from csodiaq.targetedReanalysis import (
+    create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides,
+)
 from csodiaq.loaders.query import QueryLoaderContext
 import os
 import pickle
 import pytest
+
 
 def get_parent_dir():
     return os.path.dirname(os.path.abspath(__file__))
@@ -122,13 +125,10 @@ def test__identifier__main_workflow(commandLineArgs):
 
     fullDf = identifier._format_identifications_as_dataframe(matchDf, scoreDf)
 
-    assert_numeric_pandas_dataframes_are_equal(
-        expectedFullDf, fullDf, "full"
-    )
+    assert_numeric_pandas_dataframes_are_equal(expectedFullDf, fullDf, "full")
 
 
 def test__scoring_workflow():
-
     fullDf = pd.read_csv(
         get_file_from_system_test_folder("v2FullOutput.csv.gz"), compression="gzip"
     )
@@ -148,14 +148,10 @@ def test__scoring_workflow():
     )
 
     peptideDf = create_peptide_fdr_output_from_full_output(fullDf)
-    assert_numeric_pandas_dataframes_are_equal(
-        expectedPeptideDf, peptideDf, "peptide"
-    )
+    assert_numeric_pandas_dataframes_are_equal(expectedPeptideDf, peptideDf, "peptide")
 
     proteinDf = create_protein_fdr_output_from_peptide_fdr_output(peptideDf)
-    assert_numeric_pandas_dataframes_are_equal(
-        expectedProteinDf, proteinDf, "protein"
-    )
+    assert_numeric_pandas_dataframes_are_equal(expectedProteinDf, proteinDf, "protein")
 
 
 def test__targeted_reanalysis_worflow():

@@ -5,18 +5,24 @@ import numpy as np
 from abc import ABC, abstractmethod
 import re
 
+
 def set_args_from_command_line_input():
     parser = argparse.ArgumentParser(description="")
     commandParser = parser.add_subparsers(dest="command", help="CsoDIAq Functions")
     guiParser = commandParser.add_parser(
-        'gui', help='Launches the (optional) GUI application for using CsoDIAq.')
+        "gui", help="Launches the (optional) GUI application for using CsoDIAq."
+    )
     add_id_parser(commandParser)
     add_score_parser(commandParser)
     add_reanalysis_parser(commandParser)
     return parser
 
+
 def add_id_parser(commandParser):
-    idParser = commandParser.add_parser('id', help='Identify peptides from a designated peptide library in mass spectrometry run (query) files.')
+    idParser = commandParser.add_parser(
+        "id",
+        help="Identify peptides from a designated peptide library in mass spectrometry run (query) files.",
+    )
     idParser.add_argument(
         "-o",
         "--output",
@@ -29,111 +35,124 @@ def add_id_parser(commandParser):
         "--input",
         type=InputQueryFile(),
         required=True,
-        action='append',
-        help="mzXML input files from processed mass spectrometry .RAW files.\nRequired."
+        action="append",
+        help="mzXML input files from processed mass spectrometry .RAW files.\nRequired.",
     )
     idParser.add_argument(
         "-l",
         "--library",
         type=LibraryFile(),
         required=True,
-        help="File containing spectra of peptides to identify in query files.\nRequired.\nAccepts TraML (.csv or .tsv) and MGF (.mgf) formats."
+        help="File containing spectra of peptides to identify in query files.\nRequired.\nAccepts TraML (.csv or .tsv) and MGF (.mgf) formats.",
     )
     idParser.add_argument(
         "-t",
         "--matchTolerance",
         type=RestrictedFloat("matchTolerance", minValue=1, maxValue=60),
         default=30.0,
-        help="Tolerance between library and query peak m/z values to be considered a match before correction (in PPM).\nOptional.\nDefault value is 30.\nValue must be greater than 0.\nValue must be less than 60 as a generic cutoff to prevent needlessly taxing computational power."
+        help="Tolerance between library and query peak m/z values to be considered a match before correction (in PPM).\nOptional.\nDefault value is 30.\nValue must be greater than 0.\nValue must be less than 60 as a generic cutoff to prevent needlessly taxing computational power.",
     )
     idParser.add_argument(
         "-nc",
         "--noCorrection",
         default=False,
-        action='store_true',
-        help="Disables correction of ppm tolerance when matching library and query peaks. \nOptional. This option is NOT recommended."
+        action="store_true",
+        help="Disables correction of ppm tolerance when matching library and query peaks. \nOptional. This option is NOT recommended.",
     )
     idParser.add_argument(
         "-c",
         "--correctionDegree",
         type=RestrictedFloat("correctionDegree", minValue=0.5, maxValue=2),
         default=0,
-        help="Uses mean and standard deviation to correct ppm tolerance.\nOptional. A customized 'binning' correction method described in the paper is used by default."
+        help="Uses mean and standard deviation to correct ppm tolerance.\nOptional. A customized 'binning' correction method described in the paper is used by default.",
     )
     idParser.add_argument(
         "-hist",
         "--histogram",
         default=False,
-        action='store_true',
-        help="This flag indicates a histogram of the uncorrected PPM values (with lines for the chosen offset/tolerance) should be generated.\nOptional."
+        action="store_true",
+        help="This flag indicates a histogram of the uncorrected PPM values (with lines for the chosen offset/tolerance) should be generated.\nOptional.",
     )
 
+
 def add_score_parser(commandParser):
-    scoringParser = commandParser.add_parser('score', help='Scores confidence in identified peptides and removes those above a False Discovery Rate (FDR) of 0.01.\nNOTE: The identification output must include decoys for accurate FDR scoring.')
+    scoringParser = commandParser.add_parser(
+        "score",
+        help="Scores confidence in identified peptides and removes those above a False Discovery Rate (FDR) of 0.01.\nNOTE: The identification output must include decoys for accurate FDR scoring.",
+    )
     scoringParser.add_argument(
         "-i",
         "--input",
         type=IdentificationOutputDirectory(),
         required=True,
-        help="Directory that contains outputs of the identification step of CsoDIAq.\nRequired."
+        help="Directory that contains outputs of the identification step of CsoDIAq.\nRequired.",
     )
     scoringParser.add_argument(
         "-s",
         "--score",
         choices=["macc"],
         default="macc",
-        help="Type of scoring to apply for calculating the False Discovery Rate (FDR). Default is MaCC score (see paper for explanation). \nOptional. Choices are cosine and MaCC."
+        help="Type of scoring to apply for calculating the False Discovery Rate (FDR). Default is MaCC score (see paper for explanation). \nOptional. Choices are cosine and MaCC.",
     )
 
 
-
-
 def add_reanalysis_parser(commandParser):
-    reanalysisParser = commandParser.add_parser('targetedReanalysis', help='Creates files readable by a mass spectrometer for targeted reanalysis of identified peptides.')
+    reanalysisParser = commandParser.add_parser(
+        "targetedReanalysis",
+        help="Creates files readable by a mass spectrometer for targeted reanalysis of identified peptides.",
+    )
     reanalysisParser.add_argument(
         "-i",
         "--input",
         type=ScoringOutputDirectory(),
         required=True,
-        help="Directory that contains outputs of the scoring step of CsoDIAq.\nRequired."
+        help="Directory that contains outputs of the scoring step of CsoDIAq.\nRequired.",
     )
     reanalysisParser.add_argument(
         "-p",
         "--protein",
         type=RestrictedInt("protein", minValue=1),
         default=0,
-        help="Determines the maximum number of peptides per identified protein to include.\nOptional. Not setting this variable will result in evaluating peptides only with no reference to proteins."
+        help="Determines the maximum number of peptides per identified protein to include.\nOptional. Not setting this variable will result in evaluating peptides only with no reference to proteins.",
     )
     reanalysisParser.add_argument(
         "-heavy",
         "--heavyIsotope",
         default=False,
-        action='store_true',
-        help="This flag indicates that files for targeted re-analysis should include heavy fragment isotopes for SILAC quantification.\nOptional."
+        action="store_true",
+        help="This flag indicates that files for targeted re-analysis should include heavy fragment isotopes for SILAC quantification.\nOptional.",
     )
     reanalysisParser.add_argument(
         "-b",
         "--binValueProximity",
         type=RestrictedFloat("binValueProximity", minValue=0.01),
         default=0.75,
-        help="When setting bin values, this option indicates how close an m/z value must be to the bin value. Default is 0.75.\nOptional.\nNOTE: Multiple targeted m/z values may fall within a range that a mass spectrometer can identify in one scan. Thus, m/z values are binned to prevent redundant reanalysis.\nExample: let's say we have the m/z values of 199.5 and 200.5, a binValueProximity value of 0.75, and a bin value of 200.0.\nBoth of these m/z values would be in the same bin, as they are both with 0.75 of 200.0."
+        help="When setting bin values, this option indicates how close an m/z value must be to the bin value. Default is 0.75.\nOptional.\nNOTE: Multiple targeted m/z values may fall within a range that a mass spectrometer can identify in one scan. Thus, m/z values are binned to prevent redundant reanalysis.\nExample: let's say we have the m/z values of 199.5 and 200.5, a binValueProximity value of 0.75, and a bin value of 200.0.\nBoth of these m/z values would be in the same bin, as they are both with 0.75 of 200.0.",
     )
 
+
 def check_for_conflicting_args(args):
-    if args["command"] == 'id' and args['histogram'] and args['noCorrection']:
+    if args["command"] == "id" and args["histogram"] and args["noCorrection"]:
         raise argparse.ArgumentTypeError(
             "The histogram flag is invalidated by the noCorrection flag. Please inspect your input and remove one of the tags."
         )
-    if args["command"] == 'id' and args['correctionDegree'] and args['noCorrection']:
+    if args["command"] == "id" and args["correctionDegree"] and args["noCorrection"]:
         raise argparse.ArgumentTypeError(
             "The correctionDegree parameter is invalidated by the noCorrection flag. Please inspect your input and remove one of them."
         )
-    if args["command"] == 'targetedReanalysis' and args['protein'] and len(args['input']['protein']) == 0:
+    if (
+        args["command"] == "targetedReanalysis"
+        and args["protein"]
+        and len(args["input"]["protein"]) == 0
+    ):
         raise argparse.ArgumentTypeError(
             "The protein argument requires the presence of protein FDR files to function. Please run the protein scoring workflow or remove the protein argument from your commands."
         )
+
+
 def create_output_name(commandName):
     return f"csodiaq-{commandName}-{time.strftime('%Y%m%d-%H%M%S')}"
+
 
 def create_new_output_directory_path(newDirectoryLocation, commandName):
     if newDirectoryLocation[-1] == "/":
@@ -142,14 +161,18 @@ def create_new_output_directory_path(newDirectoryLocation, commandName):
     if os.path.isdir(newDirectoryLocation):
         newDirectoryPath = os.path.join(newDirectoryLocation, newDirectoryName)
     else:
-        newDirectoryHeader = newDirectoryLocation.split('/')[-1]
-        newDirectoryParentDirectory = '/'.join(newDirectoryLocation.split('/')[:-1])
-        newDirectoryPath = os.path.join(newDirectoryParentDirectory, f'{newDirectoryHeader}-{newDirectoryName}')
+        newDirectoryHeader = newDirectoryLocation.split("/")[-1]
+        newDirectoryParentDirectory = "/".join(newDirectoryLocation.split("/")[:-1])
+        newDirectoryPath = os.path.join(
+            newDirectoryParentDirectory, f"{newDirectoryHeader}-{newDirectoryName}"
+        )
     return newDirectoryPath
+
 
 class OutputDirectory:
     def __init__(self, commandName):
         self.commandName = commandName
+
     def __call__(self, newDirectoryLocation):
         if os.path.isfile(newDirectoryLocation):
             raise argparse.ArgumentTypeError(
@@ -159,8 +182,11 @@ class OutputDirectory:
             raise argparse.ArgumentTypeError(
                 "The -o or --output argument directory requires an existing parent directory."
             )
-        newDirectoryPath = create_new_output_directory_path(newDirectoryLocation, self.commandName)
+        newDirectoryPath = create_new_output_directory_path(
+            newDirectoryLocation, self.commandName
+        )
         return newDirectoryPath
+
 
 class InputQueryFile:
     def __init__(self):
@@ -177,9 +203,10 @@ class InputQueryFile:
             )
         return inputQueryFile
 
+
 class LibraryFile:
     def __init__(self):
-        self.allowedFileTypes = ["csv","tsv","mgf"]
+        self.allowedFileTypes = ["csv", "tsv", "mgf"]
 
     def __call__(self, libraryFile):
         if not os.path.isfile(libraryFile):
@@ -192,6 +219,7 @@ class LibraryFile:
             )
         return libraryFile
 
+
 class RestrictedNumber(ABC):
     def __init__(self, type, minValue=-np.inf, maxValue=np.inf):
         self.type = type
@@ -200,10 +228,12 @@ class RestrictedNumber(ABC):
         assert self.minValue <= self.maxValue
 
     @abstractmethod
-    def return_expected_type(self): pass
+    def return_expected_type(self):
+        pass
 
     @abstractmethod
-    def coerce_into_expected_type(self): pass
+    def coerce_into_expected_type(self):
+        pass
 
     def __call__(self, value):
         try:
@@ -222,16 +252,18 @@ class RestrictedNumber(ABC):
             )
         return value
 
+
 class RestrictedInt(RestrictedNumber):
     def return_expected_type(self):
-        return 'an integer'
+        return "an integer"
 
     def coerce_into_expected_type(self, value):
         return int(value)
 
+
 class RestrictedFloat(RestrictedNumber):
     def return_expected_type(self):
-        return 'a float'
+        return "a float"
 
     def coerce_into_expected_type(self, value):
         return float(value)
@@ -244,6 +276,7 @@ class RestrictedFloat(RestrictedNumber):
             )
         return value
 
+
 class CsodiaqOutputDirectory(ABC):
     def __call__(self, idDir):
         if not os.path.isdir(idDir):
@@ -251,7 +284,7 @@ class CsodiaqOutputDirectory(ABC):
                 "The -i or --input argument must be a directory."
             )
         outputDict = self.add_necessary_directory_contents(idDir)
-        outputDict['csodiaqDirectory'] = idDir
+        outputDict["csodiaqDirectory"] = idDir
         return outputDict
 
     def find_files_with_necessary_format(self, dir, regexPattern):
@@ -261,28 +294,36 @@ class CsodiaqOutputDirectory(ABC):
         return files
 
     @abstractmethod
-    def add_necessary_directory_contents(self, directory): pass
+    def add_necessary_directory_contents(self, directory):
+        pass
+
 
 class IdentificationOutputDirectory(CsodiaqOutputDirectory):
     def add_necessary_directory_contents(self, idDir):
-        idFiles = self.find_files_with_necessary_format(idDir, r'^CsoDIAq-file.*fullOutput\.csv')
+        idFiles = self.find_files_with_necessary_format(
+            idDir, r"^CsoDIAq-file.*fullOutput\.csv"
+        )
         if len(idFiles) == 0:
             raise argparse.ArgumentTypeError(
                 "The -i or --input argument directory must contain .csv files that are outputs from the identification workflow in CsoDIAq."
             )
-        return {'idFiles': idFiles}
+        return {"idFiles": idFiles}
+
 
 class ScoringOutputDirectory(CsodiaqOutputDirectory):
     def add_necessary_directory_contents(self, scoreDir):
-
-        peptideFdrFiles = self.find_files_with_necessary_format(scoreDir, r'peptideFDR\.csv$')
-        proteinFdrFiles = self.find_files_with_necessary_format(scoreDir, r'proteinFDR\.csv$')
+        peptideFdrFiles = self.find_files_with_necessary_format(
+            scoreDir, r"peptideFDR\.csv$"
+        )
+        proteinFdrFiles = self.find_files_with_necessary_format(
+            scoreDir, r"proteinFDR\.csv$"
+        )
         if len(peptideFdrFiles) == 0 and len(proteinFdrFiles) == 0:
             raise argparse.ArgumentTypeError(
                 "The -i or --input argument directory must contain .csv files that are outputs from the scoring workflow in CsoDIAq (peptide or protein score outputs required)."
             )
 
         return {
-            'peptide': peptideFdrFiles,
-            'protein': proteinFdrFiles,
+            "peptide": peptideFdrFiles,
+            "protein": proteinFdrFiles,
         }

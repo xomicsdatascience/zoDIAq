@@ -9,6 +9,7 @@ import pandas as pd
 from collections import defaultdict
 from itertools import chain
 
+
 def create_spectral_fdr_output_from_full_output(fullDf, fdrCutoff=0.01):
     fdrs = calculate_fdr_rates_of_decoy_array(fullDf["isDecoy"])
     scoreDfCutoffIdx = np.argmax(fdrs > fdrCutoff)
@@ -47,6 +48,7 @@ def create_protein_fdr_output_from_peptide_fdr_output(peptideDf):
 
 def drop_duplicate_values_from_df_in_given_column(df, column):
     return df.drop_duplicates(subset=column, keep="first").reset_index(drop=True)
+
 
 def organize_peptide_df_by_leading_proteins(peptideDf, leadingProteins):
     """
@@ -146,6 +148,7 @@ def create_dataframe_where_peptides_match_to_one_or_more_leading_proteins(
     proteinDf = proteinDf.drop_duplicates(keep="first").reset_index(drop=True)
     return proteinDf
 
+
 def identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff(
     df, fdrCutoff=0.01
 ):
@@ -153,6 +156,7 @@ def identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cu
     df["FDR"] = calculate_fdr_rates_of_decoy_array(df["isDecoy"])
     df = df[df["FDR"] < fdrCutoff]
     return dict(zip(df["leadingProtein"], df["FDR"]))
+
 
 def determine_if_peptides_are_unique_to_leading_protein(proteinDf):
     """
@@ -178,8 +182,10 @@ def determine_if_peptides_are_unique_to_leading_protein(proteinDf):
     uniquePeptides[uniqueValuesDf.index] = 1
     return list(uniquePeptides)
 
+
 def calculate_ion_count_from_peptides_of_protein(ionCountList):
     return mean(ionCountList)
+
 
 def calculate_ion_count_for_each_protein_in_protein_fdr_df(proteinDf):
     separateProteinData = []
@@ -187,20 +193,36 @@ def calculate_ion_count_for_each_protein_in_protein_fdr_df(proteinDf):
         proteins = format_protein_string_to_list(row["leadingProtein"])
         for protein in proteins:
             separateProteinData.append([protein, row["ionCount"]])
-    separateProteinDf = pd.DataFrame(separateProteinData, columns=["protein","ionCount"])
-    proteinIonCountDf = separateProteinDf.groupby('protein').apply(lambda x: calculate_ion_count_from_peptides_of_protein(x["ionCount"])).reset_index(name="ionCount")
+    separateProteinDf = pd.DataFrame(
+        separateProteinData, columns=["protein", "ionCount"]
+    )
+    proteinIonCountDf = (
+        separateProteinDf.groupby("protein")
+        .apply(lambda x: calculate_ion_count_from_peptides_of_protein(x["ionCount"]))
+        .reset_index(name="ionCount")
+    )
     return proteinIonCountDf
 
+
 def compile_ion_count_comparison_across_runs_df(inputDfs, columnName):
-    allValuesToCompare = sorted(set(list(chain.from_iterable([df[columnName] for df in inputDfs.values()]))))
+    allValuesToCompare = sorted(
+        set(list(chain.from_iterable([df[columnName] for df in inputDfs.values()])))
+    )
     comparisonData = []
     inputFileNames = []
     for name, df in inputDfs.items():
-        comparisonData.append(extract_all_ion_counts_from_df(df, allValuesToCompare, columnName))
+        comparisonData.append(
+            extract_all_ion_counts_from_df(df, allValuesToCompare, columnName)
+        )
         inputFileNames.append(name)
-    outputDf = pd.DataFrame(comparisonData, columns=allValuesToCompare, index=inputFileNames)
+    outputDf = pd.DataFrame(
+        comparisonData, columns=allValuesToCompare, index=inputFileNames
+    )
     return outputDf
 
+
 def extract_all_ion_counts_from_df(df, allValuesToCompare, columnName):
-    valueDict = defaultdict(int, pd.Series(df["ionCount"].values,index=df[columnName]).to_dict())
+    valueDict = defaultdict(
+        int, pd.Series(df["ionCount"].values, index=df[columnName]).to_dict()
+    )
     return [valueDict[x] for x in allValuesToCompare]

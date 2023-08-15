@@ -6,6 +6,7 @@ import os
 
 from csodiaq.gui.windows import MainWindow
 
+
 def run_gui():
     app = QApplication(sys.argv)
     view = MainWindow()
