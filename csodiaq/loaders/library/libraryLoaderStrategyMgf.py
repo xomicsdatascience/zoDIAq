@@ -52,7 +52,7 @@ def _create_csodiaq_library_entry(
     reducedPeaks = remove_low_intensity_peaks_below_max_peak_num(peaks, maxPeakNum)
     return csodiaqKey, {
         finalVariableNames["precursorCharge"]: precursorCharge,
-        finalVariableNames["identifier"]: identifier,
+        finalVariableNames["identification"]: identifier,
         finalVariableNames["proteinName"]: proteinName,
         finalVariableNames["peaks"]: sorted(reducedPeaks),
         finalVariableNames["csodiaqKeyIdx"]: csodiaqKeyIdx,

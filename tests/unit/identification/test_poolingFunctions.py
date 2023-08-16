@@ -1,4 +1,4 @@
-from csodiaq.identifier.poolingFunctions import (
+from csodiaq.identification.poolingFunctions import (
     _pool_library_spectra_by_mz_window,
     generate_pooled_library_and_query_spectra_by_mz_windows,
 )

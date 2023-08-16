@@ -1,93 +1,13 @@
-import os.path
-import pandas as pd
-import numpy as np
-from csodiaq.identifier.scoringFunctions import (
+from csodiaq.scoring import (
     calculate_fdr_rates_of_decoy_array,
-    determine_index_of_fdr_cutoff,
+    identify_high_confidence_proteins,
 )
-from csodiaq.identifier.idpickerFunctions import identify_high_confidence_proteins
 from csodiaq.utils import format_protein_list_to_string, format_protein_string_to_list
-
-
-def format_output_line(libMetadata, queMetadata, matchMetadata):
-    return [
-        queMetadata["scan"],
-        queMetadata["precursorMz"],
-        libMetadata["peptide"],
-        libMetadata["proteinName"],
-        libMetadata["isDecoy"],
-        libMetadata["precursorMz"],
-        libMetadata["precursorCharge"],
-        matchMetadata["cosineSimilarityScore"],
-        libMetadata["identifier"],
-        queMetadata["peaksCount"],
-        len(libMetadata["peaks"]),
-        matchMetadata["shared"],
-        matchMetadata["ionCount"],
-        queMetadata["CV"],
-        queMetadata["windowWidth"],
-        matchMetadata["maccScore"],
-        matchMetadata["exclude_num"],
-    ]
-
-
-def extract_metadata_from_match_and_score_dataframes(matchDf, scoreDf, queryDict):
-    matchDict = {
-        k: extract_metadata_from_match_dataframe_groupby(v, queryDict[str(k[1])])
-        for k, v in matchDf.groupby(["libraryIdx", "queryIdx"])
-    }
-    scoreDict = extract_metadata_from_score_dataframe(scoreDf)
-    metadataDict = {k: {**matchDict[k], **scoreDict[k]} for k in scoreDict.keys()}
-    return metadataDict
-
-
-def extract_metadata_from_match_dataframe_groupby(group, queryMetadata):
-    precursorMz = queryMetadata["precursorMz"]
-    groupRowsAbovePrecursorMz = group[group["queryMz"] > precursorMz]
-    return {
-        "shared": len(group.index),
-        "ionCount": sum(groupRowsAbovePrecursorMz["queryIntensity"]),
-        "exclude_num": len(group.index) - len(groupRowsAbovePrecursorMz),
-    }
-
-
-def extract_metadata_from_score_dataframe(df):
-    maccDict = df.set_index(["libraryIdx", "queryIdx"])["maccScore"].to_dict()
-    cosineDict = df.set_index(["libraryIdx", "queryIdx"])["cosineScore"].to_dict()
-    outputDict = {
-        k: {"maccScore": maccDict[k], "cosineSimilarityScore": cosineDict[k]}
-        for k in maccDict.keys()
-    }
-    return outputDict
-
-
-def format_output_as_pandas_dataframe(inputFileName, outputData):
-    columns = [
-        "scan",
-        "MzEXP",
-        "peptide",
-        "protein",
-        "isDecoy",
-        "MzLIB",
-        "zLIB",
-        "cosine",
-        "name",
-        "Peak(Query)",
-        "Peaks(Library)",
-        "shared",
-        "ionCount",
-        "CompensationVoltage",
-        "totalWindowWidth",
-        "MaCC_Score",
-        "exclude_num",
-    ]
-    outputDf = pd.DataFrame(outputData, columns=columns)
-    outputDf.insert(0, "fileName", [inputFileName] * len(outputDf.index))
-    return outputDf
-
-
-def drop_duplicate_values_from_df_in_given_column(df, column):
-    return df.drop_duplicates(subset=column, keep="first").reset_index(drop=True)
+import numpy as np
+from scipy import mean
+import pandas as pd
+from collections import defaultdict
+from itertools import chain
 
 
 def create_spectral_fdr_output_from_full_output(fullDf, fdrCutoff=0.01):
@@ -126,13 +46,8 @@ def create_protein_fdr_output_from_peptide_fdr_output(peptideDf):
     return proteinDf
 
 
-def identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff(
-    df, fdrCutoff=0.01
-):
-    df = drop_duplicate_values_from_df_in_given_column(df, column="leadingProtein")
-    df["FDR"] = calculate_fdr_rates_of_decoy_array(df["isDecoy"])
-    df = df[df["FDR"] < fdrCutoff]
-    return dict(zip(df["leadingProtein"], df["FDR"]))
+def drop_duplicate_values_from_df_in_given_column(df, column):
+    return df.drop_duplicates(subset=column, keep="first").reset_index(drop=True)
 
 
 def organize_peptide_df_by_leading_proteins(peptideDf, leadingProteins):
@@ -234,6 +149,15 @@ def create_dataframe_where_peptides_match_to_one_or_more_leading_proteins(
     return proteinDf
 
 
+def identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff(
+    df, fdrCutoff=0.01
+):
+    df = drop_duplicate_values_from_df_in_given_column(df, column="leadingProtein")
+    df["FDR"] = calculate_fdr_rates_of_decoy_array(df["isDecoy"])
+    df = df[df["FDR"] < fdrCutoff]
+    return dict(zip(df["leadingProtein"], df["FDR"]))
+
+
 def determine_if_peptides_are_unique_to_leading_protein(proteinDf):
     """
     Determines if the peptide in the peptide column is unique to the protein
@@ -257,3 +181,48 @@ def determine_if_peptides_are_unique_to_leading_protein(proteinDf):
     uniquePeptides = np.array([0] * len(proteinDf.index))
     uniquePeptides[uniqueValuesDf.index] = 1
     return list(uniquePeptides)
+
+
+def calculate_ion_count_from_peptides_of_protein(ionCountList):
+    return mean(ionCountList)
+
+
+def calculate_ion_count_for_each_protein_in_protein_fdr_df(proteinDf):
+    separateProteinData = []
+    for _, row in proteinDf.iterrows():
+        proteins = format_protein_string_to_list(row["leadingProtein"])
+        for protein in proteins:
+            separateProteinData.append([protein, row["ionCount"]])
+    separateProteinDf = pd.DataFrame(
+        separateProteinData, columns=["protein", "ionCount"]
+    )
+    proteinIonCountDf = (
+        separateProteinDf.groupby("protein")
+        .apply(lambda x: calculate_ion_count_from_peptides_of_protein(x["ionCount"]))
+        .reset_index(name="ionCount")
+    )
+    return proteinIonCountDf
+
+
+def compile_ion_count_comparison_across_runs_df(inputDfs, columnName):
+    allValuesToCompare = sorted(
+        set(list(chain.from_iterable([df[columnName] for df in inputDfs.values()])))
+    )
+    comparisonData = []
+    inputFileNames = []
+    for name, df in inputDfs.items():
+        comparisonData.append(
+            extract_all_ion_counts_from_df(df, allValuesToCompare, columnName)
+        )
+        inputFileNames.append(name)
+    outputDf = pd.DataFrame(
+        comparisonData, columns=allValuesToCompare, index=inputFileNames
+    )
+    return outputDf
+
+
+def extract_all_ion_counts_from_df(df, allValuesToCompare, columnName):
+    valueDict = defaultdict(
+        int, pd.Series(df["ionCount"].values, index=df[columnName]).to_dict()
+    )
+    return [valueDict[x] for x in allValuesToCompare]

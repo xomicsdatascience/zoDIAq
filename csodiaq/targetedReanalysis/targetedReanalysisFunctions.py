@@ -45,7 +45,7 @@ def calculate_mz_of_heavy_isotope_of_each_peptide(fdrDf):
     )
 
 
-def make_bin_assignments_for_mz_values(mzValues, maxDistanceFromBinValue=0.75):
+def make_bin_assignments_for_mz_values(mzValues, maxDistanceFromBinValue):
     fullBinWidth = maxDistanceFromBinValue * 2
     bins = np.arange(
         int(min(mzValues)) - 1, int(max(mzValues) + fullBinWidth) + 1, fullBinWidth
@@ -79,11 +79,13 @@ def filter_out_peptides_based_on_user_settings(
 
 
 def calculate_binning_information_by_compensation_voltage(
-    fdrDf, isIncludeHeavyIsotopes
+    fdrDf,
+    isIncludeHeavyIsotopes,
+    binValueProximity,
 ):
     dfs = [
         organize_for_targeted_reanalysis_of_identified_peptides(
-            df, isIncludeHeavyIsotopes
+            df, isIncludeHeavyIsotopes, binValueProximity
         )
         for _, df in fdrDf.groupby(["CompensationVoltage"])
     ]
@@ -91,12 +93,16 @@ def calculate_binning_information_by_compensation_voltage(
 
 
 def organize_for_targeted_reanalysis_of_identified_peptides(
-    fdrDf, isIncludeHeavyIsotopes
+    fdrDf, isIncludeHeavyIsotopes, binValueProximity
 ):
-    fdrDf["lightMzBin"] = make_bin_assignments_for_mz_values(fdrDf["MzLIB"])
+    fdrDf["lightMzBin"] = make_bin_assignments_for_mz_values(
+        fdrDf["MzLIB"], maxDistanceFromBinValue=binValueProximity
+    )
     if isIncludeHeavyIsotopes:
         fdrDf["heavyMz"] = calculate_mz_of_heavy_isotope_of_each_peptide(fdrDf)
-        fdrDf["heavyMzBin"] = make_bin_assignments_for_mz_values(fdrDf["heavyMz"])
+        fdrDf["heavyMzBin"] = make_bin_assignments_for_mz_values(
+            fdrDf["heavyMz"], maxDistanceFromBinValue=binValueProximity
+        )
     return fdrDf
 
 
@@ -178,7 +184,10 @@ def create_targeted_reanalysis_dataframes_by_compensation_voltage(
 
 
 def create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides(
-    fdrDf, isIncludeHeavyIsotopes=False, maximumPeptidesPerProtein=0
+    fdrDf,
+    isIncludeHeavyIsotopes,
+    maximumPeptidesPerProtein,
+    binValueProximity,
 ):
     """
     Creates dataframes with data to be fed into a mass spectrometer for targetted reanalysis of identified peptides.
@@ -230,7 +239,7 @@ def create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_pept
         fdrDf, isIncludeHeavyIsotopes, maximumPeptidesPerProtein
     )
     fdrDf = organize_for_targeted_reanalysis_of_identified_peptides(
-        fdrDf, isIncludeHeavyIsotopes
+        fdrDf, isIncludeHeavyIsotopes, binValueProximity=binValueProximity
     )
     outputDfDict = create_targeted_reanalysis_dataframes_by_compensation_voltage(
         fdrDf, isIncludeHeavyIsotopes

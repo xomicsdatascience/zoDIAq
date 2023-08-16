@@ -39,7 +39,7 @@ def test__library_loader_strategy_mgf__format_raw_library_object_into_csodiaq_li
     expectedOutputDict = {
         (798.93, "AAAAAAAAAAAAAAAGAGAGAK"): {
             "precursorCharge": 2,
-            "identifier": 'human.faims.1.1. File:"", NativeID:"scan=1" Retention Time: 1910.238',
+            "identification": 'human.faims.1.1. File:"", NativeID:"scan=1" Retention Time: 1910.238',
             "proteinName": "1/sp|P55011|S12A2_HUMAN",
             "peaks": [
                 (356.193, 498.5, 0),
@@ -81,7 +81,7 @@ def test__library_loader_strategy_mgf__format_raw_library_object_into_csodiaq_li
     expectedOutputDict = {
         (798.93, "AAAAAAAAAAAAAAAGAGAGAK"): {
             "precursorCharge": 2,
-            "identifier": 'human.faims.1.1. File:"", NativeID:"scan=1" Retention Time: 1910.238',
+            "identification": 'human.faims.1.1. File:"", NativeID:"scan=1" Retention Time: 1910.238',
             "proteinName": "1/sp|P55011|S12A2_HUMAN",
             "peaks": [
                 (356.193, 498.5, 0),
@@ -100,7 +100,7 @@ def test__library_loader_strategy_mgf__format_raw_library_object_into_csodiaq_li
         },
         (798.93, "AGAAGAAAAAAAAAAAAAAGAK"): {
             "precursorCharge": 2,
-            "identifier": 'DECOY_human.faims.1.1. File:"", NativeID:"scan=1" PROTEIN: DECOY_null',
+            "identification": 'DECOY_human.faims.1.1. File:"", NativeID:"scan=1" PROTEIN: DECOY_null',
             "proteinName": "1/DECOY_0_sp|P55011|S12A2_HUMAN",
             "peaks": [
                 (328.162, 498.5, 1),

@@ -126,8 +126,8 @@ def _create_csodiaq_library_entry(
         finalVariableNames["precursorCharge"]: organizedDataDict["metadata"][
             csodiaqKey
         ]["precursorCharge"],
-        finalVariableNames["identifier"]: organizedDataDict["metadata"][csodiaqKey][
-            "identifier"
+        finalVariableNames["identification"]: organizedDataDict["metadata"][csodiaqKey][
+            "identification"
         ],
         finalVariableNames["proteinName"]: organizedDataDict["metadata"][csodiaqKey][
             "proteinName"

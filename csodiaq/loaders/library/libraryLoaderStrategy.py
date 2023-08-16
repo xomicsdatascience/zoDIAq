@@ -48,7 +48,7 @@ class LibraryLoaderStrategy(ABC):
             value: dictionary
                 contains the following `key - value` entries:
                     precursorCharge - int of the precursor charge.
-                    identifier - string of the unique title of the library spectrum.
+                    identification - string of the unique title of the library spectrum.
                     proteinName - string of protein(s) this peptide is found in.
                     peaks - list of tuples repres. peaks in the spectrum. Tuples are:
                         (peak mz value, peak intensity value, csodiaqLibDict key idx)
@@ -134,7 +134,7 @@ def remove_low_intensity_peaks_below_max_peak_num(peaks: list, maxPeakNum: int) 
 
 finalVariableNames = {
     "precursorCharge": "precursorCharge",
-    "identifier": "identifier",
+    "identification": "identification",
     "proteinName": "proteinName",
     "peaks": "peaks",
     "csodiaqKeyIdx": "csodiaqKeyIdx",

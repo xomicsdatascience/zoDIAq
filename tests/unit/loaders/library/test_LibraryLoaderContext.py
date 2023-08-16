@@ -29,7 +29,7 @@ def test__library_loader_context__table__load_csodiaq_library_dict(tableContext)
     expectedCsodiaqLibDict = {
         (516.801083027, "YRPGTVALR"): {
             "precursorCharge": 2,
-            "identifier": "51327_YRPGTVALR_2",
+            "identification": "51327_YRPGTVALR_2",
             "proteinName": "5/sp|Q71DI3|H32_HUMAN/sp|Q6NXT2|H3C_HUMAN/sp|Q16695|H31T_HUMAN/sp|P84243|H33_HUMAN/sp|P68431|H31_HUMAN",
             "peaks": [
                 (429.745245163, 39.7, 0),
@@ -73,7 +73,7 @@ def test__library_loader_context__mgf__load_csodiaq_library_dict(mgfContext):
     expectedCsodiaqLibDict = {
         (798.93, "AAAAAAAAAAAAAAAGAGAGAK"): {
             "precursorCharge": 2,
-            "identifier": 'human.faims.1.1. File:"", NativeID:"scan=1" Retention Time: 1910.238',
+            "identification": 'human.faims.1.1. File:"", NativeID:"scan=1" Retention Time: 1910.238',
             "proteinName": "1/sp|P55011|S12A2_HUMAN",
             "peaks": [
                 (356.193, 498.5, 0),

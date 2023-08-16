@@ -1,29 +1,33 @@
 from csodiaq.loaders import LibraryLoaderContext, QueryLoaderContext
-from csodiaq.identifier.poolingFunctions import (
+from csodiaq.identification.poolingFunctions import (
     generate_pooled_library_and_query_spectra_by_mz_windows,
 )
-from csodiaq.identifier.matchingFunctions import (
+from csodiaq.identification.matchingFunctions import (
     match_library_to_query_pooled_spectra,
     eliminate_low_count_matches,
-    eliminate_matches_below_fdr_cutoff,
-)
-from csodiaq.identifier.scoringFunctions import (
-    score_library_to_query_matches,
-    identify_all_decoys,
-    determine_index_of_fdr_cutoff,
     filter_matches_by_ppm_offset_and_tolerance,
     calculate_ppm_offset_tolerance,
     create_ppm_histogram,
 )
-from csodiaq.identifier.outputFormattingFunctions import (
+from csodiaq.scoring import (
+    score_library_to_query_matches,
+    determine_index_of_fdr_cutoff,
+)
+from csodiaq.identification.outputFormattingFunctions import (
     extract_metadata_from_match_and_score_dataframes,
     format_output_line,
     format_output_as_pandas_dataframe,
-    create_spectral_fdr_output_from_full_output,
+    identify_all_decoys,
+)
+
+from csodiaq.scoring.fdrCalculationFunctions import (
     create_peptide_fdr_output_from_full_output,
     create_protein_fdr_output_from_peptide_fdr_output,
+    create_spectral_fdr_output_from_full_output,
 )
 import pandas as pd
+import os
+from csodiaq.utils import Printer
 
 
 class Identifier:
@@ -53,6 +57,8 @@ class Identifier:
 
     def __init__(self, commandLineArgs):
         self._commandLineArgs = commandLineArgs
+        printer = Printer()
+        printer("Loading Library File")
         self._libraryDict = LibraryLoaderContext(
             self._commandLineArgs["library"]
         ).load_csodiaq_library_dict()
@@ -62,12 +68,19 @@ class Identifier:
         The primary function called for matching library spectra to query spectra.
             This is the only public-facing function of the class.
         """
+        printer = Printer()
         self._queryContext = QueryLoaderContext(queryFile)
+        printer("Begin matching library spectra to query spectra")
         matchDf = self._match_library_to_query_spectra()
+        printer(f"Total number of peaks matched (pre-correction): {len(matchDf.index)}")
         if self._correction_process_is_to_be_applied():
             matchDf = self._apply_correction_to_match_dataframe(matchDf)
+            printer(
+                f"Total number of peaks matched (post-correction): {len(matchDf.index)}"
+            )
         scoreDf = self._score_spectra_matches(matchDf)
-        return self._format_identification_data_with_fdr_outputs(matchDf, scoreDf)
+        printer("Formatting spectral matches for output")
+        return self._format_identifications_as_dataframe(matchDf, scoreDf)
 
     def _match_library_to_query_spectra(self):
         """
@@ -92,7 +105,7 @@ class Identifier:
             matchDf = match_library_to_query_pooled_spectra(
                 pooledLibPeaks,
                 pooledQueryPeaks,
-                self._commandLineArgs["fragmentMassTolerance"],
+                self._commandLineArgs["matchTolerance"],
             )
             matchDf = eliminate_low_count_matches(matchDf)
             matchDfs.append(matchDf)
@@ -125,7 +138,7 @@ class Identifier:
         return score_library_to_query_matches(matchDf)
 
     def _correction_process_is_to_be_applied(self):
-        return self._commandLineArgs["correction"] != -1
+        return not self._commandLineArgs["noCorrection"]
 
     def _apply_correction_to_match_dataframe(self, matchDf):
         """
@@ -154,22 +167,16 @@ class Identifier:
                 with fewer than 3 peak matches is repeated as well.
         """
         offset, tolerance = calculate_ppm_offset_tolerance(
-            matchDf["ppmDifference"], self._commandLineArgs["correction"]
+            matchDf["ppmDifference"], self._commandLineArgs["correctionDegree"]
         )
+        queryFile = self._queryContext.filePath.split("/")[-1]
+        outFile = ".".join(queryFile.split(".")[:-1]) + "_correctionHistogram.png"
         if self._commandLineArgs["histogram"]:
-            outFileHeader = (
-                self._commandLineArgs["outDirectory"]
-                + "CsoDIAq-file"
-                + "_"
-                + ".".join(self._queryContext.filePath.split("/")[-1].split(".")[:-1])
-                + "_corrected"
-            )
-
             create_ppm_histogram(
                 matchDf["ppmDifference"],
                 offset,
                 tolerance,
-                outFileHeader + "_histogram.png",
+                os.path.join(self._commandLineArgs["output"], outFile),
             )
         matchDf = filter_matches_by_ppm_offset_and_tolerance(matchDf, offset, tolerance)
         return eliminate_low_count_matches(matchDf)
@@ -202,23 +209,6 @@ class Identifier:
             )
             outputs.append(outputLine)
         return format_output_as_pandas_dataframe(self._queryContext.filePath, outputs)
-
-    def _format_identification_data_with_fdr_outputs(self, matchDf, scoreDf):
-        outputDict = {}
-        outputDict["fullOutput"] = self._format_identifications_as_dataframe(
-            matchDf, scoreDf
-        )
-        outputDict["spectralFDR"] = create_spectral_fdr_output_from_full_output(
-            outputDict["fullOutput"]
-        )
-        outputDict["peptideFDR"] = create_peptide_fdr_output_from_full_output(
-            outputDict["fullOutput"]
-        )
-        outputDict["proteinFDR"] = create_protein_fdr_output_from_peptide_fdr_output(
-            outputDict["peptideFDR"]
-        )
-
-        return outputDict
 
     def _prepare_library_dictionary_for_output(self, libKeyIdx, sortedLibKeys):
         libKey = sortedLibKeys[libKeyIdx]

@@ -1,6 +1,7 @@
 import os.path
 import pandas as pd
 import numpy as np
+import re
 
 
 def create_outfile_header(outputDir, queryFile, correction):
@@ -62,3 +63,20 @@ def format_protein_list_to_string(proteinList):
     """
 
     return f"{len(proteinList)}/{'/'.join(proteinList)}"
+
+
+def confirm_proteins_in_list_are_in_appropriate_format(proteinList):
+    proteinPattern = re.compile(r"^\d+(?:\/.*[^\/])+$")
+    for protein in proteinList:
+        if not proteinPattern.search(protein) or not confirm_protein_count_is_accurate(
+            protein
+        ):
+            return False
+    return True
+
+
+def confirm_protein_count_is_accurate(proteinStr):
+    listFormat = proteinStr.split("/")
+    count = listFormat[0]
+    proteins = listFormat[1:]
+    return len(proteins) == int(count)

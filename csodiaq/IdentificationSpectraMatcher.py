@@ -256,7 +256,7 @@ class IdentificationSpectraMatcher:
             'zLIB',
             # Cosine score comparing the library spectrum corresponding to this row with the query spectrum.
             'cosine',
-            # Title - corresponds to the column "transition_group_id," a library spectrum identifier.
+            # Title - corresponds to the column "transition_group_id," a library spectrum identification.
             'name',
             'Peak(Query)',  # The number of peaks in the query spectrum.
             'Peaks(Library)',  # The number of peaks in the library spectrum.
