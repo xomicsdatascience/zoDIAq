@@ -208,7 +208,7 @@ class LibraryFile:
 
     def __call__(self, libraryFile):
         if not os.path.isfile(libraryFile):
-            raise ValueError(
+            raise argparse.ArgumentTypeError(
                 "The -l or --library argument must be an existing file (and not a directory)."
             )
         if libraryFile.split(".")[-1] not in self.allowedFileTypes:
