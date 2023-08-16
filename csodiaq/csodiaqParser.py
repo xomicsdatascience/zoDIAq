@@ -150,19 +150,17 @@ def check_for_conflicting_args(args):
         )
 
 
-def create_output_name(commandName):
+def get_output_name(commandName):
     return f"csodiaq-{commandName}-{time.strftime('%Y%m%d-%H%M%S')}"
 
 
-def create_new_output_directory_path(newDirectoryLocation, commandName):
-    if newDirectoryLocation[-1] == "/":
-        newDirectoryLocation = newDirectoryLocation[:-1]
-    newDirectoryName = create_output_name(commandName)
+def get_new_output_directory_path(newDirectoryLocation, commandName):
+    newDirectoryName = get_output_name(commandName)
     if os.path.isdir(newDirectoryLocation):
         newDirectoryPath = os.path.join(newDirectoryLocation, newDirectoryName)
     else:
-        newDirectoryHeader = newDirectoryLocation.split("/")[-1]
-        newDirectoryParentDirectory = "/".join(newDirectoryLocation.split("/")[:-1])
+        newDirectoryHeader = os.path.basename(newDirectoryLocation)
+        newDirectoryParentDirectory = os.path.dirname(newDirectoryLocation)
         newDirectoryPath = os.path.join(
             newDirectoryParentDirectory, f"{newDirectoryHeader}-{newDirectoryName}"
         )
@@ -182,7 +180,7 @@ class OutputDirectory:
             raise argparse.ArgumentTypeError(
                 "The -o or --output argument directory requires an existing parent directory."
             )
-        newDirectoryPath = create_new_output_directory_path(
+        newDirectoryPath = get_new_output_directory_path(
             newDirectoryLocation, self.commandName
         )
         return newDirectoryPath
@@ -210,7 +208,7 @@ class LibraryFile:
 
     def __call__(self, libraryFile):
         if not os.path.isfile(libraryFile):
-            raise argparse.ArgumentTypeError(
+            raise ValueError(
                 "The -l or --library argument must be an existing file (and not a directory)."
             )
         if libraryFile.split(".")[-1] not in self.allowedFileTypes:

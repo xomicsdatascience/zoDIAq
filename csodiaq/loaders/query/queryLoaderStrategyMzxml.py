@@ -7,7 +7,7 @@ from csodiaq.loaders.library.libraryLoaderStrategy import (
 )
 from collections import defaultdict
 from pyteomics import mzxml
-
+import warnings
 
 class QueryLoaderStrategyMzxml(QueryLoaderStrategy):
     """
@@ -21,7 +21,10 @@ class QueryLoaderStrategyMzxml(QueryLoaderStrategy):
             for spec in spectra:
                 scan = spec["num"]
                 if "precursorMz" not in spec:
-                    raise SyntaxWarning(precursor_mz_missing_warning_text(scan))
+                    warnings.warn(
+                        precursor_mz_missing_warning_text(scan),
+                        SyntaxWarning,
+                    )
                     continue
                 precMz = spec["precursorMz"][0]["precursorMz"]
                 windowWidth = spec["precursorMz"][0]["windowWideness"]
