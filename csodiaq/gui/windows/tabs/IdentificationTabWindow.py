@@ -1,9 +1,9 @@
 from csodiaq.gui.windows.tabs.TabWindow import TabWindow
 from csodiaq.csodiaqParser import (
-    InputQueryFile,
-    LibraryFile,
-    OutputDirectory,
-    RestrictedFloat,
+    _InputQueryFile,
+    _LibraryFile,
+    _OutputDirectory,
+    _RestrictedFloat,
 )
 from PyQt5.QtWidgets import (
     QListWidget,
@@ -45,24 +45,24 @@ class IdentificationTabWindow(TabWindow):
         argsConfirmedChecks = []
         argsConfirmedChecks.append(
             self.check_if_arg_is_invalid_using_parsing_object(
-                args, "-i", InputQueryFile(), self.diaFileText, isRequired=True
+                args, "-i", _InputQueryFile(), self.diaFileText, isRequired=True
             )
         )
         argsConfirmedChecks.append(
             self.check_if_arg_is_invalid_using_parsing_object(
-                args, "-l", LibraryFile(), self.libFileText, isRequired=True
+                args, "-l", _LibraryFile(), self.libFileText, isRequired=True
             )
         )
         argsConfirmedChecks.append(
             self.check_if_arg_is_invalid_using_parsing_object(
-                args, "-o", OutputDirectory("id"), self.outDirText, isRequired=True
+                args, "-o", _OutputDirectory("id"), self.outDirText, isRequired=True
             )
         )
         argsConfirmedChecks.append(
             self.check_if_arg_is_invalid_using_parsing_object(
                 args,
                 "-t",
-                RestrictedFloat("matchTolerance", minValue=1, maxValue=60),
+                _RestrictedFloat("matchTolerance", minValue=1, maxValue=60),
                 self.matchToleranceText,
             )
         )
@@ -70,7 +70,7 @@ class IdentificationTabWindow(TabWindow):
             self.check_if_arg_is_invalid_using_parsing_object(
                 args,
                 "-c",
-                RestrictedFloat("correctionDegree", minValue=0.5, maxValue=2),
+                _RestrictedFloat("correctionDegree", minValue=0.5, maxValue=2),
                 self.correctionDegreeText,
             )
         )

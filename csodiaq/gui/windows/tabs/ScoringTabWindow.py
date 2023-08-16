@@ -1,5 +1,5 @@
 from csodiaq.gui.windows.tabs.TabWindow import TabWindow
-from csodiaq.csodiaqParser import IdentificationOutputDirectory
+from csodiaq.csodiaqParser import _IdentificationOutputDirectory
 from PyQt5.QtWidgets import (
     QLabel,
     QPushButton,
@@ -25,7 +25,7 @@ class ScoringTabWindow(TabWindow):
             self.check_if_arg_is_invalid_using_parsing_object(
                 args,
                 "-i",
-                IdentificationOutputDirectory(),
+                _IdentificationOutputDirectory(),
                 self.idOutputDirText,
                 isRequired=True,
             )

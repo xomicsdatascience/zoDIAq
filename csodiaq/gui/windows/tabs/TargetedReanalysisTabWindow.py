@@ -1,5 +1,9 @@
 from csodiaq.gui.windows.tabs.TabWindow import TabWindow
-from csodiaq.csodiaqParser import ScoringOutputDirectory, RestrictedInt, RestrictedFloat
+from csodiaq.csodiaqParser import (
+    _ScoringOutputDirectory,
+    _RestrictedInt,
+    _RestrictedFloat,
+)
 from PyQt5.QtWidgets import (
     QLabel,
     QPushButton,
@@ -35,21 +39,21 @@ class TargetedReanalysisTabWindow(TabWindow):
             self.check_if_arg_is_invalid_using_parsing_object(
                 args,
                 "-i",
-                ScoringOutputDirectory(),
+                _ScoringOutputDirectory(),
                 self.scoringOutputDirText,
                 isRequired=True,
             )
         )
         argsConfirmedChecks.append(
             self.check_if_arg_is_invalid_using_parsing_object(
-                args, "-p", RestrictedInt("protein", minValue=1), self.proteinText
+                args, "-p", _RestrictedInt("protein", minValue=1), self.proteinText
             )
         )
         argsConfirmedChecks.append(
             self.check_if_arg_is_invalid_using_parsing_object(
                 args,
                 "-b",
-                RestrictedFloat("binValueProximity", minValue=0.01),
+                _RestrictedFloat("binValueProximity", minValue=0.01),
                 self.binValueText,
             )
         )

@@ -4,13 +4,13 @@ import re
 import os
 from csodiaq import set_args_from_command_line_input, check_for_conflicting_args
 from csodiaq.csodiaqParser import (
-    OutputDirectory,
-    InputQueryFile,
-    LibraryFile,
-    RestrictedInt,
-    RestrictedFloat,
-    IdentificationOutputDirectory,
-    ScoringOutputDirectory,
+    _OutputDirectory,
+    _InputQueryFile,
+    _LibraryFile,
+    _RestrictedInt,
+    _RestrictedFloat,
+    _IdentificationOutputDirectory,
+    _ScoringOutputDirectory,
 )
 from unittest.mock import Mock
 from tempfile import TemporaryDirectory, NamedTemporaryFile
@@ -42,7 +42,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__gui__succeeds_with_n
 
 @pytest.fixture
 def testOutputDir():
-    return OutputDirectory("test")
+    return _OutputDirectory("test")
 
 
 def test__csodiaq_parser__output_directory_parsing_class__rejects_file_as_input(
@@ -102,7 +102,7 @@ def test__csodiaq_parser__output_directory_parsing_class__if_directory_does_not_
 
 @pytest.fixture
 def testInputFile():
-    return InputQueryFile()
+    return _InputQueryFile()
 
 
 def test__csodiaq_parser__input_query_file_parsing_class__rejects_non_existing_file_values(
@@ -127,7 +127,7 @@ def test__csodiaq_parser__input_query_file_parsing_class__rejects_files_of_wrong
 
 @pytest.fixture
 def libraryFile():
-    return LibraryFile()
+    return _LibraryFile()
 
 
 def test__csodiaq_parser__library_file_parsing_class__rejects_non_existing_file_values(
@@ -152,7 +152,7 @@ def test__csodiaq_parser__library_file_parsing_class__rejects_files_of_wrong_typ
 
 @pytest.fixture
 def restrictedInt():
-    return RestrictedInt("test", minValue=-2, maxValue=3)
+    return _RestrictedInt("test", minValue=-2, maxValue=3)
 
 
 def test__csodiaq_parser__restricted_int_parsing_class__fails_when_value_cannot_be_assigned_to_int(
@@ -211,7 +211,7 @@ def test__csodiaq_parser__restricted_int_parsing_class__succeeds_when_value_is_e
 
 @pytest.fixture
 def restrictedFloat():
-    return RestrictedFloat("test", minValue=-2, maxValue=3)
+    return _RestrictedFloat("test", minValue=-2, maxValue=3)
 
 
 def test__csodiaq_parser__restricted_float_parsing_class__fails_when_value_cannot_be_assigned_to_float(
@@ -269,7 +269,7 @@ def test__csodiaq_parser__restricted_float_parsing_class__succeeds_when_value_is
 
 
 def test__csodiaq_parser__restricted_float_parsing_class__bin_proximity__fails_when_decimal_place_further_than_2():
-    binProximityFloat = RestrictedFloat("binValueProximity")
+    binProximityFloat = _RestrictedFloat("binValueProximity")
     inputValue = "1.001"
     errorOutput = "The binValueProximity argument cannot have values beyond 2 decimal places (mass spectrometers are typically not sensitive enough for that specificity)."
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
@@ -287,7 +287,7 @@ def test__csodiaq_parser__restricted_float_parsing_class__succeeds_when_decimal_
 
 @pytest.fixture
 def identificationOutputDirectory():
-    return IdentificationOutputDirectory()
+    return _IdentificationOutputDirectory()
 
 
 def test__csodiaq_parser__identification_output_directory_parsing_class__fails_when_not_a_directory(
@@ -328,7 +328,7 @@ def test__csodiaq_parser__identification_output_directory_parsing_class__fails_w
 
 @pytest.fixture
 def scoringOutputDirectory():
-    return ScoringOutputDirectory()
+    return _ScoringOutputDirectory()
 
 
 def test__csodiaq_parser__scoring_output_directory_parsing_class__fails_when_not_a_directory(
