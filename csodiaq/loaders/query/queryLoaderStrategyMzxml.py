@@ -39,6 +39,9 @@ class QueryLoaderStrategyMzxml(QueryLoaderStrategy):
                 metadataDict["precursorMz"] = spec["precursorMz"][0]["precursorMz"]
                 metadataDict["windowWidth"] = spec["precursorMz"][0]["windowWideness"]
                 metadataDict["peaksCount"] = spec["peaksCount"]
+                if "nameValue" in spec:
+                    for key, value in spec["nameValue"].items():
+                        spec[key] = value
                 if "compensationVoltage" in spec:
                     CV = spec["compensationVoltage"]
                 else:

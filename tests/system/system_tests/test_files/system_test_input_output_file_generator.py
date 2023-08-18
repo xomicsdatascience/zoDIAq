@@ -7,26 +7,28 @@ class Spectrum(object):
     def __init__(
         self,
         id,
-        mz_array,
-        intensity_array,
-        precursor_mz,
-        precursor_charge,
-        window_width,
+        mzArray,
+        intensityArray,
+        precursorMz,
+        precursorCharge,
+        windowWidth,
+        compensationVoltage=None,
 
     ):
         self.id = id
-        self.mz_array = mz_array
-        self.intensity_array = intensity_array
-        self.precursor_mz = precursor_mz
-        self.precursor_charge = precursor_charge
-        self.window_width = window_width
+        self.mzArray = mzArray
+        self.intensityArray = intensityArray
+        self.precursorMz = precursorMz
+        self.precursorCharge = precursorCharge
+        self.windowWidth = windowWidth
+        self.compensationVoltage = compensationVoltage
 
 def get_parent_dir():
     return os.path.dirname(os.path.abspath(__file__))
 
 def make_expected_output_and_query_spectra_files(libraryPath):
     spectraBreakdown = make_library_spectra_cosine_breakdown(libraryPath)
-    outputDf = make_output_df_from_spectra_breakdown(spectraBreakdown)
+    write_expected_output_df(spectraBreakdown)
     write_mzml_query_file(spectraBreakdown)
 
 def make_library_spectra_cosine_breakdown(libraryPath):
@@ -111,8 +113,11 @@ def make_output_df_from_spectra_breakdown(spectraBreakdown):
         for i in range(len(cosineGroup["libSpectra"])):
             libSpectra = cosineGroup["libSpectra"][i]
             querySpectra = cosineGroup["querySpectra"][i]
-            queryMzLargerThanPrecursorIdx = np.argwhere(np.array(querySpectra['mzs']) > libSpectra['precursorMz'])
+            queryMzLargerThanPrecursorIdx = np.argwhere(np.array(querySpectra['mzs']) > cosineGroup['queryScanMz'])
             queryMzLargerThanPrecursorIntensities = np.array(querySpectra['intensities'])[queryMzLargerThanPrecursorIdx]
+            ionCount = 0
+            if len(queryMzLargerThanPrecursorIntensities):
+                ionCount = sum(queryMzLargerThanPrecursorIntensities)[0]
             if 'DECOY' in libSpectra["protein"]: decoy = 1
             else: decoy = 0
             data.append([
@@ -128,7 +133,7 @@ def make_output_df_from_spectra_breakdown(spectraBreakdown):
                 numQueryPeaks,
                 len(libSpectra["mzs"]),
                 len(libSpectra["mzs"]),
-                sum(queryMzLargerThanPrecursorIntensities)[0],
+                ionCount,
                 f'-{cosineGroup["scan"]}',
                 cosineGroup['windowWidth'],
                 len(libSpectra["mzs"]) - len(queryMzLargerThanPrecursorIntensities)
@@ -143,7 +148,7 @@ def make_output_df_from_spectra_breakdown(spectraBreakdown):
         "zLIB",
         "cosine",
         "name",
-        "Peaks(Query)",
+        "Peak(Query)",
         "Peaks(Library)",
         "shared",
         "ionCount",
@@ -191,6 +196,11 @@ def create_query_spectrum_from_library_spectrum_and_cosine_score(spectrum, cosin
         'intensities': create_vector_that_can_be_used_to_create_cosine_score(spectrum['intensities'], cosineScore)
     }
 
+def write_expected_output_df(spectraBreakdown):
+    outputDf = make_output_df_from_spectra_breakdown(spectraBreakdown)
+    filePath = os.path.join(get_parent_dir(), 'outputs', 'query.csv')
+    outputDf.to_csv(filePath, index=False)
+
 def write_mzml_query_file(spectraBreakdown):
     spectra = organize_scan_data(spectraBreakdown)
     filePath = os.path.join(get_parent_dir(), 'inputs', 'query.mzML')
@@ -203,7 +213,7 @@ def organize_scan_data(spectraBreakdown):
         id = f'scan={cosineGroup["scan"]}'
         mzs = [mz for spectrum in cosineGroup['querySpectra'] for mz in spectrum['mzs']]
         intensities = [intensity for spectrum in cosineGroup['querySpectra'] for intensity in spectrum['intensities']]
-        spectra.append(Spectrum(id, mzs, intensities, cosineGroup['queryScanMz'], 0, cosineGroup['windowWidth']))
+        spectra.append(Spectrum(id, mzs, intensities, cosineGroup['queryScanMz'], 0, cosineGroup['windowWidth'], f'-{cosineGroup["scan"]}'))
     return spectra
 
 def write_spectra_to_file(scans, filePath):
@@ -215,6 +225,7 @@ def write_spectra_to_file(scans, filePath):
                 "MS1 spectrum",
                 "MSn spectrum",
                 "centroid spectrum",
+                "compensation voltage"
             ]
         )
 
@@ -262,25 +273,25 @@ def write_spectra_to_file(scans, filePath):
             spectrum_count = len(scans)
             with out.spectrum_list(count=spectrum_count):
                 for prod in scans:
-
                     out.write_spectrum(
-                        prod.mz_array,
-                        prod.intensity_array,
+                        prod.mzArray,
+                        prod.intensityArray,
                         id=prod.id,
                         params=[
                             "MSn Spectrum",
                             {"ms level": 2},
+                            {"compensationVoltage": prod.compensationVoltage},
                         ],
                         # Include precursor information
                         precursor_information={
-                            "mz": prod.precursor_mz,
-                            "charge": prod.precursor_charge,
+                            "mz": prod.precursorMz,
+                            "charge": prod.precursorCharge,
                             "activation": [
                                 "beam-type collisional dissociation",
                                 {"collision energy": 25},
                             ],
                             "isolation_window": [
-                                prod.window_width,
+                                prod.windowWidth,
                             ],
                         },
                     )
