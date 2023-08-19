@@ -1,6 +1,5 @@
-import pyteomics.mzxml
 from matplotlib import pyplot as plt
-from csodiaq.spectrum import Spectrum
+from csodiaq.plotting.spectrum import Spectrum
 
 
 def spectrum_lineplot(spectrum: Spectrum,
