@@ -5,10 +5,13 @@ import subprocess
 from tempfile import TemporaryDirectory, NamedTemporaryFile
 import numpy as np
 import pytest
+import re
 from . import (
     create_template_library_dataframe,
-    BaselineSpectraBreakdown,
     spectrastColumns,
+    BaselineSpectraBreakdown,
+    NoMatchSpectraBreakdown,
+    NoCompensationVoltageSpectraBreakdown,
 )
 
 
@@ -80,12 +83,18 @@ def test__identification__baseline_run(
     inputQueryFile = os.path.join(inputFileDirectory, f"{inputFileHeader}.mzXML")
     libraryFile = os.path.join(libraryFileDirectory, "spectrast_test_library.csv")
     outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
-    args = ["csodiaq", "id"]
-    args += ["-i", inputQueryFile]
-    args += ["-l", libraryFile]
-    args += ["-o", outputDir.name]
-    args += ["-nc"]
-    subprocess.run(args)
+    args = [
+        "csodiaq",
+        "id",
+        "-i",
+        inputQueryFile,
+        "-l",
+        libraryFile,
+        "-o",
+        outputDir.name,
+        "-nc",
+    ]
+    subprocess.run(args, capture_output=True)
     outputDirContents = os.listdir(outputDir.name)
     assert len(outputDirContents) == 1
     csodiaqDir = os.path.join(outputDir.name, outputDirContents[0])
@@ -100,4 +109,185 @@ def test__identification__baseline_run(
     )
     assert_pandas_dataframes_are_equal(
         baselineSpectraBreakdown.expectedOutputDf, outputDf
+    )
+
+
+def test__identification__baseline__two_inputs_creates_two_outputs_independent_of_one_another(
+    libraryTemplateDataFrame, libraryFileDirectory, inputFileDirectory
+):
+    baselineSpectraBreakdown = BaselineSpectraBreakdown(libraryTemplateDataFrame)
+    inputFileHeader1 = "baseline_output_1"
+    baselineSpectraBreakdown.write_query_scan_data_input_files(
+        inputFileDirectory, inputFileHeader1
+    )
+    inputFileHeader2 = "baseline_output_2"
+    baselineSpectraBreakdown.write_query_scan_data_input_files(
+        inputFileDirectory, inputFileHeader2
+    )
+    libraryFile = os.path.join(libraryFileDirectory, "spectrast_test_library.csv")
+    inputQueryFile1 = os.path.join(inputFileDirectory, f"{inputFileHeader1}.mzXML")
+    inputQueryFile2 = os.path.join(inputFileDirectory, f"{inputFileHeader2}.mzXML")
+    outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
+    args = [
+        "csodiaq",
+        "id",
+        "-i",
+        inputQueryFile1,
+        "-i",
+        inputQueryFile2,
+        "-l",
+        libraryFile,
+        "-o",
+        outputDir.name,
+        "-nc",
+    ]
+
+    subprocess.run(args, capture_output=True)
+    outputDirContents = os.listdir(outputDir.name)
+    assert len(outputDirContents) == 1
+    csodiaqDir = os.path.join(outputDir.name, outputDirContents[0])
+    csodiaqDirContents = os.listdir(csodiaqDir)
+    assert len(csodiaqDirContents) == 2
+    outputFile1 = os.path.join(csodiaqDir, csodiaqDirContents[0])
+    outputFile2 = os.path.join(csodiaqDir, csodiaqDirContents[0])
+    outputDf1 = pd.read_csv(outputFile1)
+    outputDf2 = pd.read_csv(outputFile2)
+    outputDf1 = (
+        outputDf1.drop(["fileName", "MaCC_Score"], axis=1)
+        .sort_values(["cosine", "MzLIB"], ascending=[False, True])
+        .reset_index(drop=True)
+    )
+    outputDf2 = (
+        outputDf2.drop(["fileName", "MaCC_Score"], axis=1)
+        .sort_values(["cosine", "MzLIB"], ascending=[False, True])
+        .reset_index(drop=True)
+    )
+    assert_pandas_dataframes_are_equal(
+        baselineSpectraBreakdown.expectedOutputDf, outputDf1
+    )
+    assert outputDf1.equals(outputDf2)
+
+
+def test__identification__baseline_no_matches_raises_error(
+    libraryTemplateDataFrame, libraryFileDirectory, inputFileDirectory
+):
+    noMatchSpectraBreakdown = NoMatchSpectraBreakdown(libraryTemplateDataFrame)
+    noMatchFileHeader = "no_match_input"
+    noMatchSpectraBreakdown.write_query_scan_data_input_files(
+        inputFileDirectory, noMatchFileHeader
+    )
+    baselineSpectraBreakdown = BaselineSpectraBreakdown(libraryTemplateDataFrame)
+    inputFileHeader = "match_input"
+    baselineSpectraBreakdown.write_query_scan_data_input_files(
+        inputFileDirectory, inputFileHeader
+    )
+    inputQueryFile = os.path.join(inputFileDirectory, f"{inputFileHeader}.mzXML")
+    noMatchQueryFile = os.path.join(inputFileDirectory, f"{noMatchFileHeader}.mzXML")
+    libraryFile = os.path.join(libraryFileDirectory, "spectrast_test_library.csv")
+    outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
+    assert_no_matches_before_correction_raises_warning_and_skips_offending_file_only(
+        inputQueryFile,
+        noMatchQueryFile,
+        libraryFile,
+        outputDir,
+        baselineSpectraBreakdown,
+    )
+    assert_no_matches_after_correction_raises_warning(
+        inputQueryFile, libraryFile, outputDir, baselineSpectraBreakdown
+    )
+
+
+def assert_no_matches_before_correction_raises_warning_and_skips_offending_file_only(
+    inputQueryFile, noMatchQueryFile, libraryFile, outputDir, baselineSpectraBreakdown
+):
+    args = [
+        "csodiaq",
+        "id",
+        "-i",
+        inputQueryFile,
+        "-i",
+        noMatchQueryFile,
+        "-l",
+        libraryFile,
+        "-o",
+        outputDir.name,
+        "-nc",
+    ]
+    errorOutput = f"No matches found between library and query spectra. Skipping {noMatchQueryFile} file."
+    output = subprocess.run(args, capture_output=True)
+    assert errorOutput in str(output.stderr)
+    outputDirContents = os.listdir(outputDir.name)
+    assert len(outputDirContents) == 1
+    csodiaqDir = os.path.join(outputDir.name, outputDirContents[0])
+    csodiaqDirContents = os.listdir(csodiaqDir)
+    assert len(csodiaqDirContents) == 1
+    outputFile = os.path.join(csodiaqDir, csodiaqDirContents[0])
+    outputDf = pd.read_csv(outputFile)
+    outputDf = (
+        outputDf.drop(["fileName", "MaCC_Score"], axis=1)
+        .sort_values(["cosine", "MzLIB"], ascending=[False, True])
+        .reset_index(drop=True)
+    )
+    assert_pandas_dataframes_are_equal(
+        baselineSpectraBreakdown.expectedOutputDf, outputDf
+    )
+
+
+def assert_no_matches_after_correction_raises_warning(
+    inputQueryFile, libraryFile, outputDir, baselineSpectraBreakdown
+):
+    args = [
+        "csodiaq",
+        "id",
+        "-i",
+        inputQueryFile,
+        "-l",
+        libraryFile,
+        "-o",
+        outputDir.name,
+    ]
+    errorOutput = f"No matches found between library and query spectra. Skipping {inputQueryFile} file."
+    output = subprocess.run(args, capture_output=True)
+    assert errorOutput in str(output.stderr)
+
+
+def test__identification__no_compensation_voltage_succeeds(
+    libraryTemplateDataFrame, libraryFileDirectory, inputFileDirectory
+):
+    noCompensationVoltageSpectraBreakdown = NoCompensationVoltageSpectraBreakdown(
+        libraryTemplateDataFrame
+    )
+    inputFileHeader = "no_compensation_voltage"
+    noCompensationVoltageSpectraBreakdown.write_query_scan_data_input_files(
+        inputFileDirectory, inputFileHeader
+    )
+    inputQueryFile = os.path.join(inputFileDirectory, f"{inputFileHeader}.mzXML")
+    libraryFile = os.path.join(libraryFileDirectory, "spectrast_test_library.csv")
+    outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
+    args = [
+        "csodiaq",
+        "id",
+        "-i",
+        inputQueryFile,
+        "-l",
+        libraryFile,
+        "-o",
+        outputDir.name,
+        "-nc",
+    ]
+    subprocess.run(args, capture_output=True)
+    outputDirContents = os.listdir(outputDir.name)
+    assert len(outputDirContents) == 1
+    csodiaqDir = os.path.join(outputDir.name, outputDirContents[0])
+    csodiaqDirContents = os.listdir(csodiaqDir)
+    assert len(csodiaqDirContents) == 1
+    outputFile = os.path.join(csodiaqDir, csodiaqDirContents[0])
+    outputDf = pd.read_csv(outputFile)
+    outputDf = (
+        outputDf.drop(["fileName", "MaCC_Score"], axis=1)
+        .sort_values(["cosine", "MzLIB"], ascending=[False, True])
+        .reset_index(drop=True)
+    )
+    assert_pandas_dataframes_are_equal(
+        noCompensationVoltageSpectraBreakdown.expectedOutputDf, outputDf
     )

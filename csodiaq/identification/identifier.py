@@ -78,6 +78,8 @@ class Identifier:
             printer(
                 f"Total number of peaks matched (post-correction): {len(matchDf.index)}"
             )
+        if len(matchDf) == 0:
+            return "No matches found between library and query spectra."
         scoreDf = self._score_spectra_matches(matchDf)
         printer("Formatting spectral matches for output")
         return self._format_identifications_as_dataframe(matchDf, scoreDf)

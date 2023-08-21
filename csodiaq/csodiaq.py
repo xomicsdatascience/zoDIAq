@@ -1,4 +1,6 @@
 import os
+import warnings
+
 import pandas as pd
 from csodiaq import set_args_from_command_line_input, check_for_conflicting_args
 from csodiaq.identification import Identifier
@@ -44,6 +46,10 @@ def run_identification(args):
         identificationFullOutputDf = identifier.identify_library_spectra_in_query_file(
             queryFile
         )
+        if isinstance(identificationFullOutputDf, str):
+            warnings.warn(f'{identificationFullOutputDf} Skipping {queryFile} file.', UserWarning)
+            continue
+
         outFileHeader = create_outfile_header(
             args["output"], queryFile, args["correctionDegree"]
         )

@@ -76,7 +76,7 @@ def test__pooler__pool_library_spectra_by_mz_window__throws_warning_when_no_lib_
     mzWindow = (30.0, 2.0)
     expectedOutput = []
     errorOutput = f"No library spectra found in the {mzWindow} m/z window. Skipping"
-    with pytest.warns(SyntaxWarning, match=re.escape(errorOutput)):
+    with pytest.warns(Warning, match=re.escape(errorOutput)):
         output = _pool_library_spectra_by_mz_window(mzWindow, testLibDict)
         assert output == expectedOutput
 
@@ -85,7 +85,7 @@ def test__pooler__generate_pooled_library_and_query_spectra_by_mz_windows(
     libraryDict, queryContext
 ):
     errorOutput = f"No library spectra found in the {(781.400024414063, 2.0)} m/z window. Skipping"
-    with pytest.warns(SyntaxWarning, match=re.escape(errorOutput)):
+    with pytest.warns(Warning, match=re.escape(errorOutput)):
         for (
             libPeaks,
             queryPeaks,

@@ -32,6 +32,6 @@ def _find_keys_of_library_spectra_in_mz_window(mzWindow, libDictKeys):
     if topIndex == bottomIndex:
         warnings.warn(
             f"No library spectra found in the {mzWindow} m/z window. Skipping",
-            SyntaxWarning,
+            Warning,
         )
     return sortedLibDictKeys[bottomIndex:topIndex]
