@@ -7,14 +7,8 @@ import numpy as np
 import pytest
 from . import (
     create_template_library_dataframe,
-    separate_target_and_decoy_library_spectra,
-    make_mz_window_spectra_summary_for_library_spectra,
-    add_query_file_components_to_mz_window_spectra_summary,
+    BaselineSpectraBreakdown,
     spectrastColumns,
-    make_output_df_from_spectra_breakdown,
-    organize_query_scan_data_for_writing,
-    write_query_scan_data_to_mzml_file,
-    convert_mzml_file_to_mzxml_file,
 )
 
 
@@ -69,42 +63,21 @@ def libraryFileDirectory(libraryTemplateDataFrame, systemTestFileDirectory):
 
 
 @pytest.fixture(scope="module")
-def librarySpectraBreakdown(libraryTemplateDataFrame):
-    targetDecoySpectra = separate_target_and_decoy_library_spectra(
-        libraryTemplateDataFrame
-    )
-    return make_mz_window_spectra_summary_for_library_spectra(targetDecoySpectra)
-
-
-@pytest.fixture(scope="module")
-def standardMzWindowSpectraBreakdown(librarySpectraBreakdown):
-    return add_query_file_components_to_mz_window_spectra_summary(
-        librarySpectraBreakdown
-    )
-
-
-@pytest.fixture(scope="module")
-def inputFileDirectory(standardMzWindowSpectraBreakdown, systemTestFileDirectory):
+def inputFileDirectory(systemTestFileDirectory):
     inputDirectory = os.path.join(systemTestFileDirectory.name, "input_files")
     os.mkdir(inputDirectory)
-    mzmlFile = os.path.join(inputDirectory, "query.mzML")
-    queryScanData = organize_query_scan_data_for_writing(
-        standardMzWindowSpectraBreakdown
-    )
-    write_query_scan_data_to_mzml_file(queryScanData, mzmlFile)
-    convert_mzml_file_to_mzxml_file(mzmlFile)
     return inputDirectory
 
 
-@pytest.fixture(scope="module")
-def standardExpectedOutputDataFrame(standardMzWindowSpectraBreakdown):
-    return make_output_df_from_spectra_breakdown(standardMzWindowSpectraBreakdown)
-
-
-def test__identification__standard_run(
-    libraryFileDirectory, inputFileDirectory, standardExpectedOutputDataFrame
+def test__identification__baseline_run(
+    libraryTemplateDataFrame, libraryFileDirectory, inputFileDirectory
 ):
-    inputQueryFile = os.path.join(inputFileDirectory, "query.mzXML")
+    baselineSpectraBreakdown = BaselineSpectraBreakdown(libraryTemplateDataFrame)
+    inputFileHeader = "baseline_run"
+    baselineSpectraBreakdown.write_query_scan_data_input_files(
+        inputFileDirectory, inputFileHeader
+    )
+    inputQueryFile = os.path.join(inputFileDirectory, f"{inputFileHeader}.mzXML")
     libraryFile = os.path.join(libraryFileDirectory, "spectrast_test_library.csv")
     outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
     args = ["csodiaq", "id"]
@@ -125,4 +98,6 @@ def test__identification__standard_run(
         .sort_values(["cosine", "MzLIB"], ascending=[False, True])
         .reset_index(drop=True)
     )
-    assert_pandas_dataframes_are_equal(standardExpectedOutputDataFrame, outputDf)
+    assert_pandas_dataframes_are_equal(
+        baselineSpectraBreakdown.expectedOutputDf, outputDf
+    )
