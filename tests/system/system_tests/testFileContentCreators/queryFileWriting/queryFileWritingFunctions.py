@@ -1,4 +1,7 @@
 from psims.mzml.writer import MzMLWriter
+import pyopenms
+import os
+
 
 class Spectrum(object):
     def __init__(
@@ -10,7 +13,6 @@ class Spectrum(object):
         precursorCharge,
         windowWidth,
         compensationVoltage=None,
-
     ):
         self.id = id
         self.mzArray = mzArray
@@ -23,12 +25,27 @@ class Spectrum(object):
 
 def organize_query_scan_data_for_writing(mzWindowSpectraBreakdown):
     spectra = []
-    for cosineGroup in spectraBreakdown:
+    for cosineGroup in mzWindowSpectraBreakdown:
         id = f'scan={cosineGroup["scan"]}'
-        mzs = [mz for spectrum in cosineGroup['querySpectra'] for mz in spectrum['mzs']]
-        intensities = [intensity for spectrum in cosineGroup['querySpectra'] for intensity in spectrum['intensities']]
-        spectra.append(Spectrum(id, mzs, intensities, cosineGroup['queryScanMz'], 0, cosineGroup['windowWidth'], f'-{cosineGroup["scan"]}'))
+        mzs = [mz for spectrum in cosineGroup["querySpectra"] for mz in spectrum["mzs"]]
+        intensities = [
+            intensity
+            for spectrum in cosineGroup["querySpectra"]
+            for intensity in spectrum["intensities"]
+        ]
+        spectra.append(
+            Spectrum(
+                id,
+                mzs,
+                intensities,
+                cosineGroup["queryScanMz"],
+                0,
+                cosineGroup["windowWidth"],
+                f'-{cosineGroup["scan"]}',
+            )
+        )
     return spectra
+
 
 def write_query_scan_data_to_mzml_file(queryScanData, filePath):
     with MzMLWriter(open(filePath, "wb")) as outWriter:
@@ -36,6 +53,7 @@ def write_query_scan_data_to_mzml_file(queryScanData, filePath):
         with outWriter.run(id="csodiaq_test_analysis"):
             with outWriter.spectrum_list(count=len(queryScanData)):
                 write_spectra_to_file(queryScanData, outWriter)
+
 
 def initialize_mzml_file_parameters(outWriter):
     outWriter.controlled_vocabularies()
@@ -86,6 +104,7 @@ def initialize_mzml_file_parameters(outWriter):
     processing = outWriter.DataProcessing(methods, id="DP1")
     outWriter.data_processing_list([processing])
 
+
 def write_spectra_to_file(queryScanData, outWriter):
     for spectrum in queryScanData:
         outWriter.write_spectrum(
@@ -109,3 +128,11 @@ def write_spectra_to_file(queryScanData, outWriter):
                 ],
             },
         )
+
+
+def convert_mzml_file_to_mzxml_file(mzmlFilePath):
+    msExperiment = pyopenms.MSExperiment()
+    pyopenms.MzMLFile().load(mzmlFilePath, msExperiment)
+    pyopenms.MzXMLFile().store(
+        f"{os.path.splitext(mzmlFilePath)[0]}.mzXML", msExperiment
+    )

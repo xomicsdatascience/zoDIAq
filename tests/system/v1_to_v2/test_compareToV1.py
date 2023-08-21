@@ -22,6 +22,7 @@ def get_parent_dir():
 def get_file_from_system_test_folder(file):
     return os.path.join(get_parent_dir(), "test_files", file)
 
+
 @pytest.fixture
 def commandLineArgs():
     args = {
