@@ -172,7 +172,7 @@ class Identifier:
             matchDf["ppmDifference"], self._commandLineArgs["correctionDegree"]
         )
         queryFile = self._queryContext.filePath.split("/")[-1]
-        outFile = ".".join(queryFile.split(".")[:-1]) + "_correctionHistogram.png"
+        outFile = os.path.splitext(queryFile)[0] + "_correctionHistogram.png"
         if self._commandLineArgs["histogram"]:
             create_ppm_histogram(
                 matchDf["ppmDifference"],

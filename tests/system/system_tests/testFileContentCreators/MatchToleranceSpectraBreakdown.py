@@ -1,4 +1,8 @@
-from .BaselineSpectraBreakdown import BaselineSpectraBreakdown
+from .BaselineSpectraBreakdown import (
+    BaselineSpectraBreakdown,
+    calculate_mz_value_from_ppm,
+)
+
 
 class MatchToleranceSpectraBreakdown(BaselineSpectraBreakdown):
     def format_query_mz_values(self, libraryMzs, mzWindowGroup):
@@ -8,9 +12,3 @@ class MatchToleranceSpectraBreakdown(BaselineSpectraBreakdown):
         secondPpm = 28.5
         libraryMzs[1] = calculate_mz_value_from_ppm(libraryMzs[1], secondPpm)
         return libraryMzs
-
-def calculate_mz_value_from_ppm(mz, ppm):
-    return mz * (1e6-ppm) / 1e6
-
-def calculate_parts_per_million_relative_difference(referenceMz, targetMz):
-    return (referenceMz - targetMz) * (1e6) / referenceMz

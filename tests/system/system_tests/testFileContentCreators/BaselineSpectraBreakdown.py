@@ -4,7 +4,8 @@ import pandas as pd
 from psims.mzml.writer import MzMLWriter
 import pyopenms
 
-class BaselineSpectraBreakdown():
+
+class BaselineSpectraBreakdown:
     def __init__(self, templateLibraryDf):
         targetDecoyLibrarySpectra = _separate_target_and_decoy_library_spectra(
             templateLibraryDf
@@ -76,9 +77,8 @@ class BaselineSpectraBreakdown():
             ]
         return librarySpectraBreakdown
 
-
     def create_query_spectrum_from_library_spectrum_and_cosine_score(
-            self, spectrum, mzWindowGroup
+        self, spectrum, mzWindowGroup
     ):
         queryMz = self.format_query_mz_values(spectrum["mzs"], mzWindowGroup)
         return {
@@ -90,7 +90,6 @@ class BaselineSpectraBreakdown():
 
     def format_query_mz_values(self, libraryMzs, mzWindowGroup):
         return libraryMzs
-
 
     def make_expected_output_df(self, mzWindowSpectraBreakdown):
         data = []
@@ -259,6 +258,10 @@ def create_vector_that_can_be_used_to_create_cosine_score(vectorA, cosineScore):
         cosineScore * unitVector + np.sqrt(1 - cosineScore**2) * perpendicularVector
     )
     return vectorB
+
+
+def calculate_mz_value_from_ppm(mz, ppm):
+    return mz * (1e6 - ppm) / 1e6
 
 
 def _write_query_scan_data_to_mzml_file(queryScanData, filePath):

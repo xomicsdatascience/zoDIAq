@@ -6,6 +6,8 @@ from tempfile import TemporaryDirectory, NamedTemporaryFile
 import numpy as np
 import pytest
 import re
+from collections import Counter
+
 from . import (
     create_template_library_dataframe,
     spectrastColumns,
@@ -13,6 +15,8 @@ from . import (
     NoMatchSpectraBreakdown,
     NoCompensationVoltageSpectraBreakdown,
     MatchToleranceSpectraBreakdown,
+    CustomCorrectionSpectraBreakdown,
+    StDevCorrectionSpectraBreakdown,
 )
 
 
@@ -293,10 +297,13 @@ def test__identification__no_compensation_voltage_succeeds(
         noCompensationVoltageSpectraBreakdown.expectedOutputDf, outputDf
     )
 
+
 def test__identification__match_tolerance_excludes_values_that_exceed_ppm_value__one_peak_exclusion(
     libraryTemplateDataFrame, libraryFileDirectory, inputFileDirectory
 ):
-    matchToleranceSpectraBreakdown = MatchToleranceSpectraBreakdown(libraryTemplateDataFrame)
+    matchToleranceSpectraBreakdown = MatchToleranceSpectraBreakdown(
+        libraryTemplateDataFrame
+    )
     inputFileHeader = "match_tolerance"
     matchToleranceSpectraBreakdown.write_query_scan_data_input_files(
         inputFileDirectory, inputFileHeader
@@ -314,8 +321,8 @@ def test__identification__match_tolerance_excludes_values_that_exceed_ppm_value_
         "-o",
         outputDir.name,
         "-nc",
-        '-t',
-        '29',
+        "-t",
+        "29",
     ]
     subprocess.run(args, capture_output=True)
     csodiaqDir = os.path.join(outputDir.name, os.listdir(outputDir.name)[0])
@@ -325,10 +332,13 @@ def test__identification__match_tolerance_excludes_values_that_exceed_ppm_value_
     assert len(matchedPeakNum) == 1
     assert matchedPeakNum[0] == 9
 
+
 def test__identification__match_tolerance_excludes_values_that_exceed_ppm_value__two_peak_exclusion(
     libraryTemplateDataFrame, libraryFileDirectory, inputFileDirectory
 ):
-    matchToleranceSpectraBreakdown = MatchToleranceSpectraBreakdown(libraryTemplateDataFrame)
+    matchToleranceSpectraBreakdown = MatchToleranceSpectraBreakdown(
+        libraryTemplateDataFrame
+    )
     inputFileHeader = "match_tolerance"
     matchToleranceSpectraBreakdown.write_query_scan_data_input_files(
         inputFileDirectory, inputFileHeader
@@ -346,8 +356,8 @@ def test__identification__match_tolerance_excludes_values_that_exceed_ppm_value_
         "-o",
         outputDir.name,
         "-nc",
-        '-t',
-        '28',
+        "-t",
+        "28",
     ]
     subprocess.run(args, capture_output=True)
     csodiaqDir = os.path.join(outputDir.name, os.listdir(outputDir.name)[0])
@@ -358,3 +368,129 @@ def test__identification__match_tolerance_excludes_values_that_exceed_ppm_value_
     assert matchedPeakNum[0] == 8
 
 
+def test__identification__custom_correction_creates_expected_number_of_matched_peaks(
+    libraryTemplateDataFrame, libraryFileDirectory, inputFileDirectory
+):
+    customCorrectionSpectraBreakdown = CustomCorrectionSpectraBreakdown(
+        libraryTemplateDataFrame
+    )
+    inputFileHeader = "standard_devation_1"
+    customCorrectionSpectraBreakdown.write_query_scan_data_input_files(
+        inputFileDirectory, inputFileHeader
+    )
+    inputQueryFile = os.path.join(inputFileDirectory, f"{inputFileHeader}.mzXML")
+    libraryFile = os.path.join(libraryFileDirectory, "spectrast_test_library.csv")
+    outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
+    args = [
+        "csodiaq",
+        "id",
+        "-i",
+        inputQueryFile,
+        "-l",
+        libraryFile,
+        "-o",
+        outputDir.name,
+    ]
+
+    subprocess.run(args, capture_output=True)
+    csodiaqDir = os.path.join(outputDir.name, os.listdir(outputDir.name)[0])
+    assert len(os.listdir(csodiaqDir)) == 1
+    outputFile = os.path.join(csodiaqDir, os.listdir(csodiaqDir)[0])
+    outputDf = pd.read_csv(outputFile)
+    matchedPeakNum = list(set(outputDf["shared"]))
+    assert len(matchedPeakNum) == 1
+    assert matchedPeakNum[0] == 8
+
+
+def test__identification__hist_flag_creates_histogram_image(
+    libraryTemplateDataFrame, libraryFileDirectory, inputFileDirectory
+):
+    customCorrectionSpectraBreakdown = CustomCorrectionSpectraBreakdown(
+        libraryTemplateDataFrame
+    )
+    inputFileHeader = "standard_devation_1"
+    customCorrectionSpectraBreakdown.write_query_scan_data_input_files(
+        inputFileDirectory, inputFileHeader
+    )
+    inputQueryFile = os.path.join(inputFileDirectory, f"{inputFileHeader}.mzXML")
+    libraryFile = os.path.join(libraryFileDirectory, "spectrast_test_library.csv")
+    outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
+    args = [
+        "csodiaq",
+        "id",
+        "-i",
+        inputQueryFile,
+        "-l",
+        libraryFile,
+        "-o",
+        outputDir.name,
+        "-hist",
+    ]
+
+    subprocess.run(args, capture_output=True)
+    csodiaqDir = os.path.join(outputDir.name, os.listdir(outputDir.name)[0])
+    assert len(os.listdir(csodiaqDir)) == 2
+    extensions = [os.path.splitext(file)[1] for file in os.listdir(csodiaqDir)]
+    assert ".png" in extensions
+
+
+def test__identification__correction_with_first_standard_deviation_creates_expected_number_of_matched_peaks(
+    libraryTemplateDataFrame, libraryFileDirectory, inputFileDirectory
+):
+    stDevSpectraBreakdown = StDevCorrectionSpectraBreakdown(libraryTemplateDataFrame)
+    inputFileHeader = "standard_devation_1"
+    stDevSpectraBreakdown.write_query_scan_data_input_files(
+        inputFileDirectory, inputFileHeader
+    )
+    inputQueryFile = os.path.join(inputFileDirectory, f"{inputFileHeader}.mzXML")
+    libraryFile = os.path.join(libraryFileDirectory, "spectrast_test_library.csv")
+    outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
+    args = [
+        "csodiaq",
+        "id",
+        "-i",
+        inputQueryFile,
+        "-l",
+        libraryFile,
+        "-o",
+        outputDir.name,
+        "-c",
+        "1",
+    ]
+    subprocess.run(args, capture_output=True)
+    csodiaqDir = os.path.join(outputDir.name, os.listdir(outputDir.name)[0])
+    outputFile = os.path.join(csodiaqDir, os.listdir(csodiaqDir)[0])
+    outputDf = pd.read_csv(outputFile)
+    matchedPeakMean = np.mean(outputDf["shared"])
+    assert matchedPeakMean > 6.62 and matchedPeakMean < 7.02
+
+
+def test__identification__correction_with_second_standard_deviation_creates_expected_number_of_matched_peaks(
+    libraryTemplateDataFrame, libraryFileDirectory, inputFileDirectory
+):
+    stDevSpectraBreakdown = StDevCorrectionSpectraBreakdown(libraryTemplateDataFrame)
+    inputFileHeader = "standard_devation_1"
+    stDevSpectraBreakdown.write_query_scan_data_input_files(
+        inputFileDirectory, inputFileHeader
+    )
+    inputQueryFile = os.path.join(inputFileDirectory, f"{inputFileHeader}.mzXML")
+    libraryFile = os.path.join(libraryFileDirectory, "spectrast_test_library.csv")
+    outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
+    args = [
+        "csodiaq",
+        "id",
+        "-i",
+        inputQueryFile,
+        "-l",
+        libraryFile,
+        "-o",
+        outputDir.name,
+        "-c",
+        "2",
+    ]
+    subprocess.run(args, capture_output=True)
+    csodiaqDir = os.path.join(outputDir.name, os.listdir(outputDir.name)[0])
+    outputFile = os.path.join(csodiaqDir, os.listdir(csodiaqDir)[0])
+    outputDf = pd.read_csv(outputFile)
+    matchedPeakMean = np.mean(outputDf["shared"])
+    assert matchedPeakMean > 9.34 and matchedPeakMean < 9.74
