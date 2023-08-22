@@ -6,7 +6,6 @@ from tempfile import TemporaryDirectory, NamedTemporaryFile
 import numpy as np
 import pytest
 import re
-from collections import Counter
 
 from . import (
     create_template_library_dataframe,
@@ -304,7 +303,7 @@ def test__identification__match_tolerance_excludes_values_that_exceed_ppm_value_
     matchToleranceSpectraBreakdown = MatchToleranceSpectraBreakdown(
         libraryTemplateDataFrame
     )
-    inputFileHeader = "match_tolerance"
+    inputFileHeader = "match_tolerance_one_peak"
     matchToleranceSpectraBreakdown.write_query_scan_data_input_files(
         inputFileDirectory, inputFileHeader
     )
@@ -339,7 +338,7 @@ def test__identification__match_tolerance_excludes_values_that_exceed_ppm_value_
     matchToleranceSpectraBreakdown = MatchToleranceSpectraBreakdown(
         libraryTemplateDataFrame
     )
-    inputFileHeader = "match_tolerance"
+    inputFileHeader = "match_tolerance_two_peaks"
     matchToleranceSpectraBreakdown.write_query_scan_data_input_files(
         inputFileDirectory, inputFileHeader
     )
@@ -374,7 +373,7 @@ def test__identification__custom_correction_creates_expected_number_of_matched_p
     customCorrectionSpectraBreakdown = CustomCorrectionSpectraBreakdown(
         libraryTemplateDataFrame
     )
-    inputFileHeader = "standard_devation_1"
+    inputFileHeader = "custom_correction"
     customCorrectionSpectraBreakdown.write_query_scan_data_input_files(
         inputFileDirectory, inputFileHeader
     )
@@ -408,7 +407,7 @@ def test__identification__hist_flag_creates_histogram_image(
     customCorrectionSpectraBreakdown = CustomCorrectionSpectraBreakdown(
         libraryTemplateDataFrame
     )
-    inputFileHeader = "standard_devation_1"
+    inputFileHeader = "histogram"
     customCorrectionSpectraBreakdown.write_query_scan_data_input_files(
         inputFileDirectory, inputFileHeader
     )
@@ -469,7 +468,7 @@ def test__identification__correction_with_second_standard_deviation_creates_expe
     libraryTemplateDataFrame, libraryFileDirectory, inputFileDirectory
 ):
     stDevSpectraBreakdown = StDevCorrectionSpectraBreakdown(libraryTemplateDataFrame)
-    inputFileHeader = "standard_devation_1"
+    inputFileHeader = "standard_devation_2"
     stDevSpectraBreakdown.write_query_scan_data_input_files(
         inputFileDirectory, inputFileHeader
     )
@@ -494,3 +493,38 @@ def test__identification__correction_with_second_standard_deviation_creates_expe
     outputDf = pd.read_csv(outputFile)
     matchedPeakMean = np.mean(outputDf["shared"])
     assert matchedPeakMean > 9.34 and matchedPeakMean < 9.74
+
+@pytest.mark.skip(
+    "future development may include improving the memory efficiency of the program. This function serves as a baseline for such tests."
+)
+def test__identification__stress_test_memory():
+    denseLibraryDf = create_template_library_dataframe(
+        minMz=100,
+        maxMz=10000,
+        precursorMzDiff=0.1,
+        peakMzDiff=0.01,
+        peakIntensityDiff=1000.0,
+    )
+    stDevSpectraBreakdown = StDevCorrectionSpectraBreakdown(denseLibraryDf)
+    inputFileHeader = "stress_test"
+    inputDir = TemporaryDirectory(prefix="csodiaq_system_stress_test_input")
+    stDevSpectraBreakdown.write_query_scan_data_input_files(
+        inputDir.name, inputFileHeader
+    )
+    inputQueryFile = os.path.join(inputDir.name, f"{inputFileHeader}.mzXML")
+    libraryFileDirectory = TemporaryDirectory(prefix="csodiaq_system_stress_test_library")
+    denseLibraryDf.columns = spectrastColumns
+    denseLibraryDf.to_csv(os.path.join(libraryFileDirectory.name, 'spectrast_stress_test_lib.csv'))
+    outputDir = TemporaryDirectory(prefix="csodiaq_system_stress_test_output")
+    args = [
+        "csodiaq",
+        "id",
+        "-i",
+        inputQueryFile,
+        "-l",
+        os.path.join(libraryFileDirectory.name, 'spectrast_stress_test_lib.csv'),
+        "-o",
+        outputDir.name,
+    ]
+    subprocess.run(args)
+

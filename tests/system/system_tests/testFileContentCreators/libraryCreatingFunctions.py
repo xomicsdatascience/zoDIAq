@@ -11,7 +11,7 @@ def create_template_library_dataframe(
     minMz, maxMz, precursorMzDiff, peakMzDiff, peakIntensityDiff
 ):
     data = []
-    for precursorMz in range(minMz, maxMz, precursorMzDiff):
+    for precursorMz in np.arange(minMz, maxMz, precursorMzDiff):
         if precursorMz < (maxMz + minMz) / 2:
             protein = f"1/protein{precursorMz}"
         else:
