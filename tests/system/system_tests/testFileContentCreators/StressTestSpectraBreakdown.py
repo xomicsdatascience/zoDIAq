@@ -1,6 +1,7 @@
 from .BaselineSpectraBreakdown import BaselineSpectraBreakdown
 import numpy as np
 
+
 class StressTestSpectraBreakdown(BaselineSpectraBreakdown):
     def make_library_spectra_breakdown_summary(self, targetDecoyLibrarySpectra):
         return [
@@ -15,7 +16,7 @@ class StressTestSpectraBreakdown(BaselineSpectraBreakdown):
                 "scan": 4,
                 "cosine": 0.98,
                 "libSpectra": targetDecoyLibrarySpectra["decoys"],
-            }
+            },
         ]
 
     def add_query_file_components_to_library_spectra_summary(
@@ -52,6 +53,7 @@ class StressTestSpectraBreakdown(BaselineSpectraBreakdown):
             ],
         )
 
+
 def generate_random_massive_query_spectra():
     peakNum = 1000000000
     mzs = np.random.uniform(100.0, 2000.0, peakNum)
@@ -60,4 +62,3 @@ def generate_random_massive_query_spectra():
         "mzs": mzs,
         "intensities": intensities,
     }
-

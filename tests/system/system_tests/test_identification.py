@@ -6,9 +6,11 @@ from tempfile import TemporaryDirectory, NamedTemporaryFile
 import numpy as np
 import pytest
 import re
+from pyteomics import mgf
 
 from . import (
     create_template_library_dataframe,
+    make_mgf_library_from_template_library_dataframe,
     spectrastColumns,
     BaselineSpectraBreakdown,
     NoMatchSpectraBreakdown,
@@ -66,6 +68,10 @@ def libraryFileDirectory(libraryTemplateDataFrame, systemTestFileDirectory):
     spectrastDataFrame.to_csv(
         os.path.join(libraryDirectory, "spectrast_test_library.csv"), index=False
     )
+    mgfSpectra = make_mgf_library_from_template_library_dataframe(
+        libraryTemplateDataFrame
+    )
+    mgf.write(mgfSpectra, os.path.join(libraryDirectory, "mgf_test_library.mgf"))
     return libraryDirectory
 
 
@@ -76,11 +82,11 @@ def inputFileDirectory(systemTestFileDirectory):
     return inputDirectory
 
 
-def test__identification__baseline_run(
+def test__identification__baseline_run__spectrast_library(
     libraryTemplateDataFrame, libraryFileDirectory, inputFileDirectory
 ):
     baselineSpectraBreakdown = BaselineSpectraBreakdown(libraryTemplateDataFrame)
-    inputFileHeader = "baseline_run"
+    inputFileHeader = "baseline_run_spectrast"
     baselineSpectraBreakdown.write_query_scan_data_input_files(
         inputFileDirectory, inputFileHeader
     )
@@ -110,6 +116,51 @@ def test__identification__baseline_run(
         outputDf.drop(["fileName", "MaCC_Score"], axis=1)
         .sort_values(["cosine", "MzLIB"], ascending=[False, True])
         .reset_index(drop=True)
+    )
+    assert_pandas_dataframes_are_equal(
+        baselineSpectraBreakdown.expectedOutputDf, outputDf
+    )
+
+
+def test__identification__baseline_run__mgf_library(
+    libraryTemplateDataFrame, libraryFileDirectory, inputFileDirectory
+):
+    baselineSpectraBreakdown = BaselineSpectraBreakdown(libraryTemplateDataFrame)
+    inputFileHeader = "baseline_run_mgf"
+    baselineSpectraBreakdown.write_query_scan_data_input_files(
+        inputFileDirectory, inputFileHeader
+    )
+    inputQueryFile = os.path.join(inputFileDirectory, f"{inputFileHeader}.mzXML")
+    libraryFile = os.path.join(libraryFileDirectory, "mgf_test_library.mgf")
+
+    outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
+    args = [
+        "csodiaq",
+        "id",
+        "-i",
+        inputQueryFile,
+        "-l",
+        libraryFile,
+        "-o",
+        outputDir.name,
+        "-nc",
+    ]
+    subprocess.run(args, capture_output=True)
+    outputDirContents = os.listdir(outputDir.name)
+    assert len(outputDirContents) == 1
+    csodiaqDir = os.path.join(outputDir.name, outputDirContents[0])
+    csodiaqDirContents = os.listdir(csodiaqDir)
+    assert len(csodiaqDirContents) == 1
+    outputFile = os.path.join(csodiaqDir, csodiaqDirContents[0])
+    outputDf = pd.read_csv(outputFile)
+    outputDf = (
+        outputDf.drop(["fileName", "MaCC_Score"], axis=1)
+        .sort_values(["cosine", "MzLIB"], ascending=[False, True])
+        .reset_index(drop=True)
+    )
+    outputDf.to_csv("/Users/cranneyc/Desktop/outputDf.csv")
+    baselineSpectraBreakdown.expectedOutputDf.to_csv(
+        "/Users/cranneyc/Desktop/expectedOutputDf.csv"
     )
     assert_pandas_dataframes_are_equal(
         baselineSpectraBreakdown.expectedOutputDf, outputDf
@@ -494,6 +545,7 @@ def test__identification__correction_with_second_standard_deviation_creates_expe
     matchedPeakMean = np.mean(outputDf["shared"])
     assert matchedPeakMean > 9.34 and matchedPeakMean < 9.74
 
+
 @pytest.mark.skip(
     "future development may include improving the memory efficiency of the program. This function serves as a baseline for such tests."
 )
@@ -512,9 +564,13 @@ def test__identification__stress_test_memory():
         inputDir.name, inputFileHeader
     )
     inputQueryFile = os.path.join(inputDir.name, f"{inputFileHeader}.mzXML")
-    libraryFileDirectory = TemporaryDirectory(prefix="csodiaq_system_stress_test_library")
+    libraryFileDirectory = TemporaryDirectory(
+        prefix="csodiaq_system_stress_test_library"
+    )
     denseLibraryDf.columns = spectrastColumns
-    denseLibraryDf.to_csv(os.path.join(libraryFileDirectory.name, 'spectrast_stress_test_lib.csv'))
+    denseLibraryDf.to_csv(
+        os.path.join(libraryFileDirectory.name, "spectrast_stress_test_lib.csv")
+    )
     outputDir = TemporaryDirectory(prefix="csodiaq_system_stress_test_output")
     args = [
         "csodiaq",
@@ -522,9 +578,8 @@ def test__identification__stress_test_memory():
         "-i",
         inputQueryFile,
         "-l",
-        os.path.join(libraryFileDirectory.name, 'spectrast_stress_test_lib.csv'),
+        os.path.join(libraryFileDirectory.name, "spectrast_stress_test_lib.csv"),
         "-o",
         outputDir.name,
     ]
     subprocess.run(args)
-
