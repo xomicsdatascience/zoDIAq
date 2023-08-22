@@ -12,6 +12,7 @@ from . import (
     BaselineSpectraBreakdown,
     NoMatchSpectraBreakdown,
     NoCompensationVoltageSpectraBreakdown,
+    MatchToleranceSpectraBreakdown,
 )
 
 
@@ -291,3 +292,69 @@ def test__identification__no_compensation_voltage_succeeds(
     assert_pandas_dataframes_are_equal(
         noCompensationVoltageSpectraBreakdown.expectedOutputDf, outputDf
     )
+
+def test__identification__match_tolerance_excludes_values_that_exceed_ppm_value__one_peak_exclusion(
+    libraryTemplateDataFrame, libraryFileDirectory, inputFileDirectory
+):
+    matchToleranceSpectraBreakdown = MatchToleranceSpectraBreakdown(libraryTemplateDataFrame)
+    inputFileHeader = "match_tolerance"
+    matchToleranceSpectraBreakdown.write_query_scan_data_input_files(
+        inputFileDirectory, inputFileHeader
+    )
+    inputQueryFile = os.path.join(inputFileDirectory, f"{inputFileHeader}.mzXML")
+    libraryFile = os.path.join(libraryFileDirectory, "spectrast_test_library.csv")
+    outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
+    args = [
+        "csodiaq",
+        "id",
+        "-i",
+        inputQueryFile,
+        "-l",
+        libraryFile,
+        "-o",
+        outputDir.name,
+        "-nc",
+        '-t',
+        '29',
+    ]
+    subprocess.run(args, capture_output=True)
+    csodiaqDir = os.path.join(outputDir.name, os.listdir(outputDir.name)[0])
+    outputFile = os.path.join(csodiaqDir, os.listdir(csodiaqDir)[0])
+    outputDf = pd.read_csv(outputFile)
+    matchedPeakNum = list(set(outputDf["shared"]))
+    assert len(matchedPeakNum) == 1
+    assert matchedPeakNum[0] == 9
+
+def test__identification__match_tolerance_excludes_values_that_exceed_ppm_value__two_peak_exclusion(
+    libraryTemplateDataFrame, libraryFileDirectory, inputFileDirectory
+):
+    matchToleranceSpectraBreakdown = MatchToleranceSpectraBreakdown(libraryTemplateDataFrame)
+    inputFileHeader = "match_tolerance"
+    matchToleranceSpectraBreakdown.write_query_scan_data_input_files(
+        inputFileDirectory, inputFileHeader
+    )
+    inputQueryFile = os.path.join(inputFileDirectory, f"{inputFileHeader}.mzXML")
+    libraryFile = os.path.join(libraryFileDirectory, "spectrast_test_library.csv")
+    outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
+    args = [
+        "csodiaq",
+        "id",
+        "-i",
+        inputQueryFile,
+        "-l",
+        libraryFile,
+        "-o",
+        outputDir.name,
+        "-nc",
+        '-t',
+        '28',
+    ]
+    subprocess.run(args, capture_output=True)
+    csodiaqDir = os.path.join(outputDir.name, os.listdir(outputDir.name)[0])
+    outputFile = os.path.join(csodiaqDir, os.listdir(csodiaqDir)[0])
+    outputDf = pd.read_csv(outputFile)
+    matchedPeakNum = list(set(outputDf["shared"]))
+    assert len(matchedPeakNum) == 1
+    assert matchedPeakNum[0] == 8
+
+

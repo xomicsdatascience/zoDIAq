@@ -8,3 +8,4 @@ from .testFileContentCreators.NoMatchSpectraBreakdown import NoMatchSpectraBreak
 from .testFileContentCreators.NoCompensationVoltageSpectraBreakdown import (
     NoCompensationVoltageSpectraBreakdown,
 )
+from .testFileContentCreators.MatchToleranceSpectraBreakdown import MatchToleranceSpectraBreakdown

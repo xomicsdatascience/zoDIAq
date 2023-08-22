@@ -1,8 +1,4 @@
 from .BaselineSpectraBreakdown import BaselineSpectraBreakdown
-from .SpectraBreakdown import (
-    create_vector_that_can_be_used_to_create_cosine_score,
-    find_mz_window_of_query_scan_from_spectra,
-)
 import numpy as np
 
 
