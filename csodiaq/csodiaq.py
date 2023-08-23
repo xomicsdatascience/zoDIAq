@@ -10,8 +10,8 @@ from csodiaq.utils import (
     Printer,
 )
 from csodiaq.scoring import (
-    create_spectral_fdr_output_from_full_output,
-    create_peptide_fdr_output_from_full_output,
+    create_spectral_fdr_output_from_full_output_sorted_by_desired_score,
+    create_peptide_fdr_output_from_full_output_sorted_by_desired_score,
     create_protein_fdr_output_from_peptide_fdr_output,
     calculate_ion_count_for_each_protein_in_protein_fdr_df,
     compile_ion_count_comparison_across_runs_df,
@@ -70,9 +70,11 @@ def run_scoring(args):
     peptideDfs = {}
     proteinDfs = {}
     for idDfFile in args["input"]["idFiles"]:
-        fileHeader = extract_file_name_without_file_type(idDfFile)
         idDf = pd.read_csv(os.path.join(args["input"]["csodiaqDirectory"], idDfFile))
+        idDf['MaCC_Score'] = idDf.apply(lambda x: calculate_macc_score(x['shared'], x['cosine']), axis=1)
+        idDf.sort_values(['MaCC_Score'], ascending=False, inplace=True)
         spectralDf = create_spectral_fdr_output_from_full_output(idDf)
+        fileHeader = extract_file_name_without_file_type(idDfFile)
         spectralDf.to_csv(
             os.path.join(outputDir, f"{fileHeader}_spectralFDR.csv"), index=False
         )

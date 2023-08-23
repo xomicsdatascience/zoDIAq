@@ -122,7 +122,7 @@ def test__identification__baseline_run__spectrast_library(
     outputFile = os.path.join(csodiaqDir, csodiaqDirContents[0])
     outputDf = pd.read_csv(outputFile)
     outputDf = (
-        outputDf.drop(["fileName", "MaCC_Score"], axis=1)
+        outputDf.drop(["fileName"], axis=1)
         .sort_values(["cosine", "MzLIB"], ascending=[False, True])
         .reset_index(drop=True)
     )
@@ -163,7 +163,7 @@ def test__identification__baseline_run__mgf_library(
     outputFile = os.path.join(csodiaqDir, csodiaqDirContents[0])
     outputDf = pd.read_csv(outputFile)
     outputDf = (
-        outputDf.drop(["fileName", "MaCC_Score"], axis=1)
+        outputDf.drop(["fileName"], axis=1)
         .sort_values(["cosine", "MzLIB"], ascending=[False, True])
         .reset_index(drop=True)
     )
@@ -217,12 +217,12 @@ def test__identification__baseline__two_inputs_creates_two_outputs_independent_o
     outputDf1 = pd.read_csv(outputFile1)
     outputDf2 = pd.read_csv(outputFile2)
     outputDf1 = (
-        outputDf1.drop(["fileName", "MaCC_Score"], axis=1)
+        outputDf1.drop(["fileName"], axis=1)
         .sort_values(["cosine", "MzLIB"], ascending=[False, True])
         .reset_index(drop=True)
     )
     outputDf2 = (
-        outputDf2.drop(["fileName", "MaCC_Score"], axis=1)
+        outputDf2.drop(["fileName"], axis=1)
         .sort_values(["cosine", "MzLIB"], ascending=[False, True])
         .reset_index(drop=True)
     )
@@ -290,7 +290,7 @@ def assert_no_matches_before_correction_raises_warning_and_skips_offending_file_
     outputFile = os.path.join(csodiaqDir, csodiaqDirContents[0])
     outputDf = pd.read_csv(outputFile)
     outputDf = (
-        outputDf.drop(["fileName", "MaCC_Score"], axis=1)
+        outputDf.drop(["fileName"], axis=1)
         .sort_values(["cosine", "MzLIB"], ascending=[False, True])
         .reset_index(drop=True)
     )
@@ -351,7 +351,7 @@ def test__identification__no_compensation_voltage_succeeds(
     outputFile = os.path.join(csodiaqDir, csodiaqDirContents[0])
     outputDf = pd.read_csv(outputFile)
     outputDf = (
-        outputDf.drop(["fileName", "MaCC_Score"], axis=1)
+        outputDf.drop(["fileName"], axis=1)
         .sort_values(["cosine", "MzLIB"], ascending=[False, True])
         .reset_index(drop=True)
     )

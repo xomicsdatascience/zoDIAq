@@ -7,29 +7,21 @@ def score_library_to_query_matches(matches):
     scoreDf = (
         matches.groupby(["libraryIdx", "queryIdx"])
         .apply(
-            lambda x: (
-                calculate_cosine_similarity_score(
+            lambda x: calculate_cosine_similarity_score(
                     x["libraryIntensity"], x["queryIntensity"]
-                ),
-                calculate_macc_score(x["libraryIntensity"], x["queryIntensity"]),
-            )
+                )
         )
-        .reset_index(name="scores")
+        .reset_index(name="cosineScore")
     )
-    scoreDf["cosineScore"], scoreDf["maccScore"] = zip(*scoreDf["scores"])
-    del scoreDf["scores"]
-    return scoreDf.sort_values("maccScore", ascending=False).reset_index(drop=True)
+    return scoreDf.sort_values("cosineScore", ascending=False).reset_index(drop=True)
 
 
 def calculate_cosine_similarity_score(vectorA, vectorB):
     return 1 - cosine(vectorA, vectorB)
 
 
-def calculate_macc_score(vectorA, vectorB):
-    return len(vectorA.index) ** (1 / 5) * calculate_cosine_similarity_score(
-        vectorA, vectorB
-    )
-
+def calculate_macc_score(numMatchedPeaks, cosineScore):
+    return numMatchedPeaks ** (1 / 5) * cosineScore
 
 def determine_index_of_fdr_cutoff(isDecoyArray, fdrCutoff=1e-2):
     if isDecoyArray[0]:

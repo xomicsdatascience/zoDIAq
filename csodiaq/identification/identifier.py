@@ -20,11 +20,7 @@ from csodiaq.identification.outputFormattingFunctions import (
     identify_all_decoys,
 )
 
-from csodiaq.scoring.fdrCalculationFunctions import (
-    create_peptide_fdr_output_from_full_output,
-    create_protein_fdr_output_from_peptide_fdr_output,
-    create_spectral_fdr_output_from_full_output,
-)
+
 import pandas as pd
 import os
 from csodiaq.utils import Printer
@@ -55,10 +51,11 @@ class Identifier:
             false positive.
     """
 
-    def __init__(self, commandLineArgs):
+    def __init__(self, commandLineArgs, isTesting=False):
         self._commandLineArgs = commandLineArgs
-        printer = Printer()
-        printer("Loading Library File")
+        if not isTesting:
+            printer = Printer()
+            printer("Loading Library File")
         self._libraryDict = LibraryLoaderContext(
             self._commandLineArgs["library"]
         ).load_csodiaq_library_dict()

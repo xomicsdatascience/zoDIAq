@@ -23,7 +23,6 @@ def format_output_line(libMetadata, queMetadata, matchMetadata):
         matchMetadata["ionCount"],
         queMetadata["CV"],
         queMetadata["windowWidth"],
-        matchMetadata["maccScore"],
         matchMetadata["exclude_num"],
     ]
 
@@ -49,11 +48,10 @@ def extract_metadata_from_match_dataframe_groupby(group, queryMetadata):
 
 
 def extract_metadata_from_score_dataframe(df):
-    maccDict = df.set_index(["libraryIdx", "queryIdx"])["maccScore"].to_dict()
     cosineDict = df.set_index(["libraryIdx", "queryIdx"])["cosineScore"].to_dict()
     outputDict = {
-        k: {"maccScore": maccDict[k], "cosineSimilarityScore": cosineDict[k]}
-        for k in maccDict.keys()
+        k: {"cosineSimilarityScore": cosineDict[k]}
+        for k in cosineDict.keys()
     }
     return outputDict
 
@@ -75,7 +73,6 @@ def format_output_as_pandas_dataframe(inputFileName, outputData):
         "ionCount",
         "CompensationVoltage",
         "totalWindowWidth",
-        "MaCC_Score",
         "exclude_num",
     ]
     outputDf = pd.DataFrame(outputData, columns=columns)

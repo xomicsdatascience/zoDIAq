@@ -2,9 +2,10 @@ import pandas as pd
 import numpy as np
 from csodiaq.identification import Identifier
 from csodiaq.scoring import (
-    create_peptide_fdr_output_from_full_output,
+    create_spectral_fdr_output_from_full_output_sorted_by_desired_score,
+    create_peptide_fdr_output_from_full_output_sorted_by_desired_score,
     create_protein_fdr_output_from_peptide_fdr_output,
-    create_spectral_fdr_output_from_full_output,
+    calculate_macc_score,
 )
 from csodiaq.targetedReanalysis import (
     create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides,
@@ -61,7 +62,6 @@ def get_columns_that_should_match(type):
     elif type == "score":
         return [
             "cosineScore",
-            "maccScore",
         ]
     elif type == "full":
         return ["scan", "peptide", "cosine"]
@@ -92,7 +92,7 @@ def get_columns_that_should_match(type):
 
 
 def test__identifier__main_workflow(commandLineArgs):
-    identifier = Identifier(commandLineArgs)
+    identifier = Identifier(commandLineArgs, isTesting=True)
     queryFile = commandLineArgs["input"][0]
     identifier._queryContext = QueryLoaderContext(queryFile)
 
@@ -124,7 +124,6 @@ def test__identifier__main_workflow(commandLineArgs):
     )
 
     fullDf = identifier._format_identifications_as_dataframe(matchDf, scoreDf)
-
     assert_numeric_pandas_dataframes_are_equal(expectedFullDf, fullDf, "full")
 
 
@@ -132,6 +131,8 @@ def test__scoring_workflow():
     fullDf = pd.read_csv(
         get_file_from_system_test_folder("v2FullOutput.csv.gz"), compression="gzip"
     )
+    fullDf['MaCC_Score'] = fullDf.apply(lambda x: calculate_macc_score(x['shared'],x['cosine']), axis=1)
+    fullDf.sort_values(['MaCC_Score'], ascending=False, inplace=True)
     expectedSpectralDf = pd.read_csv(
         get_file_from_system_test_folder("v1SpectralOutput.csv.gz"), compression="gzip"
     )
@@ -142,12 +143,12 @@ def test__scoring_workflow():
         get_file_from_system_test_folder("v1ProteinOutput.csv.gz"), compression="gzip"
     )
 
-    spectralDf = create_spectral_fdr_output_from_full_output(fullDf)
+    spectralDf = create_spectral_fdr_output_from_full_output_sorted_by_desired_score(fullDf)
     assert_numeric_pandas_dataframes_are_equal(
         expectedSpectralDf, spectralDf, "spectral"
     )
 
-    peptideDf = create_peptide_fdr_output_from_full_output(fullDf)
+    peptideDf = create_peptide_fdr_output_from_full_output_sorted_by_desired_score(fullDf)
     assert_numeric_pandas_dataframes_are_equal(expectedPeptideDf, peptideDf, "peptide")
 
     proteinDf = create_protein_fdr_output_from_peptide_fdr_output(peptideDf)
