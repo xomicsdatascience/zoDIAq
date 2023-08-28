@@ -56,7 +56,7 @@ def libraryTemplateDataFrame():
 
 @pytest.fixture(scope="module")
 def systemTestFileDirectory():
-    return TemporaryDirectory(prefix="csodiaq_system_test_files_")
+    return TemporaryDirectory(prefix="csodiaq_identification_system_test_files_")
 
 
 @pytest.fixture(scope="module")

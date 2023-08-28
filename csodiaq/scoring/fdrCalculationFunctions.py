@@ -13,8 +13,9 @@ from itertools import chain
 def create_spectral_fdr_output_from_full_output_sorted_by_desired_score(fullDf, fdrCutoff=0.01):
     fdrs = calculate_fdr_rates_of_decoy_array(fullDf["isDecoy"])
     scoreDfCutoffIdx = np.argmax(fdrs > fdrCutoff)
-    fullDf["spectralFDR"] = fdrs
-    return fullDf.iloc[:scoreDfCutoffIdx, :]
+    spectralDf = fullDf.copy()
+    spectralDf["spectralFDR"] = fdrs
+    return spectralDf.iloc[:scoreDfCutoffIdx, :]
 
 
 def create_peptide_fdr_output_from_full_output_sorted_by_desired_score(fullDf, fdrCutoff=0.01):

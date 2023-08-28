@@ -15,6 +15,8 @@ from csodiaq.scoring import (
     create_protein_fdr_output_from_peptide_fdr_output,
     calculate_ion_count_for_each_protein_in_protein_fdr_df,
     compile_ion_count_comparison_across_runs_df,
+    calculate_macc_score,
+
 )
 from csodiaq.targetedReanalysis import (
     create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides,
@@ -38,11 +40,11 @@ def main():
 
 def run_identification(args):
     printer = Printer()
-    printer("Begin Peptide Identification Process")
-    identifier = Identifier(args)
+    printer(f"Begin Peptide Identification Process - output in '{args['output']}'")
     os.mkdir(args["output"])
+    identifier = Identifier(args)
     for queryFile in args["input"]:
-        printer(f"Beginning Identification for {queryFile} input file")
+        printer(f"Beginning Identification for '{queryFile}' input file")
         identificationFullOutputDf = identifier.identify_library_spectra_in_query_file(
             queryFile
         )
@@ -72,13 +74,13 @@ def run_scoring(args):
     for idDfFile in args["input"]["idFiles"]:
         idDf = pd.read_csv(os.path.join(args["input"]["csodiaqDirectory"], idDfFile))
         idDf['MaCC_Score'] = idDf.apply(lambda x: calculate_macc_score(x['shared'], x['cosine']), axis=1)
-        idDf.sort_values(['MaCC_Score'], ascending=False, inplace=True)
-        spectralDf = create_spectral_fdr_output_from_full_output(idDf)
+        idDf.sort_values(['MaCC_Score','peptide'], ascending=[False, True], inplace=True)
+        spectralDf = create_spectral_fdr_output_from_full_output_sorted_by_desired_score(idDf)
         fileHeader = extract_file_name_without_file_type(idDfFile)
         spectralDf.to_csv(
             os.path.join(outputDir, f"{fileHeader}_spectralFDR.csv"), index=False
         )
-        peptideDf = create_peptide_fdr_output_from_full_output(idDf)
+        peptideDf = create_peptide_fdr_output_from_full_output_sorted_by_desired_score(idDf)
         peptideDf.to_csv(
             os.path.join(outputDir, f"{fileHeader}_peptideFDR.csv"), index=False
         )
