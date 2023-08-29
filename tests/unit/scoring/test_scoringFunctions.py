@@ -35,7 +35,7 @@ def test__score_functions__calculate_cosine_similarity_score(vectorA, vectorB):
 def test__score_functions__calculate_macc_score(vectorA, vectorB):
     cosineSimilarity = calculate_cosine_similarity_score(vectorA, vectorB)
     expectedScore = (len(vectorA) ** (1 / 5)) * cosineSimilarity
-    score = calculate_macc_score(vectorA, vectorB)
+    score = calculate_macc_score(len(vectorA), cosineSimilarity)
     assert score == expectedScore
 
 
@@ -55,10 +55,9 @@ def test__score_functions__score_library_to_query_matches(vectorA, vectorB):
     matchesDf["queryIdx"] = [queryIdx for i in vectorA.index]
     matchesDf["queryIntensity"] = vectorB
     cosineScore = calculate_cosine_similarity_score(vectorA, vectorB)
-    maccScore = calculate_macc_score(vectorA, vectorB)
     expectedOutputDf = pd.DataFrame(
-        data=[[libraryIdx, queryIdx, cosineScore, maccScore]],
-        columns=["libraryIdx", "queryIdx", "cosineScore", "maccScore"],
+        data=[[libraryIdx, queryIdx, cosineScore]],
+        columns=["libraryIdx", "queryIdx", "cosineScore"],
     )
     outputDf = score_library_to_query_matches(matchesDf)
     assert expectedOutputDf.equals(outputDf)
@@ -68,14 +67,13 @@ def test__score_functions__score_library_to_query_matches(vectorA, vectorB):
     reverseVectorA = pd.Series(list(vectorA)[::-1])
     lowScoreMatchesDf["libraryIntensity"] = reverseVectorA
     lowCosineScore = calculate_cosine_similarity_score(reverseVectorA, vectorB)
-    lowMaccScore = calculate_macc_score(reverseVectorA, vectorB)
     unsortedMatchesDf = pd.concat([lowScoreMatchesDf, matchesDf])
     expectedOutputDf = pd.DataFrame(
         data=[
-            [libraryIdx, queryIdx, cosineScore, maccScore],
-            [libraryIdx - 1, queryIdx, lowCosineScore, lowMaccScore],
+            [libraryIdx, queryIdx, cosineScore],
+            [libraryIdx - 1, queryIdx, lowCosineScore],
         ],
-        columns=["libraryIdx", "queryIdx", "cosineScore", "maccScore"],
+        columns=["libraryIdx", "queryIdx", "cosineScore"],
     )
     sortedOutputDf = score_library_to_query_matches(unsortedMatchesDf)
     assert expectedOutputDf.equals(sortedOutputDf)

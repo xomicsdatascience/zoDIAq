@@ -1,0 +1,2 @@
+from .testFileContentCreators.MaccScoresBreakdown import MaccScoresBreakdown
+from .testFileContentCreators.ProteinCosineEvalScoresBreakdown import ProteinCosineEvalScoresBreakdown

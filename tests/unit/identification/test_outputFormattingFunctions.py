@@ -28,7 +28,6 @@ def identifierOutputData():
         6,
         7,
         11,
-        12,
     ]
 
 
@@ -53,8 +52,7 @@ def test__output_formatting_functions__format_output_line(identifierOutputData):
         "cosineSimilarityScore": 8,
         "shared": 9,
         "ionCount": 10,
-        "maccScore": 11,
-        "exclude_num": 12,
+        "exclude_num": 11,
     }
     output = format_output_line(libDict, queryDict, matchDict)
     assert output == identifierOutputData
@@ -120,25 +118,23 @@ def test__output_formatting_functions__extract_metadata_from_match_and_score_dat
     )
 
     scoreData = [
-        [lib1Idx, queryIdx, lib1CosineScore, lib1Score],
-        [lib2Idx, queryIdx, lib2CosineScore, lib2Score],
+        [lib1Idx, queryIdx, lib1CosineScore],
+        [lib2Idx, queryIdx, lib2CosineScore],
     ]
     scoreDf = pd.DataFrame(
-        scoreData, columns=["libraryIdx", "queryIdx", "cosineScore", "maccScore"]
+        scoreData, columns=["libraryIdx", "queryIdx", "cosineScore"]
     )
     expectedOutput = {
         (lib1Idx, queryIdx): {
             "cosineSimilarityScore": lib1CosineScore,
             "shared": lib1PeakCount,
             "ionCount": genericIntensity * lib1PeakCountAbovePrecursorMz,
-            "maccScore": lib1Score,
             "exclude_num": lib1PeakCount - lib1PeakCountAbovePrecursorMz,
         },
         (lib2Idx, queryIdx): {
             "cosineSimilarityScore": lib2CosineScore,
             "shared": lib2PeakCount,
             "ionCount": lib2PeakCount * genericIntensity,
-            "maccScore": lib2Score,
             "exclude_num": 0,
         },
     }
@@ -177,7 +173,6 @@ def test__output_formatting_functions__format_output_as_pandas_dataframe(
         "ionCount",
         "CompensationVoltage",
         "totalWindowWidth",
-        "MaCC_Score",
         "exclude_num",
     ]
     inputFileName = "dummyFile"

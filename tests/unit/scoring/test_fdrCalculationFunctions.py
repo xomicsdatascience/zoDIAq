@@ -3,8 +3,8 @@ import pandas as pd
 
 from csodiaq.scoring.fdrCalculationFunctions import (
     drop_duplicate_values_from_df_in_given_column,
-    create_spectral_fdr_output_from_full_output,
-    create_peptide_fdr_output_from_full_output,
+    create_spectral_fdr_output_from_full_output_sorted_by_desired_score,
+    create_peptide_fdr_output_from_full_output_sorted_by_desired_score,
     identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff,
     organize_peptide_df_by_leading_proteins,
     determine_if_peptides_are_unique_to_leading_protein,
@@ -47,7 +47,7 @@ def test__fdr_calculation_functions__create_spectral_fdr_output_from_full_output
     expectedOutputDf["isDecoy"] = isDecoyColumn[:-1]
     expectedOutputDf["spectralFDR"] = [0] * numNonDecoys + [1 / (numNonDecoys + 1)]
 
-    outputDf = create_spectral_fdr_output_from_full_output(inputDf)
+    outputDf = create_spectral_fdr_output_from_full_output_sorted_by_desired_score(inputDf)
     assert expectedOutputDf.equals(outputDf)
 
 
@@ -73,7 +73,7 @@ def test__fdr_calculation_functions__create_peptide_fdr_output_from_full_output(
     expectedOutputDf["peptide"] = peptideColumn[1:-1]
     expectedOutputDf["isDecoy"] = isDecoyColumn[1:-1]
     expectedOutputDf["peptideFDR"] = [0] * (numNonDecoys - 1) + [1 / numNonDecoys]
-    outputDf = create_peptide_fdr_output_from_full_output(inputDf)
+    outputDf = create_peptide_fdr_output_from_full_output_sorted_by_desired_score(inputDf)
 
     assert expectedOutputDf.equals(outputDf)
 
