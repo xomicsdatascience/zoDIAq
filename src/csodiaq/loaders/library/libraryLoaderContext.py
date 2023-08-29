@@ -4,7 +4,6 @@ from csodiaq.loaders.library.libraryLoaderStrategyTable import (
 from csodiaq.loaders.library.libraryLoaderStrategyMgf import (
     LibraryLoaderStrategyMgf as Mgf,
 )
-from csodiaq.loaders.library.libraryLoaderStrategy import LibraryLoaderStrategy
 import os
 
 

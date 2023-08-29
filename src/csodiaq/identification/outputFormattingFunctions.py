@@ -1,9 +1,5 @@
 import pandas as pd
 import numpy as np
-from csodiaq.scoring.scoringFunctions import (
-    calculate_fdr_rates_of_decoy_array,
-)
-from csodiaq.utils import format_protein_list_to_string, format_protein_string_to_list
 
 
 def format_output_line(libMetadata, queMetadata, matchMetadata):

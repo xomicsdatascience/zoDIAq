@@ -2,7 +2,6 @@ from PyQt5.QtWidgets import (
     QApplication,
 )
 import sys
-import os
 
 from csodiaq.gui.windows import MainWindow
 

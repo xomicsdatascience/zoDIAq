@@ -1,5 +1,5 @@
 from matplotlib import pyplot as plt
-from csodiaq.plotting.spectrum import Spectrum
+from src.csodiaq.plotting.spectrum import Spectrum
 
 
 def spectrum_lineplot(spectrum: Spectrum,

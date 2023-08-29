@@ -4,7 +4,6 @@ from csodiaq.loaders.library.libraryLoaderStrategy import (
     remove_low_intensity_peaks_below_max_peak_num,
     finalVariableNames,
 )
-import pandas as pd
 import os
 from pyteomics import mgf
 import re

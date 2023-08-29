@@ -1,7 +1,6 @@
 from PyQt5.QtWidgets import (
     QMainWindow,
 )
-from PyQt5.QtCore import Qt
 from csodiaq.gui.windows.TableWindow import TableWindow
 
 
