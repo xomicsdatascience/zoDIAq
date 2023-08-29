@@ -10,7 +10,7 @@ class CustomCorrectionSpectraBreakdown(BaselineSpectraBreakdown):
         numBins = 200
         ppmCenterBin = 10.0
         binWidth = 0.1
-        emptyBinNum = 2
+        emptyBinNum = 4
         centerBinDistribution = np.random.uniform(
             ppmCenterBin - (binWidth / 2), ppmCenterBin + (binWidth / 2), size=(4,)
         )
