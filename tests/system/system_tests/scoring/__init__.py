@@ -1,1 +1,1 @@
-from .testFileContentCreators.idOutputCreatingFunctions import create_input_template_for_scoring_module
+from .testFileContentCreators.MaccScoresBreakdown import MaccScoresBreakdown
