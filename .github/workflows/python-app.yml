@@ -32,7 +32,7 @@ jobs:
         pip install -e .
     - name: Unzip system test file
       run: |
-        unzip tests/system/test_files/mzxml.zip -d tests/system/test_files/
+        unzip tests/system/v1_to_v2/test_files/mzxml.zip -d tests/system/v1_to_v2/test_files/
     - name: Test with pytest
       run: |
         pytest tests/ -W ignore::SyntaxWarning
