@@ -167,10 +167,6 @@ def test__identification__baseline_run__mgf_library(
         .sort_values(["cosine", "MzLIB"], ascending=[False, True])
         .reset_index(drop=True)
     )
-    outputDf.to_csv("/Users/cranneyc/Desktop/outputDf.csv")
-    baselineSpectraBreakdown.expectedOutputDf.to_csv(
-        "/Users/cranneyc/Desktop/expectedOutputDf.csv"
-    )
     assert_pandas_dataframes_are_equal(
         baselineSpectraBreakdown.expectedOutputDf, outputDf
     )
