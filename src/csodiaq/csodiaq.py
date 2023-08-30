@@ -1,6 +1,5 @@
 import os
 import warnings
-
 import pandas as pd
 from csodiaq import set_args_from_command_line_input, check_for_conflicting_args
 from csodiaq.identification import Identifier
@@ -72,6 +71,7 @@ def run_scoring(args):
     peptideDfs = {}
     proteinDfs = {}
     for idDfFile in args["input"]["idFiles"]:
+        printer(f"Beginning Scoring for '{idDfFile}' input file")
         idDf = pd.read_csv(os.path.join(args["input"]["csodiaqDirectory"], idDfFile))
         idDf['MaCC_Score'] = idDf.apply(lambda x: calculate_macc_score(x['shared'], x['cosine']), axis=1)
         idDf.sort_values(['MaCC_Score','peptide'], ascending=[False, True], inplace=True)

@@ -35,6 +35,7 @@ class QueryLoaderStrategyMzxml(QueryLoaderStrategy):
         scanMetadataDict = {}
         with mzxml.read(self.filePath) as spectra:
             for spec in spectra:
+                if "precursorMz" not in spec: continue
                 metadataDict = {}
                 metadataDict["precursorMz"] = spec["precursorMz"][0]["precursorMz"]
                 metadataDict["windowWidth"] = spec["precursorMz"][0]["windowWideness"]
