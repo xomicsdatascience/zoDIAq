@@ -11,6 +11,9 @@ from .fdrCalculationFunctions import (
     create_spectral_fdr_output_from_full_output_sorted_by_desired_score,
     create_peptide_fdr_output_from_full_output_sorted_by_desired_score,
     create_protein_fdr_output_from_peptide_fdr_output,
+)
+
+from .quantificationFunctions import (
     calculate_ion_count_for_each_protein_in_protein_fdr_df,
     compile_ion_count_comparison_across_runs_df,
 )
