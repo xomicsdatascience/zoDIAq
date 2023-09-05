@@ -42,7 +42,7 @@ def identify_high_confidence_proteins(peptideDf):
     )
 
 
-def initialize__format_peptide_protein_connections(peptideDf):
+def initialize__format_peptide_protein_connections(peptideDf, proteinColumn='protein'):
     """
     Determines every individual peptide-protein edge connection.
 
@@ -65,7 +65,7 @@ def initialize__format_peptide_protein_connections(peptideDf):
     peptideProteinConnections = []
     for i in range(len(peptideDf)):
         peptide = peptideDf["peptide"].loc[i]
-        proteinGroup = peptideDf["protein"].loc[i]
+        proteinGroup = peptideDf[proteinColumn].loc[i]
         for protein in format_protein_string_to_list(proteinGroup):
             peptideProteinConnections.append((peptide, protein))
     return pd.DataFrame(peptideProteinConnections, columns=["peptide", "protein"])

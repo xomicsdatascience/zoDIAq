@@ -12,8 +12,8 @@ from csodiaq.scoring import (
     create_spectral_fdr_output_from_full_output_sorted_by_desired_score,
     create_peptide_fdr_output_from_full_output_sorted_by_desired_score,
     create_protein_fdr_output_from_peptide_fdr_output,
-    calculate_ion_count_for_each_protein_in_protein_fdr_df,
     compile_ion_count_comparison_across_runs_df,
+    compile_common_protein_quantification_file,
     calculate_macc_score,
 
 )
@@ -92,15 +92,13 @@ def run_scoring(args):
             )
             proteinDfs[
                 fileHeader
-            ] = calculate_ion_count_for_each_protein_in_protein_fdr_df(proteinDf)
+            ] = proteinDf[["peptide","leadingProtein","ionCount","isDecoy"]][proteinDf['isDecoy']==0].reset_index(drop=True)
     printer("Begin Quantifying Common Peptides")
     commonPeptideDf = compile_ion_count_comparison_across_runs_df(peptideDfs, "peptide")
     commonPeptideDf.to_csv(os.path.join(outputDir, "commonPeptides.csv"))
     if len(proteinDfs) > 0:
         printer("Begin Quantifying Common Proteins")
-        commonProteinDf = compile_ion_count_comparison_across_runs_df(
-            proteinDfs, "protein"
-        )
+        commonProteinDf = compile_common_protein_quantification_file(proteinDfs, commonPeptideDf)
         commonProteinDf.to_csv(os.path.join(outputDir, "commonProteins.csv"))
     printer("Finish Scoring")
 

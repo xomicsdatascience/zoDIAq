@@ -47,6 +47,44 @@ def test__idpicker_functions__initialize__format_peptide_protein_connections():
     output = initialize__format_peptide_protein_connections(peptideProteinDf)
     assert expectedOutputDf.equals(output)
 
+def test__idpicker_functions__initialize__format_peptide_protein_connections__using_leading_proteins():
+    peptideProteinData = [
+        ["peptide01", "1/protein7"],
+        ["peptide02", "3/protein4/protein6/protein9"],
+        ["peptide03", "1/protein1"],
+        ["peptide04", "2/protein1/protein5"],
+        ["peptide05", "1/protein7"],
+        ["peptide06", "2/protein3/protein6"],
+        ["peptide07", "1/protein1"],
+        ["peptide08", "4/protein1/protein2/protein5/protein8"],
+        ["peptide09", "1/protein1"],
+        ["peptide10", "2/protein4/protein9"],
+    ]
+    peptideProteinDf = pd.DataFrame(peptideProteinData, columns=["peptide", "leadingProtein"])
+    expectedOutputData = [
+        ("peptide01", "protein7"),
+        ("peptide02", "protein4"),
+        ("peptide02", "protein6"),
+        ("peptide02", "protein9"),
+        ("peptide03", "protein1"),
+        ("peptide04", "protein1"),
+        ("peptide04", "protein5"),
+        ("peptide05", "protein7"),
+        ("peptide06", "protein3"),
+        ("peptide06", "protein6"),
+        ("peptide07", "protein1"),
+        ("peptide08", "protein1"),
+        ("peptide08", "protein2"),
+        ("peptide08", "protein5"),
+        ("peptide08", "protein8"),
+        ("peptide09", "protein1"),
+        ("peptide10", "protein4"),
+        ("peptide10", "protein9"),
+    ]
+    expectedOutputDf = pd.DataFrame(expectedOutputData, columns=["peptide", "protein"])
+    output = initialize__format_peptide_protein_connections(peptideProteinDf, proteinColumn='leadingProtein')
+    assert expectedOutputDf.equals(output)
+
 
 def test__idpicker_functions__collapse__group_identically_connected_peptides_and_proteins():
     data = [

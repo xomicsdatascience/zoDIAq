@@ -41,7 +41,7 @@ def create_protein_fdr_output_from_peptide_fdr_output(peptideDf):
     proteinDf["uniquePeptide"] = determine_if_peptides_are_unique_to_leading_protein(
         proteinDf
     )
-    return proteinDf
+    return proteinDf.reset_index(drop=True)
 
 
 def drop_duplicate_values_from_df_in_given_column(df, column):

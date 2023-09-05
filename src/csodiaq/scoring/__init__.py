@@ -14,6 +14,6 @@ from .fdrCalculationFunctions import (
 )
 
 from .quantificationFunctions import (
-    calculate_ion_count_for_each_protein_in_protein_fdr_df,
     compile_ion_count_comparison_across_runs_df,
+    compile_common_protein_quantification_file,
 )
