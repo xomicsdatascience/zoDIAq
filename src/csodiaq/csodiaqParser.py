@@ -92,7 +92,14 @@ def add_score_parser(commandParser):
         "--score",
         choices=["macc"],
         default="macc",
-        help="Type of scoring to apply for calculating the False Discovery Rate (FDR). Default is MaCC score (see paper for explanation). \nOptional. Choices are cosine and MaCC.",
+        help="Type of scoring to apply for calculating the False Discovery Rate (FDR). Default is MaCC score (see paper for explanation). \nOptional, default is 'macc' method. 'macc' is the only current choice.",
+    )
+    scoringParser.add_argument(
+        "-p",
+        "--proteinQuantMethod",
+        choices=["maxlfq", "average"],
+        default="maxlfq",
+        help="Method by which protein quantification metric is calculated (based on peptide quantities). \nOptional, default is 'maxlfq' method. Choices are 'maxlfq' or 'average'.",
     )
 
 

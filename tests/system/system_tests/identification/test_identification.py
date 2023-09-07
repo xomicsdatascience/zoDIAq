@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 import subprocess
-from tempfile import TemporaryDirectory, NamedTemporaryFile
+from tempfile import TemporaryDirectory
 import numpy as np
 import pytest
 import re
