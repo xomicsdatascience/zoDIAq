@@ -4,7 +4,7 @@ from tempfile import TemporaryDirectory
 import pytest
 import pandas as pd
 import numpy as np
-from . import MaccScoresBreakdown, ProteinCosineEvalScoresBreakdown, StandardSample1And2Breakdown, StandardSample3Breakdown, MethodSample1Breakdown, MethodSample2Breakdown, MethodSample3Breakdown
+from . import MaccScoresBreakdown, ProteinCosineEvalScoresBreakdown, StandardSample1And2Breakdown, StandardSample3Breakdown, MethodSample1Breakdown, MethodSample2Breakdown, MethodSample3Breakdown, OneMatchSample1And2Breakdown, OneMatchSample3Breakdown
 
 
 @pytest.fixture(scope="module")
@@ -131,7 +131,7 @@ def test__scoring__evaluate_common_peptides_dataframe_forms_correctly_with_multi
         proteinCosineHeader: proteinCosineBreakdown,
     })
 
-def evaluate_standard_protein_quant_comparison(inputFileDirectory, expectedOutputDirectory, method):
+def evaluate_standard_protein_quant_comparison(inputFileDirectory, expectedOutputDirectory, method, expectedCommonProteinDf):
     inputHeader = f'standard_common_proteins_{method}_method'
 
     inputFileDirectoryChild = os.path.join(inputFileDirectory, inputHeader)
@@ -168,19 +168,25 @@ def evaluate_standard_protein_quant_comparison(inputFileDirectory, expectedOutpu
     outputDirPath = os.path.join(inputFileDirectoryChild, 'fdrScores-macc')
     outputDirContents = os.listdir(outputDirPath)
     assert 'commonProteins.csv' in outputDirContents
-    expectedCommonProteinDf = pd.DataFrame([
-        [100.0, 100.0],
-        [100.0, 100.0],
-        [0.0, 100.0],
-    ], columns=['protein','proteinX'], index=[f'CsoDIAq-file_{sample1Header}_fullOutput',f'CsoDIAq-file_{sample2Header}_fullOutput',f'CsoDIAq-file_{sample3Header}_fullOutput'])
+    expectedCommonProteinDf = expectedCommonProteinDf.set_index(pd.Index([f'CsoDIAq-file_{sample1Header}_fullOutput',f'CsoDIAq-file_{sample2Header}_fullOutput',f'CsoDIAq-file_{sample3Header}_fullOutput']))
     commonProteinDf = pd.read_csv(os.path.join(outputDirPath, 'commonProteins.csv'), index_col=0).sort_index()
     assert_pandas_dataframes_are_equal(expectedCommonProteinDf, commonProteinDf)
 
 def test__scoring__evaluate_common_proteins_has_zero_quantity_in_missing_sample__averaging_method(inputFileDirectory, expectedOutputDirectory):
-    evaluate_standard_protein_quant_comparison(inputFileDirectory, expectedOutputDirectory, method='average')
+    expectedCommonProteinDf = pd.DataFrame([
+        [100.0, 100.0],
+        [100.0, 100.0],
+        [0.0, 100.0],
+    ], columns=['protein','proteinX'])
+    evaluate_standard_protein_quant_comparison(inputFileDirectory, expectedOutputDirectory, method='average',expectedCommonProteinDf=expectedCommonProteinDf)
 
 def test__scoring__evaluate_common_proteins_has_zero_quantity_in_missing_sample__maxlfq_method(inputFileDirectory, expectedOutputDirectory):
-    evaluate_standard_protein_quant_comparison(inputFileDirectory, expectedOutputDirectory, method='maxlfq')
+    expectedCommonProteinDf = pd.DataFrame([
+        [100.0, 0.0],
+        [100.0, 0.0],
+        [0.0, 0.0],
+    ], columns=['protein','proteinX'])
+    evaluate_standard_protein_quant_comparison(inputFileDirectory, expectedOutputDirectory, method='maxlfq', expectedCommonProteinDf=expectedCommonProteinDf)
 
 def evaluate_method_protein_quant_comparison(inputFileDirectory, expectedOutputDirectory, method, expectedCommonProteinDf):
     inputHeader = f'method_common_proteins_{method}_method'
@@ -223,7 +229,7 @@ def evaluate_method_protein_quant_comparison(inputFileDirectory, expectedOutputD
     commonProteinDf = pd.read_csv(os.path.join(outputDirPath, 'commonProteins.csv'), index_col=0).sort_index()
     assert_pandas_dataframes_are_equal(expectedCommonProteinDf, commonProteinDf)
 
-def test__scoring__evaluate_common_proteins_has_zero_quantity_in_missing_sample__averaging_method(inputFileDirectory, expectedOutputDirectory):
+def test__scoring__evaluate_common_proteins_average_method_works_correctly(inputFileDirectory, expectedOutputDirectory):
     expectedCommonProteinDf = pd.DataFrame([
         [200.0, 100.0],
         [233.333333333333, 100.0],
@@ -231,10 +237,53 @@ def test__scoring__evaluate_common_proteins_has_zero_quantity_in_missing_sample_
     ], columns=['protein','proteinX'])
     evaluate_method_protein_quant_comparison(inputFileDirectory, expectedOutputDirectory, method='average', expectedCommonProteinDf=expectedCommonProteinDf)
 
-def test__scoring__evaluate_common_proteins_has_zero_quantity_in_missing_sample__maxlfq_method(inputFileDirectory, expectedOutputDirectory):
+def test__scoring__evaluate_common_proteins_maxlfq_method_works_correctly(inputFileDirectory, expectedOutputDirectory):
     expectedCommonProteinDf = pd.DataFrame([
-        [391.479818, 100.0],
-        [391.487326, 100.0],
-        [391.493149, 100.0],
+        [391.479818, 0.0],
+        [391.487326, 0.0],
+        [391.493149, 0.0],
     ], columns=['protein','proteinX'])
     evaluate_method_protein_quant_comparison(inputFileDirectory, expectedOutputDirectory, method='maxlfq', expectedCommonProteinDf=expectedCommonProteinDf)
+
+def test__scoring__evaluate_common_proteins_one_peptide_match_excludes_protein_in_maxlfq(inputFileDirectory, expectedOutputDirectory):
+    inputHeader = f'one_match_common_proteins'
+
+    inputFileDirectoryChild = os.path.join(inputFileDirectory, inputHeader)
+    os.mkdir(inputFileDirectoryChild)
+
+    sample1Header = 'one_match_common_proteins_sample_1'
+    sample1Breakdown = OneMatchSample1And2Breakdown(expectedOutputDirectory)
+    inputFilePath = os.path.join(inputFileDirectoryChild, f'CsoDIAq-file_{sample1Header}_fullOutput.csv')
+    sample1Breakdown.inputDf.to_csv(inputFilePath, index=False)
+    sample2Header = 'one_match_common_proteins_sample_2'
+    sample2Breakdown = OneMatchSample1And2Breakdown(expectedOutputDirectory)
+    inputFilePath = os.path.join(inputFileDirectoryChild, f'CsoDIAq-file_{sample2Header}_fullOutput.csv')
+    sample2Breakdown.inputDf.to_csv(inputFilePath, index=False)
+    sample3Header = 'one_match_common_proteins_sample_3'
+    sample3Breakdown = OneMatchSample3Breakdown(expectedOutputDirectory)
+    inputFilePath = os.path.join(inputFileDirectoryChild, f'CsoDIAq-file_{sample3Header}_fullOutput.csv')
+    sample3Breakdown.inputDf.to_csv(inputFilePath, index=False)
+
+    args = [
+        "csodiaq",
+        "score",
+        "-i",
+        inputFileDirectoryChild,
+    ]
+    subprocess.run(args, capture_output=True)
+    assert_common_peptide_outputs_are_correct(inputFileDirectoryChild, {
+        sample1Header: sample1Breakdown,
+        sample2Header: sample2Breakdown,
+        sample3Header: sample3Breakdown,
+    })
+
+    outputDirPath = os.path.join(inputFileDirectoryChild, 'fdrScores-macc')
+    outputDirContents = os.listdir(outputDirPath)
+    assert 'commonProteins.csv' in outputDirContents
+    expectedCommonProteinDf = pd.DataFrame([
+        [100.0, 0.0],
+        [100.0, 0.0],
+        [0.0, 0.0],
+    ], columns=['protein','proteinX'], index=[f'CsoDIAq-file_{sample1Header}_fullOutput',f'CsoDIAq-file_{sample2Header}_fullOutput',f'CsoDIAq-file_{sample3Header}_fullOutput'])
+    commonProteinDf = pd.read_csv(os.path.join(outputDirPath, 'commonProteins.csv'), index_col=0).sort_index()
+    assert_pandas_dataframes_are_equal(expectedCommonProteinDf, commonProteinDf)

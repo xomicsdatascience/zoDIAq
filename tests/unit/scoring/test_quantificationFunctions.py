@@ -202,7 +202,7 @@ def test__maxlfq__from_paper():
         inputDf.iloc[cell[0],cell[1]] = 0
 
     normalizedInputDf = np.log(inputDf)
-    expectedOutput = np.array([7.83589964, 7.65357809, 7.43065038, 7.14296831, 6.73758953, 2.30258509])
+    expectedOutput = np.array([7.83589964, 7.65357809, 7.43065038, 7.14296831, 6.73758953, 0])
 
     output = maxlfq(normalizedInputDf.to_numpy())
     np.testing.assert_array_almost_equal(expectedOutput, output)

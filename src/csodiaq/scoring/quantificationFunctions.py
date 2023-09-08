@@ -112,7 +112,9 @@ def calculate_protein_intensities_across_samples_from_cholesky_factorization(A,B
 def maxlfq(sampleByPeptideMatrix, tolerance=-10.0):
     sampleByPeptideMatrix[sampleByPeptideMatrix<tolerance]=0
     A, B = prepare_matrices_for_cholesky_factorization(sampleByPeptideMatrix)
+    oneOrFewerMatchIdx = np.diagonal(A) == 0
     A, B = apply_regularization_to_matrices(sampleByPeptideMatrix, A, B)
     proteinScoreAcrossSamples = calculate_protein_intensities_across_samples_from_cholesky_factorization(A, B)
-    return calculate_protein_intensities_across_samples_from_cholesky_factorization(A, B)
+    proteinScoreAcrossSamples[oneOrFewerMatchIdx] = 0
+    return proteinScoreAcrossSamples
 
