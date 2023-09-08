@@ -671,6 +671,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__initialize_scoring(
     assert parsedScoreArgs["score"] == "macc"
     assert parsedScoreArgs["proteinQuantMethod"] == "maxlfq"
 
+
 def test__csodiaq_parser__set_args_from_command_line_input__score_succeeds_with_macc_input(
     parser, scoreArgs
 ):
@@ -700,19 +701,22 @@ def test__csodiaq_parser__set_args_from_command_line_input__score_fails_with_oth
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
         args = vars(parser.parse_args(scoreArgs))
 
+
 def test__csodiaq_parser__set_args_from_command_line_input__score_suceeds_with_maxlfq_protein_quant_method(
-        parser, scoreArgs
+    parser, scoreArgs
 ):
     scoreArgs += ["-p", "maxlfq"]
     args = vars(parser.parse_args(scoreArgs))
     assert args["proteinQuantMethod"] == "maxlfq"
 
+
 def test__csodiaq_parser__set_args_from_command_line_input__score_suceeds_with_maxlfq_protein_quant_method(
-        parser, scoreArgs
+    parser, scoreArgs
 ):
     scoreArgs += ["-p", "average"]
     args = vars(parser.parse_args(scoreArgs))
     assert args["proteinQuantMethod"] == "average"
+
 
 @pytest.fixture
 def reanalysisFiles():

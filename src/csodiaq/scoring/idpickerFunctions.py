@@ -42,7 +42,7 @@ def identify_high_confidence_proteins(peptideDf):
     )
 
 
-def initialize__format_peptide_protein_connections(peptideDf, proteinColumn='protein'):
+def initialize__format_peptide_protein_connections(peptideDf, proteinColumn="protein"):
     """
     Determines every individual peptide-protein edge connection.
 

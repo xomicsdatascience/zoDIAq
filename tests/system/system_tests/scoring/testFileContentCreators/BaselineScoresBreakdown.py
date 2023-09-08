@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import pandas as pd
 import os
 
+
 class BaselineScoresBreakdown(ABC):
     def __init__(self, expectedOutputDirectory):
         self.idPickerLeadingProteins = [
@@ -18,7 +19,9 @@ class BaselineScoresBreakdown(ABC):
             "2/protein4/protein9",
         ]
         self._create_input_template_for_scoring_module()
-        self._create_outputs_of_scoring_module_and_write_to_file(expectedOutputDirectory)
+        self._create_outputs_of_scoring_module_and_write_to_file(
+            expectedOutputDirectory
+        )
 
     @abstractmethod
     def _create_input_template_for_scoring_module(self):
@@ -29,18 +32,24 @@ class BaselineScoresBreakdown(ABC):
         """
         pass
 
-    def _create_outputs_of_scoring_module_and_write_to_file(self, expectedOutputDirectory):
+    def _create_outputs_of_scoring_module_and_write_to_file(
+        self, expectedOutputDirectory
+    ):
         expectedSpectralOutput = self._make_expected_spectral_output(self.inputDf)
         expectedPeptideOutput = self._make_expected_peptide_output(self.inputDf)
-        expectedProteinOutput = self._make_expected_protein_output(expectedPeptideOutput)
+        expectedProteinOutput = self._make_expected_protein_output(
+            expectedPeptideOutput
+        )
         self.outputDict = {
-            'spectralFDR': expectedSpectralOutput,
-            'peptideFDR': expectedPeptideOutput,
-            'proteinFDR': expectedProteinOutput,
+            "spectralFDR": expectedSpectralOutput,
+            "peptideFDR": expectedPeptideOutput,
+            "proteinFDR": expectedProteinOutput,
         }
-        for key,value in self.outputDict.items():
+        for key, value in self.outputDict.items():
             if isinstance(value, pd.DataFrame):
-                value.to_csv(os.path.join(expectedOutputDirectory, f'{key}.csv'), index=False)
+                value.to_csv(
+                    os.path.join(expectedOutputDirectory, f"{key}.csv"), index=False
+                )
 
     @abstractmethod
     def _make_expected_spectral_output(self, scoredDf):
@@ -71,34 +80,36 @@ class BaselineScoresBreakdown(ABC):
         inputDf["zLIB"] = [1] * len(inputDf.index)
         inputDf["isDecoy"] = [0] * len(inputDf.index)
         inputDf["rank"] = [rank] * len(inputDf.index)
-        inputDf['ionCount'] = [100.0] * len(inputDf.index)
+        inputDf["ionCount"] = [100.0] * len(inputDf.index)
 
         return inputDf
 
     def _create_input_for_generic_peptides(self, rank, startingRow, numRows=200):
-        numbers = [str(i).rjust(3, '0') for i in range(startingRow, numRows + startingRow)]
-        peptides = [f'peptide{number}' for number in numbers]
-        proteins = [f'1/protein{number}' for number in numbers]
+        numbers = [
+            str(i).rjust(3, "0") for i in range(startingRow, numRows + startingRow)
+        ]
+        peptides = [f"peptide{number}" for number in numbers]
+        proteins = [f"1/protein{number}" for number in numbers]
         charges = [1] * numRows
         isDecoy = [0] * numRows
         ranks = [rank] * numRows
         inputDf = pd.DataFrame()
-        inputDf['peptide'] = peptides
-        inputDf['protein'] = proteins
-        inputDf['zLIB'] = charges
-        inputDf['isDecoy'] = isDecoy
-        inputDf['rank'] = ranks
-        inputDf['ionCount'] = [100.0] * len(inputDf.index)
+        inputDf["peptide"] = peptides
+        inputDf["protein"] = proteins
+        inputDf["zLIB"] = charges
+        inputDf["isDecoy"] = isDecoy
+        inputDf["rank"] = ranks
+        inputDf["ionCount"] = [100.0] * len(inputDf.index)
         return inputDf
 
-    def _create_input_for_all_decoys(self, numRows = 5):
-        numbers = [str(i).rjust(len(str(numRows)),'0') for i in range(numRows)]
-        peptides = [f'DECOY_peptide{number}' for number in numbers]
-        proteins = [f'1/DECOY_protein{number}' for number in numbers]
+    def _create_input_for_all_decoys(self, numRows=5):
+        numbers = [str(i).rjust(len(str(numRows)), "0") for i in range(numRows)]
+        peptides = [f"DECOY_peptide{number}" for number in numbers]
+        proteins = [f"1/DECOY_protein{number}" for number in numbers]
         inputDf = pd.DataFrame()
-        inputDf['peptide'] = peptides
-        inputDf['protein'] = proteins
-        inputDf['zLIB'] = [1]*len(inputDf.index)
-        inputDf['isDecoy'] = [1]*len(inputDf.index)
-        inputDf['ionCount'] = [100.0]*len(inputDf.index)
+        inputDf["peptide"] = peptides
+        inputDf["protein"] = proteins
+        inputDf["zLIB"] = [1] * len(inputDf.index)
+        inputDf["isDecoy"] = [1] * len(inputDf.index)
+        inputDf["ionCount"] = [100.0] * len(inputDf.index)
         return inputDf

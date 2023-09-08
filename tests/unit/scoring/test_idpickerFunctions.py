@@ -47,6 +47,7 @@ def test__idpicker_functions__initialize__format_peptide_protein_connections():
     output = initialize__format_peptide_protein_connections(peptideProteinDf)
     assert expectedOutputDf.equals(output)
 
+
 def test__idpicker_functions__initialize__format_peptide_protein_connections__using_leading_proteins():
     peptideProteinData = [
         ["peptide01", "1/protein7"],
@@ -60,7 +61,9 @@ def test__idpicker_functions__initialize__format_peptide_protein_connections__us
         ["peptide09", "1/protein1"],
         ["peptide10", "2/protein4/protein9"],
     ]
-    peptideProteinDf = pd.DataFrame(peptideProteinData, columns=["peptide", "leadingProtein"])
+    peptideProteinDf = pd.DataFrame(
+        peptideProteinData, columns=["peptide", "leadingProtein"]
+    )
     expectedOutputData = [
         ("peptide01", "protein7"),
         ("peptide02", "protein4"),
@@ -82,7 +85,9 @@ def test__idpicker_functions__initialize__format_peptide_protein_connections__us
         ("peptide10", "protein9"),
     ]
     expectedOutputDf = pd.DataFrame(expectedOutputData, columns=["peptide", "protein"])
-    output = initialize__format_peptide_protein_connections(peptideProteinDf, proteinColumn='leadingProtein')
+    output = initialize__format_peptide_protein_connections(
+        peptideProteinDf, proteinColumn="leadingProtein"
+    )
     assert expectedOutputDf.equals(output)
 
 

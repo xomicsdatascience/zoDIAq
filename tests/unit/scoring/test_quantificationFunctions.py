@@ -93,6 +93,7 @@ def test__quantification_functions__compile_ion_count_comparison_across_runs_df(
     outputDf = compile_ion_count_comparison_across_runs_df(inputDfs, columnName)
     assert expectedOutputDf.equals(outputDf)
 
+
 def test__quantification_functions__compile_common_protein_quantification_file__averaging_method():
     inputData = [
         ["1/protein1", 100.0],
@@ -103,33 +104,41 @@ def test__quantification_functions__compile_common_protein_quantification_file__
     ]
     inputDf1 = pd.DataFrame(inputData, columns=["leadingProtein", "ionCount"])
     inputDf2 = inputDf1.copy()
-    fileHeader1 = 'test1'
-    fileHeader2 = 'test2'
+    fileHeader1 = "test1"
+    fileHeader2 = "test2"
     expectedOutputDf = pd.DataFrame(
-        [[200.0, 450.0, 450.0],
-         [200.0, 450.0, 450.0]],
-        columns=['protein1','protein2','protein3'],
-        index=[fileHeader1, fileHeader2]
+        [[200.0, 450.0, 450.0], [200.0, 450.0, 450.0]],
+        columns=["protein1", "protein2", "protein3"],
+        index=[fileHeader1, fileHeader2],
     )
-    outputDf = compile_common_protein_quantification_file({
-        fileHeader1:inputDf1,
-        fileHeader2: inputDf2,
-    }, commonPeptidesDf=None, proteinQuantificationMethod='average')
+    outputDf = compile_common_protein_quantification_file(
+        {
+            fileHeader1: inputDf1,
+            fileHeader2: inputDf2,
+        },
+        commonPeptidesDf=None,
+        proteinQuantificationMethod="average",
+    )
     assert expectedOutputDf.equals(outputDf)
 
+
 def test__set_non_present_protein_levels_to_zero():
-    samples = ['sample1','sample2', 'sample3']
-    peptides = ['peptide1','peptide2']
-    peptideQuantityDf = pd.DataFrame([
-        [100.0, 100.0],
-        [100.0, 100.0],
-        [100.0, 100.0],
-    ], columns = peptides, index=samples)
-    protein = 'protein1'
+    samples = ["sample1", "sample2", "sample3"]
+    peptides = ["peptide1", "peptide2"]
+    peptideQuantityDf = pd.DataFrame(
+        [
+            [100.0, 100.0],
+            [100.0, 100.0],
+            [100.0, 100.0],
+        ],
+        columns=peptides,
+        index=samples,
+    )
+    protein = "protein1"
     headerToProteinPresenceDict = {
-        'sample1':[protein],
-        'sample2':[protein],
-        'sample3':[],
+        "sample1": [protein],
+        "sample2": [protein],
+        "sample3": [],
     }
     expectedOutputDf = pd.DataFrame(
         [
@@ -137,10 +146,14 @@ def test__set_non_present_protein_levels_to_zero():
             [100.0, 100.0],
             [-np.inf, -np.inf],
         ],
-        columns = peptides,
-        index=samples)
-    outputDf = set_non_present_protein_levels_to_zero(peptideQuantityDf, protein, headerToProteinPresenceDict)
+        columns=peptides,
+        index=samples,
+    )
+    outputDf = set_non_present_protein_levels_to_zero(
+        peptideQuantityDf, protein, headerToProteinPresenceDict
+    )
     assert expectedOutputDf.equals(outputDf)
+
 
 def test__maxlfq__from_paper():
     """
@@ -190,12 +203,12 @@ def test__maxlfq__from_paper():
     """
     numPeptides = 7
     numSamples = 6
-    peptideIntensityIncrease = [10**i for i in range(-3,4)]
+    peptideIntensityIncrease = [10**i for i in range(-3, 4)]
     sampleIntensityIncrease = list(range(numSamples, 0, -1))
     inputDf = pd.DataFrame(
         np.multiply.outer(sampleIntensityIncrease, peptideIntensityIncrease),
-        columns=[f'P{i}' for i in range(1, numPeptides+1)],
-        index=['A','B','C','D','E','F']
+        columns=[f"P{i}" for i in range(1, numPeptides + 1)],
+        index=["A", "B", "C", "D", "E", "F"],
     )
     cellsToDelete = [
         (0, 0),
@@ -221,17 +234,12 @@ def test__maxlfq__from_paper():
         (5, 6),
     ]
     for cell in cellsToDelete:
-        inputDf.iloc[cell[0],cell[1]] = 0
+        inputDf.iloc[cell[0], cell[1]] = 0
 
     normalizedInputDf = np.log(inputDf)
-    expectedOutput = np.array([7.83589964, 7.65357809, 7.43065038, 7.14296831, 6.73758953, 0])
+    expectedOutput = np.array(
+        [7.83589964, 7.65357809, 7.43065038, 7.14296831, 6.73758953, 0]
+    )
 
     output = maxlfq(normalizedInputDf.to_numpy())
     np.testing.assert_array_almost_equal(expectedOutput, output)
-
-
-
-
-
-
-

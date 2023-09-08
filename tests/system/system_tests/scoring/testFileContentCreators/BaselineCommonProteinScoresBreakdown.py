@@ -2,6 +2,7 @@ import pandas as pd
 from .MaccScoresBreakdown import MaccScoresBreakdown
 from abc import abstractmethod
 
+
 class BaselineCommonProteinScoresBreakdown(MaccScoresBreakdown):
     def _create_input_template_for_scoring_module(self):
         """
@@ -11,10 +12,10 @@ class BaselineCommonProteinScoresBreakdown(MaccScoresBreakdown):
         self._add_macc_rank_values_to_input_template_and_remove_rank_label()
 
     def _create_generic_peptide_line(self):
-        genericMarker = 'X'
+        genericMarker = "X"
         return pd.DataFrame(
-            [[f'peptide{genericMarker}',f'1/protein{genericMarker}',1,0,0,100.0]],
-            columns=['peptide','protein','zLIB','isDecoy','rank','ionCount']
+            [[f"peptide{genericMarker}", f"1/protein{genericMarker}", 1, 0, 0, 100.0]],
+            columns=["peptide", "protein", "zLIB", "isDecoy", "rank", "ionCount"],
         )
 
     @abstractmethod
@@ -26,13 +27,12 @@ class BaselineCommonProteinScoresBreakdown(MaccScoresBreakdown):
 
     def _make_expected_peptide_output(self, scoredDf):
         expectedPeptideOutput = scoredDf.copy()
-        expectedPeptideOutput['peptideFDR'] = [0] * len(expectedPeptideOutput.index)
+        expectedPeptideOutput["peptideFDR"] = [0] * len(expectedPeptideOutput.index)
         return expectedPeptideOutput
 
     def _make_expected_protein_output(self, peptideDf):
         expectedProteinOutput = peptideDf.copy()
-        expectedProteinOutput['leadingProtein'] = expectedProteinOutput['protein']
-        expectedProteinOutput['proteinCosine'] = expectedProteinOutput['cosine']
-        expectedProteinOutput['leadingProteinFDR'] = expectedProteinOutput['peptideFDR']
+        expectedProteinOutput["leadingProtein"] = expectedProteinOutput["protein"]
+        expectedProteinOutput["proteinCosine"] = expectedProteinOutput["cosine"]
+        expectedProteinOutput["leadingProteinFDR"] = expectedProteinOutput["peptideFDR"]
         return expectedProteinOutput
-

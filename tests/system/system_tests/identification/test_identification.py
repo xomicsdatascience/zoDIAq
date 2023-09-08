@@ -40,6 +40,7 @@ def assert_pandas_dataframes_are_equal(expectedDf, df):
         else:
             np.testing.assert_array_equal(expectedColumn, column)
 
+
 isSavingTestFiles = False
 
 
@@ -84,14 +85,21 @@ def inputFileDirectory(systemTestFileDirectory):
     os.mkdir(inputDirectory)
     return inputDirectory
 
+
 @pytest.fixture(scope="module")
 def expectedOutputDirectory(systemTestFileDirectory):
-    expectedOutputDirectory = os.path.join(systemTestFileDirectory.name, "expected_output_files")
+    expectedOutputDirectory = os.path.join(
+        systemTestFileDirectory.name, "expected_output_files"
+    )
     os.mkdir(expectedOutputDirectory)
     return expectedOutputDirectory
 
+
 def test__identification__baseline_run__spectrast_library(
-    libraryTemplateDataFrame, libraryFileDirectory, inputFileDirectory, expectedOutputDirectory
+    libraryTemplateDataFrame,
+    libraryFileDirectory,
+    inputFileDirectory,
+    expectedOutputDirectory,
 ):
     baselineSpectraBreakdown = BaselineSpectraBreakdown(libraryTemplateDataFrame)
     inputFileHeader = "baseline_run_spectrast"
@@ -100,7 +108,9 @@ def test__identification__baseline_run__spectrast_library(
     )
     inputQueryFile = os.path.join(inputFileDirectory, f"{inputFileHeader}.mzXML")
     libraryFile = os.path.join(libraryFileDirectory, "spectrast_test_library.csv")
-    baselineSpectraBreakdown.expectedOutputDf.to_csv(os.path.join(expectedOutputDirectory, f"{inputFileHeader}.csv"), index=False)
+    baselineSpectraBreakdown.expectedOutputDf.to_csv(
+        os.path.join(expectedOutputDirectory, f"{inputFileHeader}.csv"), index=False
+    )
     outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
     args = [
         "csodiaq",
@@ -132,7 +142,10 @@ def test__identification__baseline_run__spectrast_library(
 
 
 def test__identification__baseline_run__mgf_library(
-    libraryTemplateDataFrame, libraryFileDirectory, inputFileDirectory, expectedOutputDirectory
+    libraryTemplateDataFrame,
+    libraryFileDirectory,
+    inputFileDirectory,
+    expectedOutputDirectory,
 ):
     baselineSpectraBreakdown = BaselineSpectraBreakdown(libraryTemplateDataFrame)
     inputFileHeader = "baseline_run_mgf"
@@ -141,7 +154,9 @@ def test__identification__baseline_run__mgf_library(
     )
     inputQueryFile = os.path.join(inputFileDirectory, f"{inputFileHeader}.mzXML")
     libraryFile = os.path.join(libraryFileDirectory, "mgf_test_library.mgf")
-    baselineSpectraBreakdown.expectedOutputDf.to_csv(os.path.join(expectedOutputDirectory, f"{inputFileHeader}.csv"), index=False)
+    baselineSpectraBreakdown.expectedOutputDf.to_csv(
+        os.path.join(expectedOutputDirectory, f"{inputFileHeader}.csv"), index=False
+    )
     outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
     args = [
         "csodiaq",
@@ -229,7 +244,10 @@ def test__identification__baseline__two_inputs_creates_two_outputs_independent_o
 
 
 def test__identification__baseline_no_matches_raises_error(
-    libraryTemplateDataFrame, libraryFileDirectory, inputFileDirectory, expectedOutputDirectory
+    libraryTemplateDataFrame,
+    libraryFileDirectory,
+    inputFileDirectory,
+    expectedOutputDirectory,
 ):
     noMatchSpectraBreakdown = NoMatchSpectraBreakdown(libraryTemplateDataFrame)
     noMatchFileHeader = "no_match_input"
@@ -244,8 +262,12 @@ def test__identification__baseline_no_matches_raises_error(
     inputQueryFile = os.path.join(inputFileDirectory, f"{inputFileHeader}.mzXML")
     noMatchQueryFile = os.path.join(inputFileDirectory, f"{noMatchFileHeader}.mzXML")
     libraryFile = os.path.join(libraryFileDirectory, "spectrast_test_library.csv")
-    baselineSpectraBreakdown.expectedOutputDf.to_csv(os.path.join(expectedOutputDirectory, f"{inputFileHeader}.csv"), index=False)
-    noMatchSpectraBreakdown.expectedOutputDf.to_csv(os.path.join(expectedOutputDirectory, f"{noMatchFileHeader}.csv"), index=False)
+    baselineSpectraBreakdown.expectedOutputDf.to_csv(
+        os.path.join(expectedOutputDirectory, f"{inputFileHeader}.csv"), index=False
+    )
+    noMatchSpectraBreakdown.expectedOutputDf.to_csv(
+        os.path.join(expectedOutputDirectory, f"{noMatchFileHeader}.csv"), index=False
+    )
     outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
     assert_no_matches_before_correction_raises_warning_and_skips_offending_file_only(
         inputQueryFile,
@@ -314,7 +336,10 @@ def assert_no_matches_after_correction_raises_warning(
 
 
 def test__identification__no_compensation_voltage_succeeds(
-    libraryTemplateDataFrame, libraryFileDirectory, inputFileDirectory, expectedOutputDirectory
+    libraryTemplateDataFrame,
+    libraryFileDirectory,
+    inputFileDirectory,
+    expectedOutputDirectory,
 ):
     noCompensationVoltageSpectraBreakdown = NoCompensationVoltageSpectraBreakdown(
         libraryTemplateDataFrame
@@ -325,7 +350,9 @@ def test__identification__no_compensation_voltage_succeeds(
     )
     inputQueryFile = os.path.join(inputFileDirectory, f"{inputFileHeader}.mzXML")
     libraryFile = os.path.join(libraryFileDirectory, "spectrast_test_library.csv")
-    noCompensationVoltageSpectraBreakdown.expectedOutputDf.to_csv(os.path.join(expectedOutputDirectory, f"{inputFileHeader}.csv"), index=False)
+    noCompensationVoltageSpectraBreakdown.expectedOutputDf.to_csv(
+        os.path.join(expectedOutputDirectory, f"{inputFileHeader}.csv"), index=False
+    )
     outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
     args = [
         "csodiaq",
@@ -592,11 +619,12 @@ def test__identification__stress_test_memory():
     ]
     subprocess.run(args)
 
+
 @pytest.mark.skip(
     "Test files are temporarily made on-the-fly, but there are instances where one would want to investigate specific file outputs. This test function saves the test files to a permanent directory. Remove the skip tag if you want to save the files for in-depth data interrogation."
 )
 def test__identification__make_permanent_copy_of_test_files(systemTestFileDirectory):
-    parentDir =os.path.dirname(systemTestFileDirectory.name)
-    permanentTestDirectory = os.path.join(parentDir, 'csodiaq_system_test_files')
+    parentDir = os.path.dirname(systemTestFileDirectory.name)
+    permanentTestDirectory = os.path.join(parentDir, "csodiaq_system_test_files")
     shutil.copytree(systemTestFileDirectory.name, permanentTestDirectory)
-    print(f'\nsaved test files to {permanentTestDirectory}')
+    print(f"\nsaved test files to {permanentTestDirectory}")
