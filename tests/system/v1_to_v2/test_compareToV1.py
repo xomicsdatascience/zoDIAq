@@ -131,8 +131,10 @@ def test__scoring_workflow():
     fullDf = pd.read_csv(
         get_file_from_system_test_folder("v2FullOutput.csv.gz"), compression="gzip"
     )
-    fullDf['MaCC_Score'] = fullDf.apply(lambda x: calculate_macc_score(x['shared'],x['cosine']), axis=1)
-    fullDf.sort_values(['MaCC_Score'], ascending=False, inplace=True)
+    fullDf["MaCC_Score"] = fullDf.apply(
+        lambda x: calculate_macc_score(x["shared"], x["cosine"]), axis=1
+    )
+    fullDf.sort_values(["MaCC_Score"], ascending=False, inplace=True)
     expectedSpectralDf = pd.read_csv(
         get_file_from_system_test_folder("v1SpectralOutput.csv.gz"), compression="gzip"
     )
@@ -143,12 +145,16 @@ def test__scoring_workflow():
         get_file_from_system_test_folder("v1ProteinOutput.csv.gz"), compression="gzip"
     )
 
-    spectralDf = create_spectral_fdr_output_from_full_output_sorted_by_desired_score(fullDf)
+    spectralDf = create_spectral_fdr_output_from_full_output_sorted_by_desired_score(
+        fullDf
+    )
     assert_numeric_pandas_dataframes_are_equal(
         expectedSpectralDf, spectralDf, "spectral"
     )
 
-    peptideDf = create_peptide_fdr_output_from_full_output_sorted_by_desired_score(fullDf)
+    peptideDf = create_peptide_fdr_output_from_full_output_sorted_by_desired_score(
+        fullDf
+    )
     assert_numeric_pandas_dataframes_are_equal(expectedPeptideDf, peptideDf, "peptide")
 
     proteinDf = create_protein_fdr_output_from_peptide_fdr_output(peptideDf)

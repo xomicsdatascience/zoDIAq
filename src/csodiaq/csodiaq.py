@@ -1,6 +1,5 @@
 import os
 import warnings
-
 import pandas as pd
 from csodiaq import set_args_from_command_line_input, check_for_conflicting_args
 from csodiaq.identification import Identifier
@@ -13,10 +12,9 @@ from csodiaq.scoring import (
     create_spectral_fdr_output_from_full_output_sorted_by_desired_score,
     create_peptide_fdr_output_from_full_output_sorted_by_desired_score,
     create_protein_fdr_output_from_peptide_fdr_output,
-    calculate_ion_count_for_each_protein_in_protein_fdr_df,
     compile_ion_count_comparison_across_runs_df,
+    compile_common_protein_quantification_file,
     calculate_macc_score,
-
 )
 from csodiaq.targetedReanalysis import (
     create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides,
@@ -49,7 +47,9 @@ def run_identification(args):
             queryFile
         )
         if isinstance(identificationFullOutputDf, str):
-            warnings.warn(f'{identificationFullOutputDf} Skipping {queryFile} file.', UserWarning)
+            warnings.warn(
+                f"{identificationFullOutputDf} Skipping {queryFile} file.", UserWarning
+            )
             continue
 
         outFileHeader = create_outfile_header(
@@ -65,22 +65,32 @@ def run_scoring(args):
     printer = Printer()
     printer("Begin Scoring")
     outputDir = os.path.join(
-        args["input"]["csodiaqDirectory"], f'fdrScores-{args["score"]}'
+        args["input"]["csodiaqDirectory"],
+        f'fdrScores-{args["score"]}-{args["proteinQuantMethod"]}',
     )
     if not os.path.exists(outputDir):
         os.mkdir(outputDir)
     peptideDfs = {}
     proteinDfs = {}
     for idDfFile in args["input"]["idFiles"]:
+        printer(f"Beginning Scoring for '{idDfFile}' input file")
         idDf = pd.read_csv(os.path.join(args["input"]["csodiaqDirectory"], idDfFile))
-        idDf['MaCC_Score'] = idDf.apply(lambda x: calculate_macc_score(x['shared'], x['cosine']), axis=1)
-        idDf.sort_values(['MaCC_Score','peptide'], ascending=[False, True], inplace=True)
-        spectralDf = create_spectral_fdr_output_from_full_output_sorted_by_desired_score(idDf)
+        idDf["MaCC_Score"] = idDf.apply(
+            lambda x: calculate_macc_score(x["shared"], x["cosine"]), axis=1
+        )
+        idDf.sort_values(
+            ["MaCC_Score", "peptide"], ascending=[False, True], inplace=True
+        )
+        spectralDf = (
+            create_spectral_fdr_output_from_full_output_sorted_by_desired_score(idDf)
+        )
         fileHeader = extract_file_name_without_file_type(idDfFile)
         spectralDf.to_csv(
             os.path.join(outputDir, f"{fileHeader}_spectralFDR.csv"), index=False
         )
-        peptideDf = create_peptide_fdr_output_from_full_output_sorted_by_desired_score(idDf)
+        peptideDf = create_peptide_fdr_output_from_full_output_sorted_by_desired_score(
+            idDf
+        )
         peptideDf.to_csv(
             os.path.join(outputDir, f"{fileHeader}_peptideFDR.csv"), index=False
         )
@@ -90,16 +100,16 @@ def run_scoring(args):
             proteinDf.to_csv(
                 os.path.join(outputDir, f"{fileHeader}_proteinFDR.csv"), index=False
             )
-            proteinDfs[
-                fileHeader
-            ] = calculate_ion_count_for_each_protein_in_protein_fdr_df(proteinDf)
+            proteinDfs[fileHeader] = proteinDf[
+                ["peptide", "leadingProtein", "ionCount", "isDecoy"]
+            ][proteinDf["isDecoy"] == 0].reset_index(drop=True)
     printer("Begin Quantifying Common Peptides")
     commonPeptideDf = compile_ion_count_comparison_across_runs_df(peptideDfs, "peptide")
     commonPeptideDf.to_csv(os.path.join(outputDir, "commonPeptides.csv"))
     if len(proteinDfs) > 0:
         printer("Begin Quantifying Common Proteins")
-        commonProteinDf = compile_ion_count_comparison_across_runs_df(
-            proteinDfs, "protein"
+        commonProteinDf = compile_common_protein_quantification_file(
+            proteinDfs, commonPeptideDf, args["proteinQuantMethod"]
         )
         commonProteinDf.to_csv(os.path.join(outputDir, "commonProteins.csv"))
     printer("Finish Scoring")

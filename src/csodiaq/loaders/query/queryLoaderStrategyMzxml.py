@@ -9,6 +9,7 @@ from collections import defaultdict
 from pyteomics import mzxml
 import warnings
 
+
 class QueryLoaderStrategyMzxml(QueryLoaderStrategy):
     """
     Concrete strategy implementation of the QueryLoaderStrategy strategy class specific for
@@ -35,6 +36,8 @@ class QueryLoaderStrategyMzxml(QueryLoaderStrategy):
         scanMetadataDict = {}
         with mzxml.read(self.filePath) as spectra:
             for spec in spectra:
+                if "precursorMz" not in spec:
+                    continue
                 metadataDict = {}
                 metadataDict["precursorMz"] = spec["precursorMz"][0]["precursorMz"]
                 metadataDict["windowWidth"] = spec["precursorMz"][0]["windowWideness"]

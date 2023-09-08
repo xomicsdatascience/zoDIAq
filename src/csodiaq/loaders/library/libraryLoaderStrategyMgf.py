@@ -33,7 +33,9 @@ class LibraryLoaderStrategyMgf(LibraryLoaderStrategy):
                 librarySpectrum, maxPeakNum, csodiaqKeyIdx
             )
             csodiaqLibDict[csodiaqKey] = csodiaqValue
-        csodiaqLibDict = _rewrite_csodiaq_key_idx_to_correspond_to_sorted_csodiaq_key(csodiaqLibDict)
+        csodiaqLibDict = _rewrite_csodiaq_key_idx_to_correspond_to_sorted_csodiaq_key(
+            csodiaqLibDict
+        )
         return csodiaqLibDict
 
 
@@ -41,9 +43,10 @@ def _rewrite_csodiaq_key_idx_to_correspond_to_sorted_csodiaq_key(csodiaqLibDict)
     sortedLibKeys = sorted(csodiaqLibDict.keys())
     for i, key in enumerate(sortedLibKeys):
         oldPeaks = csodiaqLibDict[key][finalVariableNames["peaks"]]
-        newPeaks = [(peak[0],peak[1],i) for peak in oldPeaks]
+        newPeaks = [(peak[0], peak[1], i) for peak in oldPeaks]
         csodiaqLibDict[key][finalVariableNames["peaks"]] = newPeaks
     return csodiaqLibDict
+
 
 def _create_csodiaq_library_entry(
     librarySpectrum: dict, maxPeakNum: int, csodiaqKeyIdx: int

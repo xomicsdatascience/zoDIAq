@@ -121,9 +121,7 @@ def test__output_formatting_functions__extract_metadata_from_match_and_score_dat
         [lib1Idx, queryIdx, lib1CosineScore],
         [lib2Idx, queryIdx, lib2CosineScore],
     ]
-    scoreDf = pd.DataFrame(
-        scoreData, columns=["libraryIdx", "queryIdx", "cosineScore"]
-    )
+    scoreDf = pd.DataFrame(scoreData, columns=["libraryIdx", "queryIdx", "cosineScore"])
     expectedOutput = {
         (lib1Idx, queryIdx): {
             "cosineSimilarityScore": lib1CosineScore,

@@ -46,8 +46,7 @@ def extract_metadata_from_match_dataframe_groupby(group, queryMetadata):
 def extract_metadata_from_score_dataframe(df):
     cosineDict = df.set_index(["libraryIdx", "queryIdx"])["cosineScore"].to_dict()
     outputDict = {
-        k: {"cosineSimilarityScore": cosineDict[k]}
-        for k in cosineDict.keys()
+        k: {"cosineSimilarityScore": cosineDict[k]} for k in cosineDict.keys()
     }
     return outputDict
 
