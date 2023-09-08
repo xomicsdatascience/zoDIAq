@@ -113,7 +113,7 @@ def test__quantification_functions__compile_common_protein_quantification_file__
     outputDf = compile_common_protein_quantification_file({
         fileHeader1:inputDf1,
         fileHeader2: inputDf2,
-    }, commonPeptidesDf=None)
+    }, commonPeptidesDf=None, proteinQuantificationMethod='average')
     assert expectedOutputDf.equals(outputDf)
 
 def test__maxlfq__from_paper():
