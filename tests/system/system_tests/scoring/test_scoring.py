@@ -57,8 +57,8 @@ def assert_pandas_dataframes_are_equal(expectedDf, df):
 
 
 def assert_all_fdr_outputs_are_correct(inputFileDirectory, inputHeader, breakdown):
-    assert "fdrScores-macc" in os.listdir(inputFileDirectory)
-    outputDirPath = os.path.join(inputFileDirectory, "fdrScores-macc")
+    assert "fdrScores-macc-maxlfq" in os.listdir(inputFileDirectory)
+    outputDirPath = os.path.join(inputFileDirectory, "fdrScores-macc-maxlfq")
     outputDirContents = os.listdir(outputDirPath)
     assert f"CsoDIAq-file_{inputHeader}_fullOutput_spectralFDR.csv" in outputDirContents
     spectralOutputDf = pd.read_csv(
@@ -90,9 +90,9 @@ def assert_all_fdr_outputs_are_correct(inputFileDirectory, inputHeader, breakdow
 
 
 def assert_common_peptide_outputs_are_correct(
-    inputFileDirectory, headerToBreakdownDict, hasProteins=True
+    inputFileDirectory, headerToBreakdownDict, method="maxlfq", hasProteins=True
 ):
-    outputDirPath = os.path.join(inputFileDirectory, "fdrScores-macc")
+    outputDirPath = os.path.join(inputFileDirectory, f"fdrScores-macc-{method}")
     outputDirContents = os.listdir(outputDirPath)
     assert "commonPeptides.csv" in outputDirContents
     expectedCommonPeptidesDfs = []
@@ -250,9 +250,10 @@ def evaluate_standard_protein_quant_comparison(
             sample2Header: sample2Breakdown,
             sample3Header: sample3Breakdown,
         },
+        method=method,
     )
 
-    outputDirPath = os.path.join(inputFileDirectoryChild, "fdrScores-macc")
+    outputDirPath = os.path.join(inputFileDirectoryChild, f"fdrScores-macc-{method}")
     outputDirContents = os.listdir(outputDirPath)
     assert "commonProteins.csv" in outputDirContents
     expectedCommonProteinDf = expectedCommonProteinDf.set_index(
@@ -351,9 +352,10 @@ def evaluate_method_protein_quant_comparison(
             sample2Header: sample2Breakdown,
             sample3Header: sample3Breakdown,
         },
+        method=method,
     )
 
-    outputDirPath = os.path.join(inputFileDirectoryChild, "fdrScores-macc")
+    outputDirPath = os.path.join(inputFileDirectoryChild, f"fdrScores-macc-{method}")
     outputDirContents = os.listdir(outputDirPath)
     assert "commonProteins.csv" in outputDirContents
     expectedCommonProteinDf = expectedCommonProteinDf.set_index(
@@ -452,7 +454,7 @@ def test__scoring__evaluate_common_proteins_one_peptide_match_excludes_protein_i
         },
     )
 
-    outputDirPath = os.path.join(inputFileDirectoryChild, "fdrScores-macc")
+    outputDirPath = os.path.join(inputFileDirectoryChild, "fdrScores-macc-maxlfq")
     outputDirContents = os.listdir(outputDirPath)
     assert "commonProteins.csv" in outputDirContents
     expectedCommonProteinDf = pd.DataFrame(
@@ -517,9 +519,10 @@ def evaluate_overlap_protein_quant_comparison(
             sample2Header: sample2Breakdown,
             sample3Header: sample3Breakdown,
         },
+        method=method,
     )
 
-    outputDirPath = os.path.join(inputFileDirectoryChild, "fdrScores-macc")
+    outputDirPath = os.path.join(inputFileDirectoryChild, f"fdrScores-macc-{method}")
     outputDirContents = os.listdir(outputDirPath)
     assert "commonProteins.csv" in outputDirContents
     expectedCommonProteinDf = expectedCommonProteinDf.set_index(

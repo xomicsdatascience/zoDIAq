@@ -65,7 +65,8 @@ def run_scoring(args):
     printer = Printer()
     printer("Begin Scoring")
     outputDir = os.path.join(
-        args["input"]["csodiaqDirectory"], f'fdrScores-{args["score"]}'
+        args["input"]["csodiaqDirectory"],
+        f'fdrScores-{args["score"]}-{args["proteinQuantMethod"]}',
     )
     if not os.path.exists(outputDir):
         os.mkdir(outputDir)
