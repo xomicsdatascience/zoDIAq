@@ -60,20 +60,29 @@ def compile_common_protein_quantification_file(proteinDfs, commonPeptidesDf, pro
     elif proteinQuantificationMethod=='maxlfq':
         return run_maxlfq_on_all_proteins_found_across_runs(proteinDfs, commonPeptidesDf)
 
+def set_non_present_protein_levels_to_zero(peptideQuantityDf, protein, headerToProteinPresenceDict):
+    peptideQuantityDf = peptideQuantityDf.copy()
+    indicesWithoutProtein = set([key if protein not in value else None for key,value in headerToProteinPresenceDict.items()])
+    peptideQuantityDf.loc[peptideQuantityDf.index.isin(indicesWithoutProtein),:] = -np.inf
+    return peptideQuantityDf
+
 def run_maxlfq_on_all_proteins_found_across_runs(proteinDfs, commonPeptidesDf):
     peptideProteinConnections = []
-    for _, proteinDf in proteinDfs.items():
-        peptideProteinConnections.append(initialize__format_peptide_protein_connections(proteinDf, proteinColumn='leadingProtein'))
+    headerToProteinPresenceDict = {}
+    for header, proteinDf in proteinDfs.items():
+        peptideProteinConnectionsForSample = initialize__format_peptide_protein_connections(proteinDf, proteinColumn='leadingProtein')
+        peptideProteinConnections.append(peptideProteinConnectionsForSample)
+        headerToProteinPresenceDict[header] = set(peptideProteinConnectionsForSample['protein'])
     proteinPeptideDict = pd.concat(peptideProteinConnections).groupby('protein')['peptide'].apply(set).to_dict()
     normalizedCommonPeptideDf = np.log(commonPeptidesDf)
     proteinQuantitiesDict = {}
     for protein, peptideSet in proteinPeptideDict.items():
         peptideQuantityDf = normalizedCommonPeptideDf[list(peptideSet)]
+        peptideQuantityDf = set_non_present_protein_levels_to_zero(peptideQuantityDf, protein, headerToProteinPresenceDict)
         proteinQuantitiesDict[protein] = maxlfq(peptideQuantityDf.to_numpy())
     commonProteinsDf = pd.DataFrame.from_dict(proteinQuantitiesDict)
     commonProteinsDf.index = commonPeptidesDf.index
     return np.exp(commonProteinsDf).replace(1,0)
-
 
 def prepare_matrices_for_cholesky_factorization(sampleByPeptideMatrix, minNumDifferences=2):
     sampleNum = len(sampleByPeptideMatrix)

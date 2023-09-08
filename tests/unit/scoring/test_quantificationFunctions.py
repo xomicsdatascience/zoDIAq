@@ -7,6 +7,7 @@ from csodiaq.scoring.quantificationFunctions import (
     calculate_ion_count_for_each_protein_in_protein_fdr_df,
     compile_ion_count_comparison_across_runs_df,
     compile_common_protein_quantification_file,
+    set_non_present_protein_levels_to_zero,
     maxlfq,
 )
 
@@ -116,6 +117,31 @@ def test__quantification_functions__compile_common_protein_quantification_file__
     }, commonPeptidesDf=None, proteinQuantificationMethod='average')
     assert expectedOutputDf.equals(outputDf)
 
+def test__set_non_present_protein_levels_to_zero():
+    samples = ['sample1','sample2', 'sample3']
+    peptides = ['peptide1','peptide2']
+    peptideQuantityDf = pd.DataFrame([
+        [100.0, 100.0],
+        [100.0, 100.0],
+        [100.0, 100.0],
+    ], columns = peptides, index=samples)
+    protein = 'protein1'
+    headerToProteinPresenceDict = {
+        'sample1':[protein],
+        'sample2':[protein],
+        'sample3':[],
+    }
+    expectedOutputDf = pd.DataFrame(
+        [
+            [100.0, 100.0],
+            [100.0, 100.0],
+            [-np.inf, -np.inf],
+        ],
+        columns = peptides,
+        index=samples)
+    outputDf = set_non_present_protein_levels_to_zero(peptideQuantityDf, protein, headerToProteinPresenceDict)
+    assert expectedOutputDf.equals(outputDf)
+
 def test__maxlfq__from_paper():
     """
     Tests the maxLFQ algorithm for protein quantification as summarized in in figure 2 of their paper.
@@ -161,10 +187,6 @@ def test__maxlfq__from_paper():
     F  6:1  5:1  4:1  3:1  2:1  -
 
     Applying the maxLFQ function to this input, you'd expect quantities that reflect these ratios.
-
-
-
-
     """
     numPeptides = 7
     numSamples = 6
