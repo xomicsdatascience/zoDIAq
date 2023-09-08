@@ -39,7 +39,8 @@ class BaselineScoresBreakdown(ABC):
             'proteinFDR': expectedProteinOutput,
         }
         for key,value in self.outputDict.items():
-            value.to_csv(os.path.join(expectedOutputDirectory, f'{key}.csv'), index=False)
+            if isinstance(value, pd.DataFrame):
+                value.to_csv(os.path.join(expectedOutputDirectory, f'{key}.csv'), index=False)
 
     @abstractmethod
     def _make_expected_spectral_output(self, scoredDf):
@@ -70,7 +71,7 @@ class BaselineScoresBreakdown(ABC):
         inputDf["zLIB"] = [1] * len(inputDf.index)
         inputDf["isDecoy"] = [0] * len(inputDf.index)
         inputDf["rank"] = [rank] * len(inputDf.index)
-        inputDf['ionCount'] = [0] * len(inputDf.index)
+        inputDf['ionCount'] = [100.0] * len(inputDf.index)
 
         return inputDf
 
@@ -87,7 +88,7 @@ class BaselineScoresBreakdown(ABC):
         inputDf['zLIB'] = charges
         inputDf['isDecoy'] = isDecoy
         inputDf['rank'] = ranks
-        inputDf['ionCount'] = [0] * len(inputDf.index)
+        inputDf['ionCount'] = [100.0] * len(inputDf.index)
         return inputDf
 
     def _create_input_for_all_decoys(self, numRows = 5):
@@ -99,5 +100,5 @@ class BaselineScoresBreakdown(ABC):
         inputDf['protein'] = proteins
         inputDf['zLIB'] = [1]*len(inputDf.index)
         inputDf['isDecoy'] = [1]*len(inputDf.index)
-        inputDf['ionCount'] = [0]*len(inputDf.index)
+        inputDf['ionCount'] = [100.0]*len(inputDf.index)
         return inputDf

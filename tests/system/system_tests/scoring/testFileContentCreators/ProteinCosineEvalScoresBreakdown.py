@@ -51,6 +51,7 @@ class ProteinCosineEvalScoresBreakdown(MaccScoresBreakdown):
         decoyFdrs = [i/(lastTargetIdx+i) for i in range(1,3)]
         spectralFdr[-2:] = decoyFdrs
         expectedSpectralOutput["spectralFDR"] = spectralFdr
+        expectedSpectralOutput = expectedSpectralOutput.reset_index(drop=True)
         return expectedSpectralOutput
 
     def _make_expected_peptide_output(self, scoredDf):
@@ -61,6 +62,7 @@ class ProteinCosineEvalScoresBreakdown(MaccScoresBreakdown):
         decoyFdrs = [i/(lastTargetIdx+i) for i in range(1,3)]
         peptideFdr[-2:] = decoyFdrs
         expectedPeptideOutput["peptideFDR"] = peptideFdr
+        expectedPeptideOutput = expectedPeptideOutput.reset_index(drop=True)
         return expectedPeptideOutput
 
     def _make_expected_protein_output(self, peptideDf):
@@ -77,4 +79,6 @@ class ProteinCosineEvalScoresBreakdown(MaccScoresBreakdown):
         proteinDf["leadingProteinFDR"] = proteinFdrs
         uniquePeptides = [0, 0] + [1 for i in range(len(proteinDf.index)-2)]
         proteinDf["uniquePeptide"] = uniquePeptides
+        proteinDf = proteinDf.reset_index(drop=True)
         return proteinDf
+

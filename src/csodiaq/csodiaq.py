@@ -98,7 +98,7 @@ def run_scoring(args):
     commonPeptideDf.to_csv(os.path.join(outputDir, "commonPeptides.csv"))
     if len(proteinDfs) > 0:
         printer("Begin Quantifying Common Proteins")
-        commonProteinDf = compile_common_protein_quantification_file(proteinDfs, commonPeptideDf)
+        commonProteinDf = compile_common_protein_quantification_file(proteinDfs, commonPeptideDf, args['proteinQuantMethod'])
         commonProteinDf.to_csv(os.path.join(outputDir, "commonProteins.csv"))
     printer("Finish Scoring")
 

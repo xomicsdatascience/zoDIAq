@@ -51,7 +51,7 @@ def extract_all_ion_counts_from_df(df, allValuesToCompare, columnName):
     )
     return [valueDict[x] for x in allValuesToCompare]
 
-def compile_common_protein_quantification_file(proteinDfs, commonPeptidesDf, proteinQuantificationMethod='average'):
+def compile_common_protein_quantification_file(proteinDfs, commonPeptidesDf, proteinQuantificationMethod):
     if proteinQuantificationMethod=='average':
         return compile_ion_count_comparison_across_runs_df(
             {key: calculate_ion_count_for_each_protein_in_protein_fdr_df(value) for key, value in proteinDfs.items()},

@@ -1,2 +1,3 @@
 from .testFileContentCreators.MaccScoresBreakdown import MaccScoresBreakdown
 from .testFileContentCreators.ProteinCosineEvalScoresBreakdown import ProteinCosineEvalScoresBreakdown
+from .testFileContentCreators.StandardCommonProteinScoresBreakdown import StandardSample1And2Breakdown, StandardSample3Breakdown
