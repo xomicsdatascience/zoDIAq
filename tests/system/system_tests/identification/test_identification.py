@@ -6,7 +6,6 @@ from tempfile import TemporaryDirectory
 import numpy as np
 import pytest
 import re
-from pyteomics import mgf
 import shutil
 
 from tests.system.system_tests.identification import (
@@ -72,10 +71,6 @@ def libraryFileDirectory(libraryTemplateDataFrame, systemTestFileDirectory):
     spectrastDataFrame.to_csv(
         os.path.join(libraryDirectory, "spectrast_test_library.csv"), index=False
     )
-    mgfSpectra = make_mgf_library_from_template_library_dataframe(
-        libraryTemplateDataFrame
-    )
-    mgf.write(mgfSpectra, os.path.join(libraryDirectory, "mgf_test_library.mgf"))
     return libraryDirectory
 
 
@@ -140,7 +135,9 @@ def test__identification__baseline_run__spectrast_library(
         baselineSpectraBreakdown.expectedOutputDf, outputDf
     )
 
-
+@pytest.mark.skip(
+    "Pyteomics library (4.6.2) has an error and we cannot write mgf files at present."
+)
 def test__identification__baseline_run__mgf_library(
     libraryTemplateDataFrame,
     libraryFileDirectory,
