@@ -63,7 +63,7 @@ def make_mgf_library_from_template_library_dataframe(templateLibraryDf):
         paramsDict = {}
         paramsDict["pepmass"] = (df["precursorMz"].iat[0], None)
         paramsDict["seq"] = key[0]
-        paramsDict["charge"] = key[1]
+        paramsDict["charge"] = int(key[1])
         paramsDict["title"] = df["id"].iat[0]
         paramsDict["protein"] = df["protein"].iat[0]
         spectrumDict["params"] = paramsDict
