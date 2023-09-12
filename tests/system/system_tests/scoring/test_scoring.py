@@ -16,6 +16,8 @@ from . import (
     OneMatchSample3Breakdown,
     OverlapSample1And2Breakdown,
     OvelapSample3Breakdown,
+    ClusterSample1And2Breakdown,
+    ClusterSample3And4Breakdown,
 )
 
 
@@ -598,3 +600,77 @@ def test__scoring__evaluate_common_proteins_work_correctly_with_overlapping_prot
         method="maxlfq",
         expectedCommonProteinDf=expectedCommonProteinDf,
     )
+
+def test__scoring__evaluate_protein_quantities_are_calculated_even_with_multiple_peptide_clusters(
+    inputFileDirectory, expectedOutputDirectory
+):
+    inputHeader = f"maxlfq_multiple_peptide_clusters_"
+
+    inputFileDirectoryChild = os.path.join(inputFileDirectory, inputHeader)
+    os.mkdir(inputFileDirectoryChild)
+
+    sample1Header = "maxlfq_multiple_peptide_clusters_sample_1"
+    sample1Breakdown = ClusterSample1And2Breakdown(expectedOutputDirectory)
+    inputFilePath = os.path.join(
+        inputFileDirectoryChild, f"CsoDIAq-file_{sample1Header}_fullOutput.csv"
+    )
+    sample1Breakdown.inputDf.to_csv(inputFilePath, index=False)
+    sample2Header = "maxlfq_multiple_peptide_clusters_sample_2"
+    sample2Breakdown = ClusterSample1And2Breakdown(expectedOutputDirectory)
+    inputFilePath = os.path.join(
+        inputFileDirectoryChild, f"CsoDIAq-file_{sample2Header}_fullOutput.csv"
+    )
+    sample2Breakdown.inputDf.to_csv(inputFilePath, index=False)
+    sample3Header = "maxlfq_multiple_peptide_clusters_sample_3"
+    sample3Breakdown = ClusterSample3And4Breakdown(expectedOutputDirectory)
+    inputFilePath = os.path.join(
+        inputFileDirectoryChild, f"CsoDIAq-file_{sample3Header}_fullOutput.csv"
+    )
+    sample3Breakdown.inputDf.to_csv(inputFilePath, index=False)
+    sample4Header = "maxlfq_multiple_peptide_clusters_sample_4"
+    sample4Breakdown = ClusterSample3And4Breakdown(expectedOutputDirectory)
+    inputFilePath = os.path.join(
+        inputFileDirectoryChild, f"CsoDIAq-file_{sample4Header}_fullOutput.csv"
+    )
+    sample4Breakdown.inputDf.to_csv(inputFilePath, index=False)
+
+    args = [
+        "csodiaq",
+        "score",
+        "-i",
+        inputFileDirectoryChild,
+    ]
+    subprocess.run(args, capture_output=True)
+    assert_common_peptide_outputs_are_correct(
+        inputFileDirectoryChild,
+        {
+            sample1Header: sample1Breakdown,
+            sample2Header: sample2Breakdown,
+            sample3Header: sample3Breakdown,
+            sample4Header: sample4Breakdown,
+        },
+        method='maxlfq',
+    )
+
+    outputDirPath = os.path.join(inputFileDirectoryChild, f"fdrScores-macc-maxlfq")
+    outputDirContents = os.listdir(outputDirPath)
+    assert "commonProteins.csv" in outputDirContents
+    expectedCommonProteinDf = pd.DataFrame(
+        [
+            [100.0, 0.0],
+            [100.0, 0.0],
+            [200.0, 0.0],
+            [200.0, 0.0],
+        ],
+        columns=["protein", "proteinX"],
+        index=[
+                f"CsoDIAq-file_{sample1Header}_fullOutput",
+                f"CsoDIAq-file_{sample2Header}_fullOutput",
+                f"CsoDIAq-file_{sample3Header}_fullOutput",
+                f"CsoDIAq-file_{sample4Header}_fullOutput",
+            ]
+    )
+    commonProteinDf = pd.read_csv(
+        os.path.join(outputDirPath, "commonProteins.csv"), index_col=0
+    ).sort_index()
+    assert_pandas_dataframes_are_equal(expectedCommonProteinDf, commonProteinDf)
