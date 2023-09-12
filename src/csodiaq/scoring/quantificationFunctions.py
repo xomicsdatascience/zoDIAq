@@ -54,7 +54,7 @@ def extract_all_ion_counts_from_df(df, allValuesToCompare, columnName):
 
 
 def compile_common_protein_quantification_file(
-    proteinDfs, commonPeptidesDf, proteinQuantificationMethod
+    proteinDfs, commonPeptidesDf, proteinQuantificationMethod, minNumDifferences
 ):
     if proteinQuantificationMethod == "average":
         return compile_ion_count_comparison_across_runs_df(
@@ -66,7 +66,7 @@ def compile_common_protein_quantification_file(
         )
     elif proteinQuantificationMethod == "maxlfq":
         return run_maxlfq_on_all_proteins_found_across_runs(
-            proteinDfs, commonPeptidesDf
+            proteinDfs, commonPeptidesDf, minNumDifferences
         )
 
 
@@ -86,7 +86,7 @@ def set_non_present_protein_levels_to_zero(
     return peptideQuantityDf
 
 
-def run_maxlfq_on_all_proteins_found_across_runs(proteinDfs, commonPeptidesDf):
+def run_maxlfq_on_all_proteins_found_across_runs(proteinDfs, commonPeptidesDf, minNumDifferences):
     peptideProteinConnections = []
     headerToProteinPresenceDict = {}
     for header, proteinDf in proteinDfs.items():
@@ -112,7 +112,7 @@ def run_maxlfq_on_all_proteins_found_across_runs(proteinDfs, commonPeptidesDf):
         peptideQuantityDf = set_non_present_protein_levels_to_zero(
             peptideQuantityDf, protein, headerToProteinPresenceDict
         )
-        proteinQuantitiesDict[protein] = maxlfq(peptideQuantityDf.to_numpy())
+        proteinQuantitiesDict[protein] = maxlfq(peptideQuantityDf.to_numpy(), minNumDifferences)
     commonProteinsDf = pd.DataFrame.from_dict(proteinQuantitiesDict)
     commonProteinsDf.index = commonPeptidesDf.index
     return np.exp(commonProteinsDf).replace(1, 0)
@@ -162,13 +162,13 @@ def calculate_protein_intensities_across_samples_from_cholesky_factorization(A, 
     return linalg.cho_solve(a, B)
 
 
-def maxlfq(sampleByPeptideMatrix, tolerance=-10.0):
+def maxlfq(sampleByPeptideMatrix, minNumDifferences, tolerance=-10.0):
     sampleByPeptideMatrix[sampleByPeptideMatrix < tolerance] = 0
-    A, B = prepare_matrices_for_cholesky_factorization(sampleByPeptideMatrix)
-    oneOrFewerMatchIdx = np.diagonal(A) == 0
+    A, B = prepare_matrices_for_cholesky_factorization(sampleByPeptideMatrix, minNumDifferences)
+    unmatchedIdx = np.diagonal(A) == 0
     A, B = apply_regularization_to_matrices(sampleByPeptideMatrix, A, B)
     proteinScoreAcrossSamples = (
         calculate_protein_intensities_across_samples_from_cholesky_factorization(A, B)
     )
-    proteinScoreAcrossSamples[oneOrFewerMatchIdx] = 0
+    proteinScoreAcrossSamples[unmatchedIdx] = 0
     return proteinScoreAcrossSamples

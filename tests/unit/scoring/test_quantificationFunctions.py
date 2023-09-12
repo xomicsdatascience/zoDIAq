@@ -118,6 +118,7 @@ def test__quantification_functions__compile_common_protein_quantification_file__
         },
         commonPeptidesDf=None,
         proteinQuantificationMethod="average",
+        minNumDifferences=None,
     )
     assert expectedOutputDf.equals(outputDf)
 
@@ -155,7 +156,7 @@ def test__set_non_present_protein_levels_to_zero():
     assert expectedOutputDf.equals(outputDf)
 
 
-def test__maxlfq__from_paper():
+def test__maxlfq__from_paper__default_2_peptide_connections_required_per_sample():
     """
     Tests the maxLFQ algorithm for protein quantification as summarized in in figure 2 of their paper.
 
@@ -200,6 +201,11 @@ def test__maxlfq__from_paper():
     F  6:1  5:1  4:1  3:1  2:1  -
 
     Applying the maxLFQ function to this input, you'd expect quantities that reflect these ratios.
+
+    NOTE: By default this algorithm only uses differences/ratios calculated between samples that have
+        at least 2 peptide matches and excludes all others. In the case of sample F, which has no such
+        differences/ratios, the protein is quantified as 0. See later test for adjusting this setting
+        to requiring at least 1 peptide match, which would then include a quantity for sample F.
     """
     numPeptides = 7
     numSamples = 6
@@ -241,5 +247,51 @@ def test__maxlfq__from_paper():
         [7.83589964, 7.65357809, 7.43065038, 7.14296831, 6.73758953, 0]
     )
 
-    output = maxlfq(normalizedInputDf.to_numpy())
+    output = maxlfq(normalizedInputDf.to_numpy(), minNumDifferences=2)
+    np.testing.assert_array_almost_equal(expectedOutput, output)
+
+def test__maxlfq__from_paper__only_1_peptide_connection_required_per_sample():
+    """
+    Evaluating the above example, but only requiring 1 peptide connection between samples.
+    """
+    numPeptides = 7
+    numSamples = 6
+    peptideIntensityIncrease = [10**i for i in range(-3, 4)]
+    sampleIntensityIncrease = list(range(numSamples, 0, -1))
+    inputDf = pd.DataFrame(
+        np.multiply.outer(sampleIntensityIncrease, peptideIntensityIncrease),
+        columns=[f"P{i}" for i in range(1, numPeptides + 1)],
+        index=["A", "B", "C", "D", "E", "F"],
+    )
+    cellsToDelete = [
+        (0, 0),
+        (0, 2),
+        (0, 3),
+        (0, 4),
+        (0, 6),
+        (1, 0),
+        (1, 3),
+        (1, 4),
+        (1, 6),
+        (2, 4),
+        (3, 2),
+        (3, 4),
+        (4, 0),
+        (4, 2),
+        (4, 4),
+        (4, 5),
+        (5, 0),
+        (5, 2),
+        (5, 3),
+        (5, 5),
+        (5, 6),
+    ]
+    for cell in cellsToDelete:
+        inputDf.iloc[cell[0], cell[1]] = 0
+
+    normalizedInputDf = np.log(inputDf)
+    expectedOutput = np.array(
+        [7.164394, 6.982073, 6.759121, 6.471439, 6.065974, 5.372443]
+    )
+    output = maxlfq(normalizedInputDf.to_numpy(), minNumDifferences=1)
     np.testing.assert_array_almost_equal(expectedOutput, output)

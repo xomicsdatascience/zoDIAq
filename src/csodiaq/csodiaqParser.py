@@ -4,6 +4,7 @@ import time
 import numpy as np
 from abc import ABC, abstractmethod
 import re
+import warnings
 
 
 def set_args_from_command_line_input():
@@ -101,6 +102,13 @@ def add_score_parser(commandParser):
         default="maxlfq",
         help="Method by which protein quantification metric is calculated (based on peptide quantities). \nOptional, default is 'maxlfq' method. Choices are 'maxlfq' or 'average'.",
     )
+    scoringParser.add_argument(
+        "-min",
+        "--minNumDifferences",
+        type=_RestrictedInt("minNumDifferences", minValue=1, maxValue=2),
+        default=2,
+        help="Specific to the maxLFQ protein quantification method. Requires at minimum the given number of matches before a sample to sample ratio or difference is accepted.\nOptional, default is 2. Only 1 or 2 is accepted. \nThis flag will throw a warning error when paired with a protein quantification method other than 'maxlfq'.",
+    )
 
 
 def add_reanalysis_parser(commandParser):
@@ -146,6 +154,10 @@ def check_for_conflicting_args(args):
     if args["command"] == "id" and args["correctionDegree"] and args["noCorrection"]:
         raise argparse.ArgumentTypeError(
             "The correctionDegree parameter is invalidated by the noCorrection flag. Please inspect your input and remove one of them."
+        )
+    if args["command"] == "score" and args["proteinQuantMethod"] != "maxlfq" and args["minNumDifferences"] != 2:
+        warnings.warn(
+            f"The minNumDifferences flag will only have an effect when paired with the 'maxlfq' proteinQuantMethod flag. You used it with the '{args['proteinQuantMethod']}' method, so this flag will be ignored.", UserWarning
         )
     if (
         args["command"] == "targetedReanalysis"

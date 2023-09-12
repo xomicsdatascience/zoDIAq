@@ -410,11 +410,10 @@ def test__scoring__evaluate_common_proteins_maxlfq_method_works_correctly(
         expectedCommonProteinDf=expectedCommonProteinDf,
     )
 
-
-def test__scoring__evaluate_common_proteins_one_peptide_match_excludes_protein_in_maxlfq(
-    inputFileDirectory, expectedOutputDirectory
+def evaluate_common_proteins_one_peptide_match_in_maxlfq(
+    inputFileDirectory, expectedOutputDirectory, expectedCommonProteinDf, minNumDifferences
 ):
-    inputHeader = f"one_match_common_proteins"
+    inputHeader = f"one_match_common_proteins_{minNumDifferences}minNumDifferences"
 
     inputFileDirectoryChild = os.path.join(inputFileDirectory, inputHeader)
     os.mkdir(inputFileDirectoryChild)
@@ -443,6 +442,8 @@ def test__scoring__evaluate_common_proteins_one_peptide_match_excludes_protein_i
         "score",
         "-i",
         inputFileDirectoryChild,
+        "-min",
+        str(minNumDifferences),
     ]
     subprocess.run(args, capture_output=True)
     assert_common_peptide_outputs_are_correct(
@@ -457,6 +458,23 @@ def test__scoring__evaluate_common_proteins_one_peptide_match_excludes_protein_i
     outputDirPath = os.path.join(inputFileDirectoryChild, "fdrScores-macc-maxlfq")
     outputDirContents = os.listdir(outputDirPath)
     assert "commonProteins.csv" in outputDirContents
+    expectedCommonProteinDf = expectedCommonProteinDf.set_index(
+        pd.Index(
+            [
+                f"CsoDIAq-file_{sample1Header}_fullOutput",
+                f"CsoDIAq-file_{sample2Header}_fullOutput",
+                f"CsoDIAq-file_{sample3Header}_fullOutput",
+            ]
+        )
+    )
+    commonProteinDf = pd.read_csv(
+        os.path.join(outputDirPath, "commonProteins.csv"), index_col=0
+    ).sort_index()
+    assert_pandas_dataframes_are_equal(expectedCommonProteinDf, commonProteinDf)
+
+def test__scoring__evaluate_common_proteins_one_peptide_match__excludes_protein_in_maxlfq_when_minNumDifferences_2(
+    inputFileDirectory, expectedOutputDirectory
+):
     expectedCommonProteinDf = pd.DataFrame(
         [
             [100.0, 0.0],
@@ -464,17 +482,21 @@ def test__scoring__evaluate_common_proteins_one_peptide_match_excludes_protein_i
             [0.0, 0.0],
         ],
         columns=["protein", "proteinX"],
-        index=[
-            f"CsoDIAq-file_{sample1Header}_fullOutput",
-            f"CsoDIAq-file_{sample2Header}_fullOutput",
-            f"CsoDIAq-file_{sample3Header}_fullOutput",
-        ],
     )
-    commonProteinDf = pd.read_csv(
-        os.path.join(outputDirPath, "commonProteins.csv"), index_col=0
-    ).sort_index()
-    assert_pandas_dataframes_are_equal(expectedCommonProteinDf, commonProteinDf)
+    evaluate_common_proteins_one_peptide_match_in_maxlfq(inputFileDirectory, expectedOutputDirectory, expectedCommonProteinDf, minNumDifferences=2)
 
+def test__scoring__evaluate_common_proteins_one_peptide_match__includes_protein_in_maxlfq_when_minNumDifferences_1(
+    inputFileDirectory, expectedOutputDirectory
+):
+    expectedCommonProteinDf = pd.DataFrame(
+        [
+            [100.0, 100.0],
+            [100.0, 100.0],
+            [100.0, 100.0],
+        ],
+        columns=["protein", "proteinX"],
+    )
+    evaluate_common_proteins_one_peptide_match_in_maxlfq(inputFileDirectory, expectedOutputDirectory, expectedCommonProteinDf, minNumDifferences=1)
 
 def evaluate_overlap_protein_quant_comparison(
     inputFileDirectory, expectedOutputDirectory, method, expectedCommonProteinDf
