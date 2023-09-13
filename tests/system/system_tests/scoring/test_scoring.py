@@ -276,16 +276,16 @@ def test__scoring__evaluate_common_proteins_has_zero_quantity_in_missing_sample_
 ):
     expectedCommonProteinDf = pd.DataFrame(
         [
-            [100.0, 100.0],
-            [100.0, 100.0],
+            [0.0, 100.0],
+            [0.0, 100.0],
             [0.0, 100.0],
         ],
-        columns=["protein", "proteinX"],
+        columns=["1/protein", "1/proteinX"],
     )
     evaluate_standard_protein_quant_comparison(
         inputFileDirectory,
         expectedOutputDirectory,
-        method="average",
+        method="sum",
         expectedCommonProteinDf=expectedCommonProteinDf,
     )
 
@@ -378,16 +378,16 @@ def test__scoring__evaluate_common_proteins_average_method_works_correctly(
 ):
     expectedCommonProteinDf = pd.DataFrame(
         [
-            [200.0, 100.0],
-            [233.333333333333, 100.0],
-            [266.666666666667, 100.0],
+            [600.0, 100.0],
+            [700.0, 100.0],
+            [800.0, 100.0],
         ],
-        columns=["protein", "proteinX"],
+        columns=["1/protein", "1/proteinX"],
     )
     evaluate_method_protein_quant_comparison(
         inputFileDirectory,
         expectedOutputDirectory,
-        method="average",
+        method="sum",
         expectedCommonProteinDf=expectedCommonProteinDf,
     )
 

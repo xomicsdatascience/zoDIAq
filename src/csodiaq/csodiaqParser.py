@@ -98,7 +98,7 @@ def add_score_parser(commandParser):
     scoringParser.add_argument(
         "-p",
         "--proteinQuantMethod",
-        choices=["maxlfq", "average"],
+        choices=["maxlfq", "sum"],
         default="maxlfq",
         help="Method by which protein quantification metric is calculated (based on peptide quantities). \nOptional, default is 'maxlfq' method. Choices are 'maxlfq' or 'average'.",
     )

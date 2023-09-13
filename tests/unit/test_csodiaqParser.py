@@ -715,9 +715,19 @@ def test__csodiaq_parser__set_args_from_command_line_input__score_suceeds_with_m
 def test__csodiaq_parser__set_args_from_command_line_input__score_suceeds_with_maxlfq_protein_quant_method(
     parser, scoreArgs
 ):
-    scoreArgs += ["-p", "average"]
+    scoreArgs += ["-p", "sum"]
     args = vars(parser.parse_args(scoreArgs))
-    assert args["proteinQuantMethod"] == "average"
+    assert args["proteinQuantMethod"] == "sum"
+
+def test__csodiaq_parser__set_args_from_command_line_input__score_fails_with_invalid_protein_quant_method(
+    parser, scoreArgs
+):
+    scoreArgs += ["-p", "shouldFail"]
+    errorOutput = (
+        "argument -p/--proteinQuantMethod: invalid choice: 'shouldFail' (choose from 'maxlfq', 'sum')"
+    )
+    with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
+        args = vars(parser.parse_args(scoreArgs))
 
 def test__csodiaq_parser__set_args_from_command_line_input__score_suceeds_with_min_num_differences_equal_to_1(
     parser, scoreArgs

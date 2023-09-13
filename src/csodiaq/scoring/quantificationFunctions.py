@@ -56,19 +56,31 @@ def extract_all_ion_counts_from_df(df, allValuesToCompare, columnName):
 def compile_common_protein_quantification_file(
     proteinDfs, commonPeptidesDf, proteinQuantificationMethod, minNumDifferences
 ):
-    if proteinQuantificationMethod == "average":
-        return compile_ion_count_comparison_across_runs_df(
-            {
-                key: calculate_ion_count_for_each_protein_in_protein_fdr_df(value)
-                for key, value in proteinDfs.items()
-            },
-            "protein",
+    headerToProteinPresenceDict = {header: set(proteinDf["leadingProtein"]) for header, proteinDf in proteinDfs.items()}
+    proteinPeptideDict = (
+        pd.concat(list(proteinDfs.values()))
+        .groupby("leadingProtein")["peptide"]
+        .apply(set)
+        .to_dict()
+    )
+    proteinQuantitiesDict = {}
+    for protein, peptideSet in proteinPeptideDict.items():
+        peptideQuantityDf = commonPeptidesDf[list(peptideSet)]
+        peptideQuantityDf = set_non_present_protein_levels_to_zero(
+            peptideQuantityDf, protein, headerToProteinPresenceDict
         )
-    elif proteinQuantificationMethod == "maxlfq":
-        return run_maxlfq_on_all_proteins_found_across_runs(
-            proteinDfs, commonPeptidesDf, minNumDifferences
-        )
+        if proteinQuantificationMethod == "sum":
+            proteinSampleQuantities = ion_count_sum(peptideQuantityDf)
+        elif proteinQuantificationMethod == "maxlfq":
+            proteinSampleQuantities = run_maxlfq_with_normalizations(peptideQuantityDf, minNumDifferences)
+        proteinQuantitiesDict[protein] = proteinSampleQuantities
+    commonProteinsDf = pd.DataFrame.from_dict(proteinQuantitiesDict)
+    commonProteinsDf.index = commonPeptidesDf.index
+    return commonProteinsDf
 
+def ion_count_sum(sampleByPeptideMatrix):
+    sampleByPeptideMatrix = sampleByPeptideMatrix.loc[:, (sampleByPeptideMatrix != 0).all(axis=0)]
+    return np.array(sampleByPeptideMatrix.sum(axis=1))
 
 def set_non_present_protein_levels_to_zero(
     peptideQuantityDf, protein, headerToProteinPresenceDict
@@ -82,33 +94,15 @@ def set_non_present_protein_levels_to_zero(
     )
     peptideQuantityDf.loc[
         peptideQuantityDf.index.isin(indicesWithoutProtein), :
-    ] = -np.inf
+    ] = 0
     return peptideQuantityDf
 
 
-def run_maxlfq_on_all_proteins_found_across_runs(proteinDfs, commonPeptidesDf, minNumDifferences):
-    headerToProteinPresenceDict = {}
-    for header, proteinDf in proteinDfs.items():
-        headerToProteinPresenceDict[header] = set(
-            proteinDf["leadingProtein"]
-        )
-    proteinPeptideDict = (
-        pd.concat(list(proteinDfs.values()))
-        .groupby("leadingProtein")["peptide"]
-        .apply(set)
-        .to_dict()
-    )
-    normalizedCommonPeptideDf = np.log(commonPeptidesDf)
-    proteinQuantitiesDict = {}
-    for protein, peptideSet in proteinPeptideDict.items():
-        peptideQuantityDf = normalizedCommonPeptideDf[list(peptideSet)]
-        peptideQuantityDf = set_non_present_protein_levels_to_zero(
-            peptideQuantityDf, protein, headerToProteinPresenceDict
-        )
-        proteinQuantitiesDict[protein] = maxlfq(peptideQuantityDf.to_numpy(), minNumDifferences)
-    commonProteinsDf = pd.DataFrame.from_dict(proteinQuantitiesDict)
-    commonProteinsDf.index = commonPeptidesDf.index
-    return np.exp(commonProteinsDf).replace(1, 0)
+def run_maxlfq_with_normalizations(peptideQuantityDf, minNumDifferences):
+    proteinSampleQuantities = maxlfq(np.log(peptideQuantityDf).to_numpy(), minNumDifferences)
+    proteinSampleQuantities = np.exp(proteinSampleQuantities)
+    proteinSampleQuantities[proteinSampleQuantities == 1] = 0
+    return proteinSampleQuantities
 
 
 def prepare_matrices_for_cholesky_factorization(

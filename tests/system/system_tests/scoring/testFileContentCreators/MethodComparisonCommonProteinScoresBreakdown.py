@@ -11,9 +11,9 @@ sample3 100.0       200.0       500.0
 
 protein quantification for 'average' method:
         protein
-sample1 200.0
-sample2 233.3
-sample3 266.7
+sample1 600.0
+sample2 700.0
+sample3 800.0
 
 protein quantification for 'maxlfq' method:
         protein
