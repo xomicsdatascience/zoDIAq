@@ -14,8 +14,6 @@ from . import (
     MethodSample3Breakdown,
     OneMatchSample1And2Breakdown,
     OneMatchSample3Breakdown,
-    OverlapSample1And2Breakdown,
-    OvelapSample3Breakdown,
     ClusterSample1And2Breakdown,
     ClusterSample3And4Breakdown,
 )
@@ -301,7 +299,7 @@ def test__scoring__evaluate_common_proteins_has_zero_quantity_in_missing_sample_
             [100.0, 0.0],
             [0.0, 0.0],
         ],
-        columns=["protein", "proteinX"],
+        columns=["1/protein", "1/proteinX"],
     )
     evaluate_standard_protein_quant_comparison(
         inputFileDirectory,
@@ -403,7 +401,7 @@ def test__scoring__evaluate_common_proteins_maxlfq_method_works_correctly(
             [391.487326, 0.0],
             [391.493149, 0.0],
         ],
-        columns=["protein", "proteinX"],
+        columns=["1/protein", "1/proteinX"],
     )
     evaluate_method_protein_quant_comparison(
         inputFileDirectory,
@@ -483,7 +481,7 @@ def test__scoring__evaluate_common_proteins_one_peptide_match__excludes_protein_
             [100.0, 0.0],
             [0.0, 0.0],
         ],
-        columns=["protein", "proteinX"],
+        columns=["1/protein", "1/proteinX"],
     )
     evaluate_common_proteins_one_peptide_match_in_maxlfq(inputFileDirectory, expectedOutputDirectory, expectedCommonProteinDf, minNumDifferences=2)
 
@@ -496,110 +494,9 @@ def test__scoring__evaluate_common_proteins_one_peptide_match__includes_protein_
             [100.0, 100.0],
             [100.0, 100.0],
         ],
-        columns=["protein", "proteinX"],
+        columns=["1/protein", "1/proteinX"],
     )
     evaluate_common_proteins_one_peptide_match_in_maxlfq(inputFileDirectory, expectedOutputDirectory, expectedCommonProteinDf, minNumDifferences=1)
-
-def evaluate_overlap_protein_quant_comparison(
-    inputFileDirectory, expectedOutputDirectory, method, expectedCommonProteinDf
-):
-    inputHeader = f"overlap_common_proteins_{method}_method"
-
-    inputFileDirectoryChild = os.path.join(inputFileDirectory, inputHeader)
-    os.mkdir(inputFileDirectoryChild)
-
-    sample1Header = "overlap_common_protein_eval_sample_1"
-    sample1Breakdown = OverlapSample1And2Breakdown(expectedOutputDirectory)
-    inputFilePath = os.path.join(
-        inputFileDirectoryChild, f"CsoDIAq-file_{sample1Header}_fullOutput.csv"
-    )
-    sample1Breakdown.inputDf.to_csv(inputFilePath, index=False)
-    sample2Header = "overlap_common_protein_eval_sample_2"
-    sample2Breakdown = OverlapSample1And2Breakdown(expectedOutputDirectory)
-    inputFilePath = os.path.join(
-        inputFileDirectoryChild, f"CsoDIAq-file_{sample2Header}_fullOutput.csv"
-    )
-    sample2Breakdown.inputDf.to_csv(inputFilePath, index=False)
-    sample3Header = "overlap_common_protein_eval_sample_3"
-    sample3Breakdown = OvelapSample3Breakdown(expectedOutputDirectory)
-    inputFilePath = os.path.join(
-        inputFileDirectoryChild, f"CsoDIAq-file_{sample3Header}_fullOutput.csv"
-    )
-    sample3Breakdown.inputDf.to_csv(inputFilePath, index=False)
-
-    args = [
-        "csodiaq",
-        "score",
-        "-i",
-        inputFileDirectoryChild,
-        "-p",
-        method,
-    ]
-    subprocess.run(args, capture_output=True)
-    assert_common_peptide_outputs_are_correct(
-        inputFileDirectoryChild,
-        {
-            sample1Header: sample1Breakdown,
-            sample2Header: sample2Breakdown,
-            sample3Header: sample3Breakdown,
-        },
-        method=method,
-    )
-
-    outputDirPath = os.path.join(inputFileDirectoryChild, f"fdrScores-macc-{method}")
-    outputDirContents = os.listdir(outputDirPath)
-    assert "commonProteins.csv" in outputDirContents
-    expectedCommonProteinDf = expectedCommonProteinDf.set_index(
-        pd.Index(
-            [
-                f"CsoDIAq-file_{sample1Header}_fullOutput",
-                f"CsoDIAq-file_{sample2Header}_fullOutput",
-                f"CsoDIAq-file_{sample3Header}_fullOutput",
-            ]
-        )
-    )
-    commonProteinDf = pd.read_csv(
-        os.path.join(outputDirPath, "commonProteins.csv"), index_col=0
-    ).sort_index()
-    assert_pandas_dataframes_are_equal(expectedCommonProteinDf, commonProteinDf)
-
-
-def test__scoring__evaluate_common_proteins_work_correctly_with_overlapping_proteins__average_method(
-    inputFileDirectory, expectedOutputDirectory
-):
-    expectedCommonProteinDf = pd.DataFrame(
-        [
-            [100.0, 0.0, 100.0],
-            [100.0, 0.0, 100.0],
-            [0.0, 100.0, 100.0],
-        ],
-        columns=["protein1", "protein2", "proteinX"],
-    )
-    evaluate_overlap_protein_quant_comparison(
-        inputFileDirectory,
-        expectedOutputDirectory,
-        method="average",
-        expectedCommonProteinDf=expectedCommonProteinDf,
-    )
-
-
-def test__scoring__evaluate_common_proteins_work_correctly_with_overlapping_proteins__maxlfq_method(
-    inputFileDirectory, expectedOutputDirectory
-):
-    expectedCommonProteinDf = pd.DataFrame(
-        [
-            [100.0, 0.0, 0.0],
-            [100.0, 0.0, 0.0],
-            [0.0, 0.0, 0.0],
-        ],
-        columns=["protein1", "protein2", "proteinX"],
-    )
-    evaluate_overlap_protein_quant_comparison(
-        inputFileDirectory,
-        expectedOutputDirectory,
-        method="maxlfq",
-        expectedCommonProteinDf=expectedCommonProteinDf,
-    )
 
 def test__scoring__evaluate_protein_quantities_are_calculated_even_with_multiple_peptide_clusters(
     inputFileDirectory, expectedOutputDirectory
@@ -662,7 +559,7 @@ def test__scoring__evaluate_protein_quantities_are_calculated_even_with_multiple
             [200.0, 0.0],
             [200.0, 0.0],
         ],
-        columns=["protein", "proteinX"],
+        columns=["1/protein", "1/proteinX"],
         index=[
                 f"CsoDIAq-file_{sample1Header}_fullOutput",
                 f"CsoDIAq-file_{sample2Header}_fullOutput",

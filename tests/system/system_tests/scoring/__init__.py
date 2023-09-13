@@ -15,10 +15,6 @@ from .testFileContentCreators.OneMatchCommonProteinScoresBreakdown import (
     OneMatchSample1And2Breakdown,
     OneMatchSample3Breakdown,
 )
-from .testFileContentCreators.OverlapCommonProteinScoresBreakdown import (
-    OverlapSample1And2Breakdown,
-    OvelapSample3Breakdown,
-)
 from .testFileContentCreators.ClusteredCommonProteinScoresBreakdown import (
     ClusterSample1And2Breakdown,
     ClusterSample3And4Breakdown,

@@ -87,21 +87,14 @@ def set_non_present_protein_levels_to_zero(
 
 
 def run_maxlfq_on_all_proteins_found_across_runs(proteinDfs, commonPeptidesDf, minNumDifferences):
-    peptideProteinConnections = []
     headerToProteinPresenceDict = {}
     for header, proteinDf in proteinDfs.items():
-        peptideProteinConnectionsForSample = (
-            initialize__format_peptide_protein_connections(
-                proteinDf, proteinColumn="leadingProtein"
-            )
-        )
-        peptideProteinConnections.append(peptideProteinConnectionsForSample)
         headerToProteinPresenceDict[header] = set(
-            peptideProteinConnectionsForSample["protein"]
+            proteinDf["leadingProtein"]
         )
     proteinPeptideDict = (
-        pd.concat(peptideProteinConnections)
-        .groupby("protein")["peptide"]
+        pd.concat(list(proteinDfs.values()))
+        .groupby("leadingProtein")["peptide"]
         .apply(set)
         .to_dict()
     )
