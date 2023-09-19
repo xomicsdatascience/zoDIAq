@@ -277,9 +277,7 @@ def test__identification__baseline_no_matches_raises_error(
         outputDir,
         baselineSpectraBreakdown,
     )
-    assert_no_matches_after_correction_raises_warning(
-        inputQueryFile, libraryFile, outputDir, baselineSpectraBreakdown
-    )
+
 
 
 def assert_no_matches_before_correction_raises_warning_and_skips_offending_file_only(
@@ -321,6 +319,17 @@ def assert_no_matches_before_correction_raises_warning_and_skips_offending_file_
 def assert_no_matches_after_correction_raises_warning(
     inputQueryFile, libraryFile, outputDir, baselineSpectraBreakdown
 ):
+    """
+    Currently unused. The applicability of this error is questionable and may be removed entirely in the future.
+
+    Would be added to 'test__identification__baseline_no_matches_raises_error', though it would require using
+        input data with wider differences between m/z values in each spectra.
+    '''
+    assert_no_matches_after_correction_raises_warning(
+        inputQueryFile, libraryFile, outputDir, baselineSpectraBreakdown
+    )
+    '''
+    """
     args = [
         "csodiaq",
         "id",

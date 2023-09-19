@@ -221,7 +221,7 @@ def calculate_ppm_offset_tolerance_using_tallest_bin_peak(ppms):
         binHeights, tallestBinIdx
     )
     offset = bins[tallestBinIdx]
-    tolerance = abs(offset - bins[nearestNoiseBinIdx])
+    tolerance = abs(offset - bins[nearestNoiseBinIdx]) + 1
     return offset, tolerance
 
 
