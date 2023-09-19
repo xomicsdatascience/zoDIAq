@@ -54,7 +54,7 @@ def test__score_functions__score_library_to_query_matches(vectorA, vectorB):
     matchesDf["libraryIntensity"] = vectorA
     matchesDf["queryIdx"] = [queryIdx for i in vectorA.index]
     matchesDf["queryIntensity"] = vectorB
-    cosineScore = calculate_cosine_similarity_score(vectorA, vectorB)
+    cosineScore = calculate_cosine_similarity_score(np.sqrt(vectorA), np.sqrt(vectorB))
     expectedOutputDf = pd.DataFrame(
         data=[[libraryIdx, queryIdx, cosineScore]],
         columns=["libraryIdx", "queryIdx", "cosineScore"],
@@ -66,7 +66,7 @@ def test__score_functions__score_library_to_query_matches(vectorA, vectorB):
     lowScoreMatchesDf["libraryIdx"] = [libraryIdx - 1 for i in vectorA.index]
     reverseVectorA = pd.Series(list(vectorA)[::-1])
     lowScoreMatchesDf["libraryIntensity"] = reverseVectorA
-    lowCosineScore = calculate_cosine_similarity_score(reverseVectorA, vectorB)
+    lowCosineScore = calculate_cosine_similarity_score(np.sqrt(reverseVectorA), np.sqrt(vectorB))
     unsortedMatchesDf = pd.concat([lowScoreMatchesDf, matchesDf])
     expectedOutputDf = pd.DataFrame(
         data=[

@@ -250,6 +250,7 @@ def find_number_of_total_query_peaks_in_scan(spectra):
 
 
 def create_vector_that_can_be_used_to_create_cosine_score(vectorA, cosineScore):
+    vectorA = np.sqrt(vectorA)
     unitVector = vectorA / np.linalg.norm(vectorA)
     positiveVector = np.array(np.full((len(vectorA)), 1000.0))
     perpendicularVector = positiveVector - positiveVector.dot(unitVector) * unitVector
@@ -257,7 +258,7 @@ def create_vector_that_can_be_used_to_create_cosine_score(vectorA, cosineScore):
     vectorB = (
         cosineScore * unitVector + np.sqrt(1 - cosineScore**2) * perpendicularVector
     )
-    return vectorB
+    return vectorB ** 2
 
 
 def calculate_mz_value_from_ppm(mz, ppm):
