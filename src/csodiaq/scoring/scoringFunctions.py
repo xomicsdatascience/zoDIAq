@@ -8,7 +8,7 @@ def score_library_to_query_matches(matches):
         matches.groupby(["libraryIdx", "queryIdx"])
         .apply(
             lambda x: calculate_cosine_similarity_score(
-                x["libraryIntensity"], x["queryIntensity"]
+                np.sqrt(x["libraryIntensity"]), np.sqrt(x["queryIntensity"])
             )
         )
         .reset_index(name="cosineScore")

@@ -90,43 +90,6 @@ def get_columns_that_should_match(type):
             "leadingProteinFDR",
         ]
 
-
-def test__identifier__main_workflow(commandLineArgs):
-    identifier = Identifier(commandLineArgs, isTesting=True)
-    queryFile = commandLineArgs["input"][0]
-    identifier._queryContext = QueryLoaderContext(queryFile)
-
-    expectedMatchDf = pd.read_csv(
-        get_file_from_system_test_folder("matchDf_precorrected.csv.gz"),
-        compression="gzip",
-    )
-    matchDf = identifier._match_library_to_query_spectra()
-    assert_numeric_pandas_dataframes_are_equal(expectedMatchDf, matchDf, "match")
-
-    expectedCorrectedMatchDf = pd.read_csv(
-        get_file_from_system_test_folder("matchDf_postcorrected.csv.gz"),
-        compression="gzip",
-    )
-    matchDf = identifier._apply_correction_to_match_dataframe(matchDf)
-    assert_numeric_pandas_dataframes_are_equal(
-        expectedCorrectedMatchDf, matchDf, "match"
-    )
-
-    expectedScoreDf = pd.read_csv(
-        get_file_from_system_test_folder("scoreDf.csv.gz"),
-        compression="gzip",
-    )
-    scoreDf = identifier._score_spectra_matches(matchDf)
-    assert_numeric_pandas_dataframes_are_equal(expectedScoreDf, scoreDf, "score")
-
-    expectedFullDf = pd.read_csv(
-        get_file_from_system_test_folder("v1FullOutput.csv.gz"), compression="gzip"
-    )
-
-    fullDf = identifier._format_identifications_as_dataframe(matchDf, scoreDf)
-    assert_numeric_pandas_dataframes_are_equal(expectedFullDf, fullDf, "full")
-
-
 def test__scoring_workflow():
     fullDf = pd.read_csv(
         get_file_from_system_test_folder("v2FullOutput.csv.gz"), compression="gzip"

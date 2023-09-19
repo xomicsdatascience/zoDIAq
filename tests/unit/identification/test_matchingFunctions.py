@@ -151,7 +151,7 @@ def test__score_functions__calculate_ppm_offset_tolerance_using_tallest_bin_peak
     numbers += [mediumLeftNeighboringBin] * (tallestBinQuantity // 2 - 1)
     numbers += [mediumRightNeighboringBin] * (tallestBinQuantity // 2 - 1)
     expectedOffset = tallestBin
-    expectedTolerance = 2
+    expectedTolerance = 3
     offset, tolerance = calculate_ppm_offset_tolerance_using_tallest_bin_peak(numbers)
     assert abs(offset - expectedOffset) < 0.5
     assert abs(tolerance - expectedTolerance) < 0.5

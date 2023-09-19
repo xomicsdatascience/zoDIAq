@@ -2,6 +2,7 @@ import pytest
 import argparse
 import re
 import os
+import warnings
 from csodiaq import set_args_from_command_line_input, check_for_conflicting_args
 from csodiaq.csodiaqParser import (
     _OutputDirectory,
@@ -670,6 +671,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__initialize_scoring(
     assert len(parsedScoreArgs["input"]["idFiles"]) == 2
     assert parsedScoreArgs["score"] == "macc"
     assert parsedScoreArgs["proteinQuantMethod"] == "maxlfq"
+    assert parsedScoreArgs["minNumDifferences"] == 2
 
 
 def test__csodiaq_parser__set_args_from_command_line_input__score_succeeds_with_macc_input(
@@ -713,10 +715,87 @@ def test__csodiaq_parser__set_args_from_command_line_input__score_suceeds_with_m
 def test__csodiaq_parser__set_args_from_command_line_input__score_suceeds_with_maxlfq_protein_quant_method(
     parser, scoreArgs
 ):
-    scoreArgs += ["-p", "average"]
+    scoreArgs += ["-p", "sum"]
     args = vars(parser.parse_args(scoreArgs))
-    assert args["proteinQuantMethod"] == "average"
+    assert args["proteinQuantMethod"] == "sum"
 
+def test__csodiaq_parser__set_args_from_command_line_input__score_fails_with_invalid_protein_quant_method(
+    parser, scoreArgs
+):
+    scoreArgs += ["-p", "shouldFail"]
+    errorOutput = (
+        "argument -p/--proteinQuantMethod: invalid choice: 'shouldFail' (choose from 'maxlfq', 'sum')"
+    )
+    with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
+        args = vars(parser.parse_args(scoreArgs))
+
+def test__csodiaq_parser__set_args_from_command_line_input__score_suceeds_with_min_num_differences_equal_to_1(
+    parser, scoreArgs
+):
+    scoreArgs += ["-min", "1"]
+    args = vars(parser.parse_args(scoreArgs))
+    assert args["minNumDifferences"] == 1
+
+def test__csodiaq_parser__set_args_from_command_line_input__score_suceeds_with_min_num_differences_equal_to_2(
+    parser, scoreArgs
+):
+    scoreArgs += ["-min", "2"]
+    args = vars(parser.parse_args(scoreArgs))
+    assert args["minNumDifferences"] == 2
+
+def test__csodiaq_parser__set_args_from_command_line_input__score_fails_with_float_min_num_differences(
+    parser, scoreArgs
+):
+    scoreArgs += ["-min", "1.2"]
+    errorOutput = (
+        "The minNumDifferences argument must be an integer."
+    )
+    with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
+        args = vars(parser.parse_args(scoreArgs))
+
+def test__csodiaq_parser__set_args_from_command_line_input__score_fails_when_min_num_differences_less_than_1(
+    parser, scoreArgs
+):
+    scoreArgs += ["-min", "0"]
+    errorOutput = (
+        "The minNumDifferences argument must be an integer greater than or equal to 1."
+    )
+    with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
+        args = vars(parser.parse_args(scoreArgs))
+
+def test__csodiaq_parser__set_args_from_command_line_input__score_fails_when_min_num_differences_greater_than_2(
+    parser, scoreArgs
+):
+    scoreArgs += ["-min", "3"]
+    errorOutput = (
+        "The minNumDifferences argument must be an integer less than or equal to 2."
+    )
+    with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
+        args = vars(parser.parse_args(scoreArgs))
+
+def test__csodiaq_parser__set_args_from_command_line_input__score_fails_when_min_num_differences_greater_than_2(
+    parser, scoreArgs
+):
+    scoreArgs += ["-min", "3"]
+    errorOutput = (
+        "The minNumDifferences argument must be an integer less than or equal to 2."
+    )
+    with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
+        args = vars(parser.parse_args(scoreArgs))
+
+@pytest.mark.skip(
+    "This test would require a huge setup for a minor warning message (in test_csodiaq.py). Skipping"
+)
+def test__csodiaq_parser__check_for_conflicting_args__score_throws_error_when_non_maxlfq_method_used_with_min_num_difference_flag(
+    parser, scoreArgs
+):
+    scoreArgs += ["-p", "average"]
+    scoreArgs += ["-min", "1"]
+    errorOutput = (
+        "The minNumDifferences flag will only have an effect when paired with the 'maxlfq' proteinQuantMethod flag. You used it with the 'average' method, so this flag will be ignored."
+    )
+    with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
+        args = vars(parser.parse_args(scoreArgs))
 
 @pytest.fixture
 def reanalysisFiles():

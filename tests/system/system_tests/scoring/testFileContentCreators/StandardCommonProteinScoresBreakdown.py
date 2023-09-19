@@ -8,11 +8,18 @@ sample1 X           X
 sample2 X           X
 sample3 -           -
 
-protein quantification:
+protein quantification for maxlfq method:
         protein
 sample1 X
 sample2 X
 sample3 0
+
+protein quantification for sum method (only peptides found in all samples counted):
+        protein
+sample1 0
+sample2 0
+sample3 0
+
 """
 
 
