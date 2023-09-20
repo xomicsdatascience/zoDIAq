@@ -1,10 +1,16 @@
 import warnings
 from bisect import bisect
+from csodiaq.utils import Printer
 
 
 def generate_pooled_library_and_query_spectra_by_mz_windows(libDict, queryContext):
+    printer = Printer()
     queDict = queryContext.map_query_scan_ids_to_dia_mz_windows()
+    printer(f'Total number of m/z windows: {len(queDict.keys())}')
+    numWindowsTraversed = 0
     for mzWindow, scans in queDict.items():
+        numWindowsTraversed += 1
+        printer(f'Checkpoint: {numWindowsTraversed} / {len(queDict.keys())} windows traversed', checkPoint=True)
         pooledLibraryPeaks = _pool_library_spectra_by_mz_window(mzWindow, libDict)
         if len(pooledLibraryPeaks) == 0:
             continue
