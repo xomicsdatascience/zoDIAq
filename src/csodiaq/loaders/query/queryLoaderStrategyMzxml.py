@@ -53,14 +53,16 @@ class QueryLoaderStrategyMzxml(QueryLoaderStrategy):
                 scanMetadataDict[spec["num"]] = metadataDict
         return scanMetadataDict
 
-    def pool_peaks_of_query_scans(self, scans: list) -> list:
+    def get_query_file_reader(self):
+        return mzxml.read(self.filePath, use_index=True)
+
+    def pool_peaks_of_query_scans(self, scans: list, reader) -> list:
         pooledQueryPeaks = []
-        with mzxml.read(self.filePath, use_index=True) as spectra:
-            for scan in scans:
-                spectrum = spectra.get_by_id(scan)
-                pooledQueryPeaks += (
-                    create_peaks_from_mz_intensity_lists_and_csodiaq_key_id(
-                        spectrum["m/z array"], spectrum["intensity array"], int(scan)
-                    )
+        for scan in scans:
+            spectrum = reader.get_by_id(scan)
+            pooledQueryPeaks += (
+                create_peaks_from_mz_intensity_lists_and_csodiaq_key_id(
+                    spectrum["m/z array"], spectrum["intensity array"], int(scan)
                 )
+            )
         return sorted(pooledQueryPeaks)

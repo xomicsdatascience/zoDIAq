@@ -9,15 +9,19 @@ class Printer:
         if not self._singletonInstance:
             self._singletonInstance = super(Printer, self).__new__(self)
             self.startTime = timer()
+            self.timeSinceLastPrint = 0
             self.timeSinceLastCheckpoint = 0
         return self._singletonInstance
 
     def __call__(self, printText, checkPoint=False):
         currentTime = timer()
-        if checkPoint and self.timeSinceLastCheckpoint < 50000:
-            self.timeSinceLastCheckpoint += currentTime
+        fiveMinutes = 300
+        if checkPoint and self.timeSinceLastPrint < fiveMinutes:
+            self.timeSinceLastPrint += (currentTime - self.timeSinceLastCheckpoint)
+            self.timeSinceLastCheckpoint = currentTime
             return
-        self.timeSinceLastCheckpoint = 0
+        self.timeSinceLastCheckpoint = currentTime
+        self.timeSinceLastPrint = 0
         readableCurrentTime = self.determine_time_since_start_in_human_readable_format(
             currentTime
         )

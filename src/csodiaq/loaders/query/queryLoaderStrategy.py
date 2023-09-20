@@ -77,7 +77,12 @@ class QueryLoaderStrategy(ABC):
         pass
 
     @abstractmethod
-    def pool_peaks_of_query_scans(self, scans: list) -> list:
+    def get_query_file_reader(self):
+        pass
+
+
+    @abstractmethod
+    def pool_peaks_of_query_scans(self, scans: list, reader) -> list:
         """
         Given a list of scans, this function gathers their peaks and pools them into
             a single list.
