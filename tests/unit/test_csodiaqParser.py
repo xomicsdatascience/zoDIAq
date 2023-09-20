@@ -631,6 +631,23 @@ def test__csodiaq_parser__set_args_from_command_line_input__id_fails_with_histog
         args = vars(parser.parse_args(idArgs))
 
 
+def test__csodiaq_parser__set_args_from_command_line_input__id_succeeds_with_cancel_warnings_flag(
+    parser, idArgs
+):
+    idArgs += ["-w"]
+    args = vars(parser.parse_args(idArgs))
+    assert args["cancelWarnings"]
+
+
+def test__csodiaq_parser__set_args_from_command_line_input__id_fails_with_cancel_warnings_argument_added(
+    parser, idArgs
+):
+    idArgs += ["-w", "randomBadValue"]
+    errorOutput = "unrecognized arguments: randomBadValue"
+    with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
+        args = vars(parser.parse_args(idArgs))
+
+
 @pytest.fixture
 def scoreFiles():
     class fileObj:

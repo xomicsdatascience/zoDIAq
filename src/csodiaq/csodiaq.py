@@ -37,6 +37,8 @@ def main():
 
 
 def run_identification(args):
+    if args['cancelWarnings']:
+        warnings.filterwarnings('ignore')
     printer = Printer()
     printer(f"Begin Peptide Identification Process - output in '{args['output']}'")
     os.mkdir(args["output"])

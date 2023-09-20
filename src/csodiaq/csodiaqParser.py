@@ -74,6 +74,14 @@ def add_id_parser(commandParser):
         action="store_true",
         help="This flag indicates a histogram of the uncorrected PPM values (with lines for the chosen offset/tolerance) should be generated.\nOptional.",
     )
+    idParser.add_argument(
+        "-w",
+        "--cancelWarnings",
+        default=False,
+        action="store_true",
+        help="This flag indicates that warning errors should be oppressed.\nOptional.",
+    )
+
 
 
 def add_score_parser(commandParser):
@@ -207,14 +215,14 @@ class _OutputDirectory:
 
 class _InputQueryFile:
     def __init__(self):
-        self.allowedFileTypes = ["mzXML"]
+        self.allowedFileTypes = [".mzxml"]
 
     def __call__(self, inputQueryFile):
         if not os.path.isfile(inputQueryFile):
             raise argparse.ArgumentTypeError(
                 "The -i or --input argument must be an existing file (and not a directory)."
             )
-        if inputQueryFile.split(".")[-1] not in self.allowedFileTypes:
+        if os.path.splitext(inputQueryFile)[1].lower() not in self.allowedFileTypes:
             raise argparse.ArgumentTypeError(
                 "The -i or --input argument must be an .mzXML file."
             )
