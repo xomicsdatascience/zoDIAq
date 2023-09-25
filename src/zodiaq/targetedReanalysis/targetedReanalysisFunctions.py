@@ -26,7 +26,7 @@ def filter_to_only_keep_peptides_with_possibly_heavy_K_or_R_terminal_residue(fdr
 def filter_to_only_keep_top_peptides_unique_to_protein(fdrDf, maxPeptidesPerProtein):
     fdrDf = (
         fdrDf[fdrDf["uniquePeptide"] == 1]
-        .sort_values("ionCount", ascending=False)
+        .sort_values(["ionCount","leadingProtein"], ascending=[False, True])
         .reset_index(drop=True)
     )
     return (
