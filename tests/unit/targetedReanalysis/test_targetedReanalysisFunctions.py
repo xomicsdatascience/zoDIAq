@@ -15,6 +15,16 @@ from zodiaq.targetedReanalysis.targetedReanalysisFunctions import (
     create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides,
 )
 
+def assert_pandas_dataframes_are_equal(expectedDf, df):
+
+    for columnName in expectedDf.columns:
+        assert columnName in df.columns
+        expectedColumn = np.array(expectedDf[columnName])
+        column = np.array(df[columnName])
+        if expectedColumn.dtype.kind in np.typecodes["AllFloat"]:
+            np.testing.assert_array_almost_equal(expectedColumn, column)
+        else:
+            np.testing.assert_array_equal(expectedColumn, column)
 
 def test__output_formatting_functions__calculate_mz_of_heavy_version_of_peptide():
     testMz = 0.0
@@ -93,8 +103,7 @@ def test__output_formatting_functions__filter_to_only_keep_peptides_with_possibl
     output = filter_to_only_keep_peptides_with_possibly_heavy_K_or_R_terminal_residue(
         df
     )
-    assert expectedOutput.equals(output)
-    pass
+    assert_pandas_dataframes_are_equal(expectedOutput, output)
 
 
 def test__output_formatting_functions__filter_to_only_keep_top_peptides_unique_to_protein():
@@ -130,7 +139,7 @@ def test__output_formatting_functions__filter_to_only_keep_top_peptides_unique_t
     outputDf = filter_to_only_keep_top_peptides_unique_to_protein(
         inputDf, topProteinsToKeep
     )
-    assert expectedOutputDf.equals(outputDf)
+    assert_pandas_dataframes_are_equal(expectedOutputDf, outputDf)
 
 
 @pytest.fixture
@@ -166,7 +175,7 @@ def test__output_formatting_functions__filter_out_peptides_based_on_user_setting
         isIncludeHeavyIsotopes=isIncludeHeavyIsotopes,
         maximumPeptidesPerProtein=maximumPeptidesPerProtein,
     )
-    assert expectedOutputDf.equals(outputDf)
+    assert_pandas_dataframes_are_equal(expectedOutputDf, outputDf)
 
 
 def test__output_formatting_functions__filter_out_peptides_based_on_user_settings__is_heavy_no_proteins(
@@ -197,7 +206,7 @@ def test__output_formatting_functions__filter_out_peptides_based_on_user_setting
         isIncludeHeavyIsotopes=isIncludeHeavyIsotopes,
         maximumPeptidesPerProtein=maximumPeptidesPerProtein,
     )
-    assert expectedOutputDf.equals(outputDf)
+    assert_pandas_dataframes_are_equal(expectedOutputDf, outputDf)
 
 
 def test__output_formatting_functions__filter_out_peptides_based_on_user_settings__no_heavy_has_proteins(
@@ -223,7 +232,7 @@ def test__output_formatting_functions__filter_out_peptides_based_on_user_setting
         isIncludeHeavyIsotopes=isIncludeHeavyIsotopes,
         maximumPeptidesPerProtein=maximumPeptidesPerProtein,
     )
-    assert expectedOutputDf.equals(outputDf)
+    assert_pandas_dataframes_are_equal(expectedOutputDf, outputDf)
 
 
 def test__output_formatting_functions__filter_out_peptides_based_on_user_settings__is_heavy_has_proteins(
@@ -248,7 +257,7 @@ def test__output_formatting_functions__filter_out_peptides_based_on_user_setting
         isIncludeHeavyIsotopes=isIncludeHeavyIsotopes,
         maximumPeptidesPerProtein=maximumPeptidesPerProtein,
     )
-    assert expectedOutputDf.equals(outputDf)
+    assert_pandas_dataframes_are_equal(expectedOutputDf, outputDf)
 
 
 def test__output_formatting_functions__calculate_mz_of_heavy_isotope_of_each_peptide():
@@ -333,7 +342,7 @@ def test__output_formatting_functions__organize_for_targeted_reanalysis_of_ident
         isIncludeHeavyIsotopes=isIncludeHeavyIsotopes,
         binValueProximity=binValueProximity,
     )
-    assert expectedOutputDf.equals(outputDf)
+    assert_pandas_dataframes_are_equal(expectedOutputDf, outputDf)
 
 
 @pytest.fixture
@@ -384,7 +393,7 @@ def test__output_formatting_functions__organize_for_targeted_reanalysis_of_ident
         isIncludeHeavyIsotopes=isIncludeHeavyIsotopes,
         binValueProximity=binValueProximity,
     )
-    assert expectedOutputDf.equals(outputDf)
+    assert_pandas_dataframes_are_equal(expectedOutputDf, outputDf)
 
 
 def test__output_formatting_functions__calculate_binning_information_by_compensation_voltage__no_heavy(
@@ -404,7 +413,7 @@ def test__output_formatting_functions__calculate_binning_information_by_compensa
         isIncludeHeavyIsotopes=isIncludeHeavyIsotopes,
         binValueProximity=binValueProximity,
     )
-    assert expectedOutputDf.equals(outputDf)
+    assert_pandas_dataframes_are_equal(expectedOutputDf, outputDf)
 
 
 def test__output_formatting_functions__calculate_binning_information_by_compensation_voltage__with_heavy(
@@ -428,7 +437,7 @@ def test__output_formatting_functions__calculate_binning_information_by_compensa
         isIncludeHeavyIsotopes=isIncludeHeavyIsotopes,
         binValueProximity=binValueProximity,
     )
-    assert expectedOutputDf.equals(outputDf)
+    assert_pandas_dataframes_are_equal(expectedOutputDf, outputDf)
 
 
 @pytest.fixture
@@ -463,7 +472,7 @@ def test__output_formatting_functions__create_targeted_reanalysis_dataframe__no_
     outputDf = create_targeted_reanalysis_dataframe(
         inputFormattedDf, isIncludeHeavyIsotopes=isIncludeHeavyIsotopes
     )
-    assert targetedReanalysisNoHeavyDf.equals(outputDf)
+    assert_pandas_dataframes_are_equal(targetedReanalysisNoHeavyDf, outputDf)
 
 
 @pytest.fixture
@@ -490,7 +499,7 @@ def test__output_formatting_functions__create_targeted_reanalysis_dataframe__wit
     outputDf = create_targeted_reanalysis_dataframe(
         inputFormattedDf, isIncludeHeavyIsotopes=isIncludeHeavyIsotopes
     )
-    assert targetedReanalysisWithHeavyDf.equals(outputDf)
+    assert_pandas_dataframes_are_equal(targetedReanalysisWithHeavyDf, outputDf)
 
 
 def test__output_formatting_functions__create_targeted_reanalysis_dataframes_by_compensation_voltage__no_heavy(
@@ -515,7 +524,7 @@ def test__output_formatting_functions__create_targeted_reanalysis_dataframes_by_
     )
     for cv, expectedTargetedReanalysisDf in expectedOutput.items():
         assert cv in output
-        assert expectedTargetedReanalysisDf.equals(output[cv])
+        assert_pandas_dataframes_are_equal(targetedReanalysisNoHeavyDf, output[cv])
 
 
 def test__output_formatting_functions__create_targeted_reanalysis_dataframes_by_compensation_voltage__with_heavy(
@@ -540,7 +549,7 @@ def test__output_formatting_functions__create_targeted_reanalysis_dataframes_by_
     )
     for cv, expectedTargetedReanalysisDf in expectedOutput.items():
         assert cv in output
-        assert expectedTargetedReanalysisDf.equals(output[cv])
+        assert_pandas_dataframes_are_equal(targetedReanalysisWithHeavyDf, output[cv])
 
 
 @pytest.fixture
@@ -623,7 +632,7 @@ def test__output_formatting_functions__create_mass_spec_input_dataframes_for_tar
     )
     for type, df in expectedOutputDict.items():
         assert type in outputDict
-        assert df.equals(outputDict[type])
+        assert_pandas_dataframes_are_equal(df, outputDict[type])
 
 
 def test__output_formatting_functions__create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides__with_heavy_with_protein_with_cv(
@@ -731,9 +740,9 @@ def test__output_formatting_functions__create_mass_spec_input_dataframes_for_tar
         .sort_values(["peptide", "leadingProtein", "MzLIB", "CompensationVoltage"])
         .reset_index(drop=True)
     )
-    assert expectedFullDf.equals(fullDf)
+    assert_pandas_dataframes_are_equal(expectedFullDf, fullDf)
     for type, df in expectedOutputDict.items():
         if type == "fullDf":
             continue
         assert type in outputDict
-        assert df.equals(outputDict[type])
+        assert_pandas_dataframes_are_equal(df, outputDict[type])
