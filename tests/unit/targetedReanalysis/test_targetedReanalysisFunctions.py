@@ -139,6 +139,9 @@ def test__output_formatting_functions__filter_to_only_keep_top_peptides_unique_t
     outputDf = filter_to_only_keep_top_peptides_unique_to_protein(
         inputDf, topProteinsToKeep
     )
+    print()
+    print(expectedOutputDf)
+    print(outputDf)
     assert_pandas_dataframes_are_equal(expectedOutputDf, outputDf)
 
 
@@ -206,6 +209,9 @@ def test__output_formatting_functions__filter_out_peptides_based_on_user_setting
         isIncludeHeavyIsotopes=isIncludeHeavyIsotopes,
         maximumPeptidesPerProtein=maximumPeptidesPerProtein,
     )
+    print()
+    print(expectedOutputDf)
+    print(outputDf)
     assert_pandas_dataframes_are_equal(expectedOutputDf, outputDf)
 
 
@@ -232,6 +238,9 @@ def test__output_formatting_functions__filter_out_peptides_based_on_user_setting
         isIncludeHeavyIsotopes=isIncludeHeavyIsotopes,
         maximumPeptidesPerProtein=maximumPeptidesPerProtein,
     )
+    print()
+    print(expectedOutputDf)
+    print(outputDf)
     assert_pandas_dataframes_are_equal(expectedOutputDf, outputDf)
 
 
