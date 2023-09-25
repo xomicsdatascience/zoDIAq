@@ -3,8 +3,8 @@ import argparse
 import re
 import os
 import warnings
-from csodiaq import set_args_from_command_line_input, check_for_conflicting_args
-from csodiaq.csodiaqParser import (
+from zodiaq import set_args_from_command_line_input, check_for_conflicting_args
+from zodiaq.zodiaqParser import (
     _OutputDirectory,
     _InputQueryFile,
     _LibraryFile,
@@ -27,14 +27,14 @@ def parser():
     return parser
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__gui__explicitly_flagged_succeeds(
+def test__zodiaq_parser__set_args_from_command_line_input__gui__explicitly_flagged_succeeds(
     parser,
 ):
     args = vars(parser.parse_args(["gui"]))
     assert args["command"] == "gui"
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__gui__succeeds_with_no_command_provided(
+def test__zodiaq_parser__set_args_from_command_line_input__gui__succeeds_with_no_command_provided(
     parser,
 ):
     args = vars(parser.parse_args([]))
@@ -46,16 +46,16 @@ def testOutputDir():
     return _OutputDirectory("test")
 
 
-def test__csodiaq_parser__output_directory_parsing_class__rejects_file_as_input(
+def test__zodiaq_parser__output_directory_parsing_class__rejects_file_as_input(
     testOutputDir,
 ):
-    testFile = NamedTemporaryFile(prefix="csodiaq_test_file_", suffix=".txt")
+    testFile = NamedTemporaryFile(prefix="zodiaq_test_file_", suffix=".txt")
     errorOutput = "The -o or --output argument must be a directory or to-be-created directory header, not an existing file."
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
         testOutputDir(testFile.name)
 
 
-def test__csodiaq_parser__output_directory_parsing_class__rejects_input_that_has_no_existing_parent_directory(
+def test__zodiaq_parser__output_directory_parsing_class__rejects_input_that_has_no_existing_parent_directory(
     testOutputDir,
 ):
     testPath = "this/path/does/not/exist"
@@ -71,23 +71,23 @@ def outputDirectoryPattern():
     return r"\d{8}-\d{6}"
 
 
-def test__csodiaq_parser__output_directory_parsing_class__if_directory_exists_new_directory_made_in_directory(
+def test__zodiaq_parser__output_directory_parsing_class__if_directory_exists_new_directory_made_in_directory(
     testOutputDir, outputDirectoryPattern
 ):
-    testDirectory = TemporaryDirectory(prefix="csodiaq_input_test_directory_")
+    testDirectory = TemporaryDirectory(prefix="zodiaq_input_test_directory_")
     errorOutput = (
         "The -o or --output argument directory requires an existing parent directory."
     )
     newDirectoryPath = testOutputDir(testDirectory.name)
     newDirectoryPathName = newDirectoryPath.split("/")[-1]
-    expectedDirectoryNamePattern = re.compile(rf"csodiaq-test-{outputDirectoryPattern}")
+    expectedDirectoryNamePattern = re.compile(rf"zodiaq-test-{outputDirectoryPattern}")
     assert expectedDirectoryNamePattern.search(newDirectoryPathName)
 
 
-def test__csodiaq_parser__output_directory_parsing_class__if_directory_does_not_exist_new_directory_made_with_header_at_end_of_given_path(
+def test__zodiaq_parser__output_directory_parsing_class__if_directory_does_not_exist_new_directory_made_with_header_at_end_of_given_path(
     testOutputDir, outputDirectoryPattern
 ):
-    testDirectory = TemporaryDirectory(prefix="csodiaq_input_test_directory_")
+    testDirectory = TemporaryDirectory(prefix="zodiaq_input_test_directory_")
     newDirectoryHeader = "newDirectoryHeader"
     inputPath = os.path.join(testDirectory.name, newDirectoryHeader)
     errorOutput = (
@@ -96,7 +96,7 @@ def test__csodiaq_parser__output_directory_parsing_class__if_directory_does_not_
     newDirectoryPath = testOutputDir(inputPath)
     newDirectoryPathName = newDirectoryPath.split("/")[-1]
     expectedDirectoryNamePattern = re.compile(
-        rf"{newDirectoryHeader}-csodiaq-test-{outputDirectoryPattern}"
+        rf"{newDirectoryHeader}-zodiaq-test-{outputDirectoryPattern}"
     )
     assert expectedDirectoryNamePattern.search(newDirectoryPathName)
 
@@ -106,7 +106,7 @@ def testInputFile():
     return _InputQueryFile()
 
 
-def test__csodiaq_parser__input_query_file_parsing_class__rejects_non_existing_file_values(
+def test__zodiaq_parser__input_query_file_parsing_class__rejects_non_existing_file_values(
     testInputFile,
 ):
     testFile = "this/path/does/not/exist"
@@ -117,10 +117,10 @@ def test__csodiaq_parser__input_query_file_parsing_class__rejects_non_existing_f
         testInputFile(testFile)
 
 
-def test__csodiaq_parser__input_query_file_parsing_class__rejects_files_of_wrong_type(
+def test__zodiaq_parser__input_query_file_parsing_class__rejects_files_of_wrong_type(
     testInputFile,
 ):
-    testFile = NamedTemporaryFile(prefix="csodiaq_input_test_file_", suffix=".txt")
+    testFile = NamedTemporaryFile(prefix="zodiaq_input_test_file_", suffix=".txt")
     errorOutput = "The -i or --input argument must be an .mzXML file."
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
         testInputFile(testFile.name)
@@ -131,7 +131,7 @@ def libraryFile():
     return _LibraryFile()
 
 
-def test__csodiaq_parser__library_file_parsing_class__rejects_non_existing_file_values(
+def test__zodiaq_parser__library_file_parsing_class__rejects_non_existing_file_values(
     libraryFile,
 ):
     testFile = "this/path/does/not/exist"
@@ -142,10 +142,10 @@ def test__csodiaq_parser__library_file_parsing_class__rejects_non_existing_file_
         libraryFile(testFile)
 
 
-def test__csodiaq_parser__library_file_parsing_class__rejects_files_of_wrong_type(
+def test__zodiaq_parser__library_file_parsing_class__rejects_files_of_wrong_type(
     libraryFile,
 ):
-    testFile = NamedTemporaryFile(prefix="csodiaq_input_test_file_", suffix=".txt")
+    testFile = NamedTemporaryFile(prefix="zodiaq_input_test_file_", suffix=".txt")
     errorOutput = "The -l or --library argument must be a .tsv, .csv or .mgf file."
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
         libraryFile(testFile.name)
@@ -156,7 +156,7 @@ def restrictedInt():
     return _RestrictedInt("test", minValue=-2, maxValue=3)
 
 
-def test__csodiaq_parser__restricted_int_parsing_class__fails_when_value_cannot_be_assigned_to_int(
+def test__zodiaq_parser__restricted_int_parsing_class__fails_when_value_cannot_be_assigned_to_int(
     restrictedInt,
 ):
     inputValue = "string"
@@ -165,7 +165,7 @@ def test__csodiaq_parser__restricted_int_parsing_class__fails_when_value_cannot_
         restrictedInt(inputValue)
 
 
-def test__csodiaq_parser__restricted_int_parsing_class__fails_when_value_is_below_min_value(
+def test__zodiaq_parser__restricted_int_parsing_class__fails_when_value_is_below_min_value(
     restrictedInt,
 ):
     inputValue = "-3"
@@ -174,7 +174,7 @@ def test__csodiaq_parser__restricted_int_parsing_class__fails_when_value_is_belo
         restrictedInt(inputValue)
 
 
-def test__csodiaq_parser__restricted_int_parsing_class__fails_when_value_is_above_max_value(
+def test__zodiaq_parser__restricted_int_parsing_class__fails_when_value_is_above_max_value(
     restrictedInt,
 ):
     inputValue = "4"
@@ -183,7 +183,7 @@ def test__csodiaq_parser__restricted_int_parsing_class__fails_when_value_is_abov
         restrictedInt(inputValue)
 
 
-def test__csodiaq_parser__restricted_int_parsing_class__succeeds_when_value_is_equal_to_min_value(
+def test__zodiaq_parser__restricted_int_parsing_class__succeeds_when_value_is_equal_to_min_value(
     restrictedInt,
 ):
     inputValue = "-2"
@@ -192,7 +192,7 @@ def test__csodiaq_parser__restricted_int_parsing_class__succeeds_when_value_is_e
     assert output == -2
 
 
-def test__csodiaq_parser__restricted_int_parsing_class__succeeds_when_value_is_greater_than_min_value_less_than_max_value(
+def test__zodiaq_parser__restricted_int_parsing_class__succeeds_when_value_is_greater_than_min_value_less_than_max_value(
     restrictedInt,
 ):
     inputValue = "0"
@@ -201,7 +201,7 @@ def test__csodiaq_parser__restricted_int_parsing_class__succeeds_when_value_is_g
     assert output == 0
 
 
-def test__csodiaq_parser__restricted_int_parsing_class__succeeds_when_value_is_equal_to_max_value(
+def test__zodiaq_parser__restricted_int_parsing_class__succeeds_when_value_is_equal_to_max_value(
     restrictedInt,
 ):
     inputValue = "3"
@@ -215,7 +215,7 @@ def restrictedFloat():
     return _RestrictedFloat("test", minValue=-2, maxValue=3)
 
 
-def test__csodiaq_parser__restricted_float_parsing_class__fails_when_value_cannot_be_assigned_to_float(
+def test__zodiaq_parser__restricted_float_parsing_class__fails_when_value_cannot_be_assigned_to_float(
     restrictedFloat,
 ):
     inputValue = "string"
@@ -224,7 +224,7 @@ def test__csodiaq_parser__restricted_float_parsing_class__fails_when_value_canno
         restrictedFloat(inputValue)
 
 
-def test__csodiaq_parser__restricted_float_parsing_class__fails_when_value_is_below_min_value(
+def test__zodiaq_parser__restricted_float_parsing_class__fails_when_value_is_below_min_value(
     restrictedFloat,
 ):
     inputValue = "-3"
@@ -233,7 +233,7 @@ def test__csodiaq_parser__restricted_float_parsing_class__fails_when_value_is_be
         restrictedFloat(inputValue)
 
 
-def test__csodiaq_parser__restricted_float_parsing_class__fails_when_value_is_above_max_value(
+def test__zodiaq_parser__restricted_float_parsing_class__fails_when_value_is_above_max_value(
     restrictedFloat,
 ):
     inputValue = "4"
@@ -242,7 +242,7 @@ def test__csodiaq_parser__restricted_float_parsing_class__fails_when_value_is_ab
         restrictedFloat(inputValue)
 
 
-def test__csodiaq_parser__restricted_float_parsing_class__succeeds_when_value_is_equal_to_min_value(
+def test__zodiaq_parser__restricted_float_parsing_class__succeeds_when_value_is_equal_to_min_value(
     restrictedFloat,
 ):
     inputValue = "-2"
@@ -251,7 +251,7 @@ def test__csodiaq_parser__restricted_float_parsing_class__succeeds_when_value_is
     assert output == -2
 
 
-def test__csodiaq_parser__restricted_float_parsing_class__succeeds_when_value_is_greater_than_min_value_less_than_max_value(
+def test__zodiaq_parser__restricted_float_parsing_class__succeeds_when_value_is_greater_than_min_value_less_than_max_value(
     restrictedFloat,
 ):
     inputValue = "0"
@@ -260,7 +260,7 @@ def test__csodiaq_parser__restricted_float_parsing_class__succeeds_when_value_is
     assert output == 0
 
 
-def test__csodiaq_parser__restricted_float_parsing_class__succeeds_when_value_is_equal_to_max_value(
+def test__zodiaq_parser__restricted_float_parsing_class__succeeds_when_value_is_equal_to_max_value(
     restrictedFloat,
 ):
     inputValue = "3"
@@ -269,7 +269,7 @@ def test__csodiaq_parser__restricted_float_parsing_class__succeeds_when_value_is
     assert output == 3
 
 
-def test__csodiaq_parser__restricted_float_parsing_class__bin_proximity__fails_when_decimal_place_further_than_2():
+def test__zodiaq_parser__restricted_float_parsing_class__bin_proximity__fails_when_decimal_place_further_than_2():
     binProximityFloat = _RestrictedFloat("binValueProximity")
     inputValue = "1.001"
     errorOutput = "The binValueProximity argument cannot have values beyond 2 decimal places (mass spectrometers are typically not sensitive enough for that specificity)."
@@ -277,7 +277,7 @@ def test__csodiaq_parser__restricted_float_parsing_class__bin_proximity__fails_w
         binProximityFloat(inputValue)
 
 
-def test__csodiaq_parser__restricted_float_parsing_class__succeeds_when_decimal_place_further_than_2_when_not_bin_proximity(
+def test__zodiaq_parser__restricted_float_parsing_class__succeeds_when_decimal_place_further_than_2_when_not_bin_proximity(
     restrictedFloat,
 ):
     inputValue = "1.001"
@@ -291,38 +291,38 @@ def identificationOutputDirectory():
     return _IdentificationOutputDirectory()
 
 
-def test__csodiaq_parser__identification_output_directory_parsing_class__fails_when_not_a_directory(
+def test__zodiaq_parser__identification_output_directory_parsing_class__fails_when_not_a_directory(
     identificationOutputDirectory,
 ):
-    testFile = NamedTemporaryFile(prefix="csodiaq_test_file_", suffix=".txt")
+    testFile = NamedTemporaryFile(prefix="zodiaq_test_file_", suffix=".txt")
     errorOutput = "The -i or --input argument must be a directory."
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
         identificationOutputDirectory(testFile.name)
 
 
-def test__csodiaq_parser__identification_output_directory_parsing_class__fails_when_directory_has_no_csodiaq_identification_outputs(
+def test__zodiaq_parser__identification_output_directory_parsing_class__fails_when_directory_has_no_zodiaq_identification_outputs(
     identificationOutputDirectory,
 ):
-    testDir = TemporaryDirectory(prefix="csodiaq_test_directory_")
+    testDir = TemporaryDirectory(prefix="zodiaq_test_directory_")
     testFile1 = NamedTemporaryFile(
-        prefix="csodiaq_test_file1_", suffix=".txt", dir=testDir.name, delete=False
+        prefix="zodiaq_test_file1_", suffix=".txt", dir=testDir.name, delete=False
     )
     testFile2 = NamedTemporaryFile(
-        prefix="csodiaq_test_file2_",
+        prefix="zodiaq_test_file2_",
         suffix="fullOutput.csv",
         dir=testDir.name,
         delete=False,
     )
     testFile3 = NamedTemporaryFile(
-        prefix="CsoDIAq-file_3", suffix=".csv", dir=testDir.name, delete=False
+        prefix="zoDIAq-file_3", suffix=".csv", dir=testDir.name, delete=False
     )
     testFile4 = NamedTemporaryFile(
-        prefix="stuffCsoDIAq-file_4",
+        prefix="stuffZoDIAq-file_4",
         suffix="fullOutput.csv",
         dir=testDir.name,
         delete=False,
     )
-    errorOutput = "The -i or --input argument directory must contain .csv files that are outputs from the identification workflow in CsoDIAq."
+    errorOutput = "The -i or --input argument directory must contain .csv files that are outputs from the identification workflow in zoDIAq."
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
         identificationOutputDirectory(testDir.name)
 
@@ -332,24 +332,24 @@ def scoringOutputDirectory():
     return _ScoringOutputDirectory()
 
 
-def test__csodiaq_parser__scoring_output_directory_parsing_class__fails_when_not_a_directory(
+def test__zodiaq_parser__scoring_output_directory_parsing_class__fails_when_not_a_directory(
     scoringOutputDirectory,
 ):
-    testFile = NamedTemporaryFile(prefix="csodiaq_test_file_", suffix=".txt")
+    testFile = NamedTemporaryFile(prefix="zodiaq_test_file_", suffix=".txt")
     errorOutput = "The -i or --input argument must be a directory."
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
         scoringOutputDirectory(testFile.name)
 
 
-def test__csodiaq_parser__scoring_output_directory_parsing_class__succeeds_when_directory_has_a_single_peptide_fdr_file(
+def test__zodiaq_parser__scoring_output_directory_parsing_class__succeeds_when_directory_has_a_single_peptide_fdr_file(
     scoringOutputDirectory,
 ):
-    testDir = TemporaryDirectory(prefix="csodiaq_test_directory_")
+    testDir = TemporaryDirectory(prefix="zodiaq_test_directory_")
     testFile1 = NamedTemporaryFile(
-        prefix="csodiaq_test_file1_", suffix=".txt", dir=testDir.name, delete=False
+        prefix="zodiaq_test_file1_", suffix=".txt", dir=testDir.name, delete=False
     )
     testFile2 = NamedTemporaryFile(
-        prefix="csodiaq_test_file2_",
+        prefix="zodiaq_test_file2_",
         suffix="peptideFDR.csv",
         dir=testDir.name,
         delete=False,
@@ -360,21 +360,21 @@ def test__csodiaq_parser__scoring_output_directory_parsing_class__succeeds_when_
     assert outputDict["peptide"][0] == testFile2.name.split("/")[-1]
 
 
-def test__csodiaq_parser__scoring_output_directory_parsing_class__succeeds_when_directory_has_multiple_peptide_fdr_files(
+def test__zodiaq_parser__scoring_output_directory_parsing_class__succeeds_when_directory_has_multiple_peptide_fdr_files(
     scoringOutputDirectory,
 ):
-    testDir = TemporaryDirectory(prefix="csodiaq_test_directory_")
+    testDir = TemporaryDirectory(prefix="zodiaq_test_directory_")
     testFile1 = NamedTemporaryFile(
-        prefix="csodiaq_test_file1_", suffix=".txt", dir=testDir.name, delete=False
+        prefix="zodiaq_test_file1_", suffix=".txt", dir=testDir.name, delete=False
     )
     testFile2 = NamedTemporaryFile(
-        prefix="csodiaq_test_file2_",
+        prefix="zodiaq_test_file2_",
         suffix="peptideFDR.csv",
         dir=testDir.name,
         delete=False,
     )
     testFile3 = NamedTemporaryFile(
-        prefix="csodiaq_test_file3_",
+        prefix="zodiaq_test_file3_",
         suffix="peptideFDR.csv",
         dir=testDir.name,
         delete=False,
@@ -387,15 +387,15 @@ def test__csodiaq_parser__scoring_output_directory_parsing_class__succeeds_when_
     )
 
 
-def test__csodiaq_parser__scoring_output_directory_parsing_class__succeeds_when_directory_has_a_single_protein_fdr_file(
+def test__zodiaq_parser__scoring_output_directory_parsing_class__succeeds_when_directory_has_a_single_protein_fdr_file(
     scoringOutputDirectory,
 ):
-    testDir = TemporaryDirectory(prefix="csodiaq_test_directory_")
+    testDir = TemporaryDirectory(prefix="zodiaq_test_directory_")
     testFile1 = NamedTemporaryFile(
-        prefix="csodiaq_test_file1_", suffix=".txt", dir=testDir.name, delete=False
+        prefix="zodiaq_test_file1_", suffix=".txt", dir=testDir.name, delete=False
     )
     testFile2 = NamedTemporaryFile(
-        prefix="csodiaq_test_file2_",
+        prefix="zodiaq_test_file2_",
         suffix="proteinFDR.csv",
         dir=testDir.name,
         delete=False,
@@ -406,21 +406,21 @@ def test__csodiaq_parser__scoring_output_directory_parsing_class__succeeds_when_
     assert outputDict["protein"][0] == testFile2.name.split("/")[-1]
 
 
-def test__csodiaq_parser__scoring_output_directory_parsing_class__succeeds_when_directory_has_multiple_protein_fdr_files(
+def test__zodiaq_parser__scoring_output_directory_parsing_class__succeeds_when_directory_has_multiple_protein_fdr_files(
     scoringOutputDirectory,
 ):
-    testDir = TemporaryDirectory(prefix="csodiaq_test_directory_")
+    testDir = TemporaryDirectory(prefix="zodiaq_test_directory_")
     testFile1 = NamedTemporaryFile(
-        prefix="csodiaq_test_file1_", suffix=".txt", dir=testDir.name, delete=False
+        prefix="zodiaq_test_file1_", suffix=".txt", dir=testDir.name, delete=False
     )
     testFile2 = NamedTemporaryFile(
-        prefix="csodiaq_test_file2_",
+        prefix="zodiaq_test_file2_",
         suffix="proteinFDR.csv",
         dir=testDir.name,
         delete=False,
     )
     testFile3 = NamedTemporaryFile(
-        prefix="csodiaq_test_file3_",
+        prefix="zodiaq_test_file3_",
         suffix="proteinFDR.csv",
         dir=testDir.name,
         delete=False,
@@ -433,17 +433,17 @@ def test__csodiaq_parser__scoring_output_directory_parsing_class__succeeds_when_
     )
 
 
-def test__csodiaq_parser__scoring_output_directory_parsing_class__fails_when_directory_has_no_csodiaq_identification_outputs(
+def test__zodiaq_parser__scoring_output_directory_parsing_class__fails_when_directory_has_no_zodiaq_identification_outputs(
     scoringOutputDirectory,
 ):
-    testDir = TemporaryDirectory(prefix="csodiaq_test_directory_")
+    testDir = TemporaryDirectory(prefix="zodiaq_test_directory_")
     testFile1 = NamedTemporaryFile(
-        prefix="csodiaq_test_file1_", suffix=".txt", dir=testDir.name, delete=False
+        prefix="zodiaq_test_file1_", suffix=".txt", dir=testDir.name, delete=False
     )
     testFile2 = NamedTemporaryFile(
-        prefix="csodiaq_test_file2_", suffix="FDR.csv", dir=testDir.name, delete=False
+        prefix="zodiaq_test_file2_", suffix="FDR.csv", dir=testDir.name, delete=False
     )
-    errorOutput = "The -i or --input argument directory must contain .csv files that are outputs from the scoring workflow in CsoDIAq (peptide or protein score outputs required)."
+    errorOutput = "The -i or --input argument directory must contain .csv files that are outputs from the scoring workflow in zoDIAq (peptide or protein score outputs required)."
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
         scoringOutputDirectory(testDir.name)
 
@@ -452,21 +452,21 @@ def test__csodiaq_parser__scoring_output_directory_parsing_class__fails_when_dir
 def idFiles():
     class fileObj:
         def __init__(self):
-            self.parentDir = TemporaryDirectory(prefix="csodiaq_input_test_directory_")
+            self.parentDir = TemporaryDirectory(prefix="zodiaq_input_test_directory_")
             self.outputDir = TemporaryDirectory(
-                prefix="csodiaq_output_test_directory_id_", dir=self.parentDir.name
+                prefix="zodiaq_output_test_directory_id_", dir=self.parentDir.name
             )
             self.inputFile = NamedTemporaryFile(
-                prefix="csodiaq_input_test_file_id_", suffix=".mzXML"
+                prefix="zodiaq_input_test_file_id_", suffix=".mzXML"
             )
             self.tramlCsvLibraryFile = NamedTemporaryFile(
-                prefix="csodiaq_traml_library_file_csv_id_", suffix=".csv"
+                prefix="zodiaq_traml_library_file_csv_id_", suffix=".csv"
             )
             self.tramlTsvLibraryFile = NamedTemporaryFile(
-                prefix="csodiaq_traml_library_file_tsv_id_", suffix=".tsv"
+                prefix="zodiaq_traml_library_file_tsv_id_", suffix=".tsv"
             )
             self.mgfLibraryFile = NamedTemporaryFile(
-                prefix="csodiaq_mgf_library_file_id_", suffix=".mgf"
+                prefix="zodiaq_mgf_library_file_id_", suffix=".mgf"
             )
 
     return fileObj()
@@ -485,7 +485,7 @@ def idArgs(idFiles):
     ]
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__initialize_identification(
+def test__zodiaq_parser__set_args_from_command_line_input__initialize_identification(
     parser, idArgs
 ):
     parsedIdArgs = vars(parser.parse_args(idArgs))
@@ -499,7 +499,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__initialize_identific
     assert not parsedIdArgs["histogram"]
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__id_fails_when_no_output_dir_provided(
+def test__zodiaq_parser__set_args_from_command_line_input__id_fails_when_no_output_dir_provided(
     parser, idArgs
 ):
     idArgsWithoutOutput = idArgs[:1] + idArgs[3:]
@@ -509,7 +509,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__id_fails_when_no_out
         args = vars(parser.parse_args(idArgsWithoutOutput))
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__id_fails_when_no_input_file_provided(
+def test__zodiaq_parser__set_args_from_command_line_input__id_fails_when_no_input_file_provided(
     parser, idArgs
 ):
     idArgsWithoutInput = idArgs[:3] + idArgs[5:]
@@ -518,7 +518,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__id_fails_when_no_inp
         args = vars(parser.parse_args(idArgsWithoutInput))
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__id_succeeds_with_multiple_input_files(
+def test__zodiaq_parser__set_args_from_command_line_input__id_succeeds_with_multiple_input_files(
     parser, idArgs
 ):
     idArgsWithMultipleInputs = idArgs + idArgs[3:5]
@@ -528,7 +528,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__id_succeeds_with_mul
     assert args["input"][0] == args["input"][1]
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__id_fails_when_no_library_file_provided(
+def test__zodiaq_parser__set_args_from_command_line_input__id_fails_when_no_library_file_provided(
     parser, idArgs
 ):
     idArgsWithoutLibrary = idArgs[:5] + idArgs[7:]
@@ -537,7 +537,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__id_fails_when_no_lib
         args = vars(parser.parse_args(idArgsWithoutLibrary))
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__id_succeeds_with_custom_match_tolerance(
+def test__zodiaq_parser__set_args_from_command_line_input__id_succeeds_with_custom_match_tolerance(
     parser, idArgs
 ):
     idArgs += ["-t", "10"]
@@ -545,7 +545,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__id_succeeds_with_cus
     assert args["matchTolerance"] == 10
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__id_fails_when_match_tolerance_less_than_1(
+def test__zodiaq_parser__set_args_from_command_line_input__id_fails_when_match_tolerance_less_than_1(
     parser, idArgs
 ):
     idArgs += ["-t", "0"]
@@ -556,7 +556,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__id_fails_when_match_
         args = vars(parser.parse_args(idArgs))
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__id_fails_when_match_tolerance_greater_than_100(
+def test__zodiaq_parser__set_args_from_command_line_input__id_fails_when_match_tolerance_greater_than_100(
     parser, idArgs
 ):
     idArgs += ["-t", "61"]
@@ -567,7 +567,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__id_fails_when_match_
         args = vars(parser.parse_args(idArgs))
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__id_succeeds_with_no_correction_flag(
+def test__zodiaq_parser__set_args_from_command_line_input__id_succeeds_with_no_correction_flag(
     parser, idArgs
 ):
     idArgs += ["-nc"]
@@ -575,7 +575,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__id_succeeds_with_no_
     assert args["noCorrection"]
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__id_fails_with_no_correction_arguments_added(
+def test__zodiaq_parser__set_args_from_command_line_input__id_fails_with_no_correction_arguments_added(
     parser, idArgs
 ):
     idArgs += ["-nc", "randomBadValue"]
@@ -584,7 +584,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__id_fails_with_no_cor
         args = vars(parser.parse_args(idArgs))
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__id_fails_when_correction_degree_less_than_p5(
+def test__zodiaq_parser__set_args_from_command_line_input__id_fails_when_correction_degree_less_than_p5(
     parser, idArgs
 ):
     idArgs += ["-c", "0.4"]
@@ -595,7 +595,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__id_fails_when_correc
         args = vars(parser.parse_args(idArgs))
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__id_fails_when_correction_degree_greater_than_2(
+def test__zodiaq_parser__set_args_from_command_line_input__id_fails_when_correction_degree_greater_than_2(
     parser, idArgs
 ):
     idArgs += ["-c", "2.1"]
@@ -606,7 +606,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__id_fails_when_correc
         args = vars(parser.parse_args(idArgs))
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__id_succeeds_with_custom_correction_degree(
+def test__zodiaq_parser__set_args_from_command_line_input__id_succeeds_with_custom_correction_degree(
     parser, idArgs
 ):
     idArgs += ["-c", "1"]
@@ -614,7 +614,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__id_succeeds_with_cus
     assert args["correctionDegree"] == 1
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__id_succeeds_with_histogram_flag(
+def test__zodiaq_parser__set_args_from_command_line_input__id_succeeds_with_histogram_flag(
     parser, idArgs
 ):
     idArgs += ["-hist"]
@@ -622,7 +622,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__id_succeeds_with_his
     assert args["histogram"]
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__id_fails_with_histogram_argument_added(
+def test__zodiaq_parser__set_args_from_command_line_input__id_fails_with_histogram_argument_added(
     parser, idArgs
 ):
     idArgs += ["-hist", "randomBadValue"]
@@ -631,7 +631,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__id_fails_with_histog
         args = vars(parser.parse_args(idArgs))
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__id_succeeds_with_cancel_warnings_flag(
+def test__zodiaq_parser__set_args_from_command_line_input__id_succeeds_with_cancel_warnings_flag(
     parser, idArgs
 ):
     idArgs += ["-w"]
@@ -639,7 +639,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__id_succeeds_with_can
     assert args["cancelWarnings"]
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__id_fails_with_cancel_warnings_argument_added(
+def test__zodiaq_parser__set_args_from_command_line_input__id_fails_with_cancel_warnings_argument_added(
     parser, idArgs
 ):
     idArgs += ["-w", "randomBadValue"]
@@ -652,15 +652,15 @@ def test__csodiaq_parser__set_args_from_command_line_input__id_fails_with_cancel
 def scoreFiles():
     class fileObj:
         def __init__(self):
-            self.idOutputDir = TemporaryDirectory(prefix="test_csodiaq_id_output_dir")
+            self.idOutputDir = TemporaryDirectory(prefix="test_zodiaq_id_output_dir")
             self.idOutputFile1 = NamedTemporaryFile(
-                prefix="CsoDIAq-file",
+                prefix="zoDIAq-file",
                 suffix="fullOutput.csv",
                 dir=self.idOutputDir.name,
                 delete=False,
             )
             self.idOutputFile2 = NamedTemporaryFile(
-                prefix="CsoDIAq-file",
+                prefix="zoDIAq-file",
                 suffix="fullOutput.csv",
                 dir=self.idOutputDir.name,
                 delete=False,
@@ -678,20 +678,20 @@ def scoreArgs(scoreFiles):
     ]
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__initialize_scoring(
+def test__zodiaq_parser__set_args_from_command_line_input__initialize_scoring(
     parser, scoreFiles, scoreArgs
 ):
     parsedScoreArgs = vars(parser.parse_args(scoreArgs))
     assert parsedScoreArgs["command"] == "score"
     assert isinstance(parsedScoreArgs["input"], dict)
-    assert parsedScoreArgs["input"]["csodiaqDirectory"] == scoreFiles.idOutputDir.name
+    assert parsedScoreArgs["input"]["zodiaqDirectory"] == scoreFiles.idOutputDir.name
     assert len(parsedScoreArgs["input"]["idFiles"]) == 2
     assert parsedScoreArgs["score"] == "macc"
     assert parsedScoreArgs["proteinQuantMethod"] == "maxlfq"
     assert parsedScoreArgs["minNumDifferences"] == 2
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__score_succeeds_with_macc_input(
+def test__zodiaq_parser__set_args_from_command_line_input__score_succeeds_with_macc_input(
     parser, scoreArgs
 ):
     scoreArgs += ["-s", "macc"]
@@ -702,7 +702,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__score_succeeds_with_
 @pytest.mark.skip(
     "we may want to make an fdr scoring metric based purely on cosine. Keeping this here in case that becomes used."
 )
-def test__csodiaq_parser__set_args_from_command_line_input__score_succeeds_with_cosine_input(
+def test__zodiaq_parser__set_args_from_command_line_input__score_succeeds_with_cosine_input(
     parser, scoreArgs
 ):
     scoreArgs += ["-s", "cosine"]
@@ -710,7 +710,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__score_succeeds_with_
     assert args["score"] == "cosine"
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__score_fails_with_other_input(
+def test__zodiaq_parser__set_args_from_command_line_input__score_fails_with_other_input(
     parser, scoreArgs
 ):
     scoreArgs += ["-s", "shouldFail"]
@@ -721,7 +721,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__score_fails_with_oth
         args = vars(parser.parse_args(scoreArgs))
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__score_suceeds_with_maxlfq_protein_quant_method(
+def test__zodiaq_parser__set_args_from_command_line_input__score_suceeds_with_maxlfq_protein_quant_method(
     parser, scoreArgs
 ):
     scoreArgs += ["-p", "maxlfq"]
@@ -729,14 +729,14 @@ def test__csodiaq_parser__set_args_from_command_line_input__score_suceeds_with_m
     assert args["proteinQuantMethod"] == "maxlfq"
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__score_suceeds_with_maxlfq_protein_quant_method(
+def test__zodiaq_parser__set_args_from_command_line_input__score_suceeds_with_maxlfq_protein_quant_method(
     parser, scoreArgs
 ):
     scoreArgs += ["-p", "sum"]
     args = vars(parser.parse_args(scoreArgs))
     assert args["proteinQuantMethod"] == "sum"
 
-def test__csodiaq_parser__set_args_from_command_line_input__score_fails_with_invalid_protein_quant_method(
+def test__zodiaq_parser__set_args_from_command_line_input__score_fails_with_invalid_protein_quant_method(
     parser, scoreArgs
 ):
     scoreArgs += ["-p", "shouldFail"]
@@ -746,21 +746,21 @@ def test__csodiaq_parser__set_args_from_command_line_input__score_fails_with_inv
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
         args = vars(parser.parse_args(scoreArgs))
 
-def test__csodiaq_parser__set_args_from_command_line_input__score_suceeds_with_min_num_differences_equal_to_1(
+def test__zodiaq_parser__set_args_from_command_line_input__score_suceeds_with_min_num_differences_equal_to_1(
     parser, scoreArgs
 ):
     scoreArgs += ["-min", "1"]
     args = vars(parser.parse_args(scoreArgs))
     assert args["minNumDifferences"] == 1
 
-def test__csodiaq_parser__set_args_from_command_line_input__score_suceeds_with_min_num_differences_equal_to_2(
+def test__zodiaq_parser__set_args_from_command_line_input__score_suceeds_with_min_num_differences_equal_to_2(
     parser, scoreArgs
 ):
     scoreArgs += ["-min", "2"]
     args = vars(parser.parse_args(scoreArgs))
     assert args["minNumDifferences"] == 2
 
-def test__csodiaq_parser__set_args_from_command_line_input__score_fails_with_float_min_num_differences(
+def test__zodiaq_parser__set_args_from_command_line_input__score_fails_with_float_min_num_differences(
     parser, scoreArgs
 ):
     scoreArgs += ["-min", "1.2"]
@@ -770,7 +770,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__score_fails_with_flo
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
         args = vars(parser.parse_args(scoreArgs))
 
-def test__csodiaq_parser__set_args_from_command_line_input__score_fails_when_min_num_differences_less_than_1(
+def test__zodiaq_parser__set_args_from_command_line_input__score_fails_when_min_num_differences_less_than_1(
     parser, scoreArgs
 ):
     scoreArgs += ["-min", "0"]
@@ -780,7 +780,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__score_fails_when_min
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
         args = vars(parser.parse_args(scoreArgs))
 
-def test__csodiaq_parser__set_args_from_command_line_input__score_fails_when_min_num_differences_greater_than_2(
+def test__zodiaq_parser__set_args_from_command_line_input__score_fails_when_min_num_differences_greater_than_2(
     parser, scoreArgs
 ):
     scoreArgs += ["-min", "3"]
@@ -790,7 +790,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__score_fails_when_min
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
         args = vars(parser.parse_args(scoreArgs))
 
-def test__csodiaq_parser__set_args_from_command_line_input__score_fails_when_min_num_differences_greater_than_2(
+def test__zodiaq_parser__set_args_from_command_line_input__score_fails_when_min_num_differences_greater_than_2(
     parser, scoreArgs
 ):
     scoreArgs += ["-min", "3"]
@@ -801,9 +801,9 @@ def test__csodiaq_parser__set_args_from_command_line_input__score_fails_when_min
         args = vars(parser.parse_args(scoreArgs))
 
 @pytest.mark.skip(
-    "This test would require a huge setup for a minor warning message (in test_csodiaq.py). Skipping"
+    "This test would require a huge setup for a minor warning message (in test_zodiaq.py). Skipping"
 )
-def test__csodiaq_parser__check_for_conflicting_args__score_throws_error_when_non_maxlfq_method_used_with_min_num_difference_flag(
+def test__zodiaq_parser__check_for_conflicting_args__score_throws_error_when_non_maxlfq_method_used_with_min_num_difference_flag(
     parser, scoreArgs
 ):
     scoreArgs += ["-p", "average"]
@@ -819,7 +819,7 @@ def reanalysisFiles():
     class fileObj:
         def __init__(self):
             self.scoreOutputDir = TemporaryDirectory(
-                prefix="test_csodiaq_score_output_dir"
+                prefix="test_zodiaq_score_output_dir"
             )
             self.peptideFdrFile1 = NamedTemporaryFile(
                 suffix="peptideFDR.csv", dir=self.scoreOutputDir.name, delete=False
@@ -846,13 +846,13 @@ def reanalysisArgs(reanalysisFiles):
     ]
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__initialize_targeted_reanalysis(
+def test__zodiaq_parser__set_args_from_command_line_input__initialize_targeted_reanalysis(
     parser, reanalysisFiles, reanalysisArgs
 ):
     parsedReanalysisArgs = vars(parser.parse_args(reanalysisArgs))
     assert parsedReanalysisArgs["command"] == "targetedReanalysis"
     assert (
-        parsedReanalysisArgs["input"]["csodiaqDirectory"]
+        parsedReanalysisArgs["input"]["zodiaqDirectory"]
         == reanalysisFiles.scoreOutputDir.name
     )
     assert isinstance(parsedReanalysisArgs["input"], dict)
@@ -873,7 +873,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__initialize_targeted_
     assert parsedReanalysisArgs["binValueProximity"] == 0.75
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_fails_when_below_1(
+def test__zodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_fails_when_below_1(
     parser, reanalysisArgs
 ):
     reanalysisArgs += ["-p", "0"]
@@ -882,7 +882,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_
         args = vars(parser.parse_args(reanalysisArgs))
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_fails_when_float_provided(
+def test__zodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_fails_when_float_provided(
     parser, reanalysisArgs
 ):
     reanalysisArgs += ["-p", "0.2"]
@@ -891,7 +891,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_
         args = vars(parser.parse_args(reanalysisArgs))
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_succeeds_with_custom_protein_input(
+def test__zodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_succeeds_with_custom_protein_input(
     parser, reanalysisArgs
 ):
     reanalysisArgs += ["-p", "1"]
@@ -899,7 +899,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_
     assert args["protein"] == 1
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_succeeds_with_heavy_isotope_flag(
+def test__zodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_succeeds_with_heavy_isotope_flag(
     parser, reanalysisArgs
 ):
     reanalysisArgs += ["-heavy"]
@@ -907,7 +907,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_
     assert args["heavyIsotope"]
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_fails_with_heavy_isotope_argument_added(
+def test__zodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_fails_with_heavy_isotope_argument_added(
     parser, reanalysisArgs
 ):
     reanalysisArgs += ["-heavy", "randomBadValue"]
@@ -916,7 +916,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_
         args = vars(parser.parse_args(reanalysisArgs))
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_succeeds_with_custom_bin_value_proximity_input(
+def test__zodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_succeeds_with_custom_bin_value_proximity_input(
     parser, reanalysisArgs
 ):
     reanalysisArgs += ["-b", "1"]
@@ -924,7 +924,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_
     assert args["binValueProximity"] == 1
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_fails_with_bin_value_proximity_with_more_than_2_decimal_places(
+def test__zodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_fails_with_bin_value_proximity_with_more_than_2_decimal_places(
     parser, reanalysisArgs
 ):
     reanalysisArgs += ["-b", "1.001"]
@@ -933,7 +933,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_
         args = vars(parser.parse_args(reanalysisArgs))
 
 
-def test__csodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_fails_with_bin_value_proximity_of_0(
+def test__zodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_fails_with_bin_value_proximity_of_0(
     parser, reanalysisArgs
 ):
     reanalysisArgs += ["-b", "0"]
@@ -942,7 +942,7 @@ def test__csodiaq_parser__set_args_from_command_line_input__targeted_reanalysis_
         args = vars(parser.parse_args(reanalysisArgs))
 
 
-def test__csodiaq_parser__check_for_conflicting_args__presence_of_histogram_tag_fails_if_no_correction_tag_set(
+def test__zodiaq_parser__check_for_conflicting_args__presence_of_histogram_tag_fails_if_no_correction_tag_set(
     parser, idArgs
 ):
     idArgs += ["-nc", "-hist"]
@@ -952,7 +952,7 @@ def test__csodiaq_parser__check_for_conflicting_args__presence_of_histogram_tag_
         check_for_conflicting_args(args)
 
 
-def test__csodiaq_parser__check_for_conflicting_args__presence_of_histogram_tag_fails_if_no_correction_tag_set(
+def test__zodiaq_parser__check_for_conflicting_args__presence_of_histogram_tag_fails_if_no_correction_tag_set(
     parser, idArgs
 ):
     idArgs += ["-nc", "-c", "1"]
@@ -962,12 +962,12 @@ def test__csodiaq_parser__check_for_conflicting_args__presence_of_histogram_tag_
         check_for_conflicting_args(args)
 
 
-def test__csodiaq_parser__check_for_conflicting_args__presence_of_protein_arg_fails_if_no_protein_fdr_files_present(
+def test__zodiaq_parser__check_for_conflicting_args__presence_of_protein_arg_fails_if_no_protein_fdr_files_present(
     parser,
 ):
-    testDir = TemporaryDirectory(prefix="csodiaq_test_directory_")
+    testDir = TemporaryDirectory(prefix="zodiaq_test_directory_")
     peptideFile = NamedTemporaryFile(
-        prefix="csodiaq_peptide_file_",
+        prefix="zodiaq_peptide_file_",
         suffix="peptideFDR.csv",
         dir=testDir.name,
         delete=False,

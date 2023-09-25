@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from csodiaq.scoring.quantificationFunctions import (
+from zodiaq.scoring.quantificationFunctions import (
     calculate_ion_count_from_peptides_of_protein,
     calculate_ion_count_for_each_protein_in_protein_fdr_df,
     compile_ion_count_comparison_across_runs_df,

@@ -21,7 +21,7 @@ from . import (
 
 @pytest.fixture(scope="module")
 def systemTestFileDirectory():
-    return TemporaryDirectory(prefix="csodiaq_scoring_system_test_files_")
+    return TemporaryDirectory(prefix="zodiaq_scoring_system_test_files_")
 
 
 @pytest.fixture(scope="module")
@@ -60,28 +60,28 @@ def assert_all_fdr_outputs_are_correct(inputFileDirectory, inputHeader, breakdow
     assert "fdrScores-macc-maxlfq" in os.listdir(inputFileDirectory)
     outputDirPath = os.path.join(inputFileDirectory, "fdrScores-macc-maxlfq")
     outputDirContents = os.listdir(outputDirPath)
-    assert f"CsoDIAq-file_{inputHeader}_fullOutput_spectralFDR.csv" in outputDirContents
+    assert f"zoDIAq-file_{inputHeader}_fullOutput_spectralFDR.csv" in outputDirContents
     spectralOutputDf = pd.read_csv(
         os.path.join(
-            outputDirPath, f"CsoDIAq-file_{inputHeader}_fullOutput_spectralFDR.csv"
+            outputDirPath, f"zoDIAq-file_{inputHeader}_fullOutput_spectralFDR.csv"
         )
     )
     assert_pandas_dataframes_are_equal(
         breakdown.outputDict["spectralFDR"], spectralOutputDf
     )
-    assert f"CsoDIAq-file_{inputHeader}_fullOutput_peptideFDR.csv" in outputDirContents
+    assert f"zoDIAq-file_{inputHeader}_fullOutput_peptideFDR.csv" in outputDirContents
     peptideOutputDf = pd.read_csv(
         os.path.join(
-            outputDirPath, f"CsoDIAq-file_{inputHeader}_fullOutput_peptideFDR.csv"
+            outputDirPath, f"zoDIAq-file_{inputHeader}_fullOutput_peptideFDR.csv"
         )
     )
     assert_pandas_dataframes_are_equal(
         breakdown.outputDict["peptideFDR"], peptideOutputDf
     )
-    assert f"CsoDIAq-file_{inputHeader}_fullOutput_proteinFDR.csv" in outputDirContents
+    assert f"zoDIAq-file_{inputHeader}_fullOutput_proteinFDR.csv" in outputDirContents
     proteinOutputDf = pd.read_csv(
         os.path.join(
-            outputDirPath, f"CsoDIAq-file_{inputHeader}_fullOutput_proteinFDR.csv"
+            outputDirPath, f"zoDIAq-file_{inputHeader}_fullOutput_proteinFDR.csv"
         )
     )
     assert_pandas_dataframes_are_equal(
@@ -103,7 +103,7 @@ def assert_common_peptide_outputs_are_correct(
             .to_dict()
         )
         singleExpectedCommonPeptidesDf = pd.DataFrame(
-            commonPeptidesDict, index=[f"CsoDIAq-file_{header}_fullOutput"]
+            commonPeptidesDict, index=[f"zoDIAq-file_{header}_fullOutput"]
         )
         expectedCommonPeptidesDfs.append(singleExpectedCommonPeptidesDf)
 
@@ -124,12 +124,12 @@ def test__scoring__baseline_macc_score_run(inputFileDirectory, expectedOutputDir
     inputFileDirectoryChild = os.path.join(inputFileDirectory, inputHeader)
     os.mkdir(inputFileDirectoryChild)
     inputFilePath = os.path.join(
-        inputFileDirectoryChild, f"CsoDIAq-file_{inputHeader}_fullOutput.csv"
+        inputFileDirectoryChild, f"zoDIAq-file_{inputHeader}_fullOutput.csv"
     )
     maccBreakdown.inputDf.to_csv(inputFilePath, index=False)
 
     args = [
-        "csodiaq",
+        "zodiaq",
         "score",
         "-i",
         inputFileDirectoryChild,
@@ -151,12 +151,12 @@ def test__scoring__evaluate_protein_cosine_column_appears_correctly(
     inputFileDirectoryChild = os.path.join(inputFileDirectory, inputHeader)
     os.mkdir(inputFileDirectoryChild)
     inputFilePath = os.path.join(
-        inputFileDirectoryChild, f"CsoDIAq-file_{inputHeader}_fullOutput.csv"
+        inputFileDirectoryChild, f"zoDIAq-file_{inputHeader}_fullOutput.csv"
     )
     proteinCosineBreakdown.inputDf.to_csv(inputFilePath, index=False)
 
     args = [
-        "csodiaq",
+        "zodiaq",
         "score",
         "-i",
         inputFileDirectoryChild,
@@ -180,19 +180,19 @@ def test__scoring__evaluate_common_peptides_dataframe_forms_correctly_with_multi
     maccHeader = "macc_baseline"
     maccBreakdown = MaccScoresBreakdown(expectedOutputDirectory)
     inputFilePath = os.path.join(
-        inputFileDirectoryChild, f"CsoDIAq-file_{maccHeader}_fullOutput.csv"
+        inputFileDirectoryChild, f"zoDIAq-file_{maccHeader}_fullOutput.csv"
     )
     maccBreakdown.inputDf.to_csv(inputFilePath, index=False)
 
     proteinCosineHeader = "protein_cosine_eval"
     proteinCosineBreakdown = ProteinCosineEvalScoresBreakdown(expectedOutputDirectory)
     inputFilePath = os.path.join(
-        inputFileDirectoryChild, f"CsoDIAq-file_{proteinCosineHeader}_fullOutput.csv"
+        inputFileDirectoryChild, f"zoDIAq-file_{proteinCosineHeader}_fullOutput.csv"
     )
     proteinCosineBreakdown.inputDf.to_csv(inputFilePath, index=False)
 
     args = [
-        "csodiaq",
+        "zodiaq",
         "score",
         "-i",
         inputFileDirectoryChild,
@@ -218,24 +218,24 @@ def evaluate_standard_protein_quant_comparison(
     sample1Header = "standard_common_protein_eval_sample_1"
     sample1Breakdown = StandardSample1And2Breakdown(expectedOutputDirectory)
     inputFilePath = os.path.join(
-        inputFileDirectoryChild, f"CsoDIAq-file_{sample1Header}_fullOutput.csv"
+        inputFileDirectoryChild, f"zoDIAq-file_{sample1Header}_fullOutput.csv"
     )
     sample1Breakdown.inputDf.to_csv(inputFilePath, index=False)
     sample2Header = "standard_common_protein_eval_sample_2"
     sample2Breakdown = StandardSample1And2Breakdown(expectedOutputDirectory)
     inputFilePath = os.path.join(
-        inputFileDirectoryChild, f"CsoDIAq-file_{sample2Header}_fullOutput.csv"
+        inputFileDirectoryChild, f"zoDIAq-file_{sample2Header}_fullOutput.csv"
     )
     sample2Breakdown.inputDf.to_csv(inputFilePath, index=False)
     sample3Header = "standard_common_protein_eval_sample_3"
     sample3Breakdown = StandardSample3Breakdown(expectedOutputDirectory)
     inputFilePath = os.path.join(
-        inputFileDirectoryChild, f"CsoDIAq-file_{sample3Header}_fullOutput.csv"
+        inputFileDirectoryChild, f"zoDIAq-file_{sample3Header}_fullOutput.csv"
     )
     sample3Breakdown.inputDf.to_csv(inputFilePath, index=False)
 
     args = [
-        "csodiaq",
+        "zodiaq",
         "score",
         "-i",
         inputFileDirectoryChild,
@@ -259,9 +259,9 @@ def evaluate_standard_protein_quant_comparison(
     expectedCommonProteinDf = expectedCommonProteinDf.set_index(
         pd.Index(
             [
-                f"CsoDIAq-file_{sample1Header}_fullOutput",
-                f"CsoDIAq-file_{sample2Header}_fullOutput",
-                f"CsoDIAq-file_{sample3Header}_fullOutput",
+                f"zoDIAq-file_{sample1Header}_fullOutput",
+                f"zoDIAq-file_{sample2Header}_fullOutput",
+                f"zoDIAq-file_{sample3Header}_fullOutput",
             ]
         )
     )
@@ -320,24 +320,24 @@ def evaluate_method_protein_quant_comparison(
     sample1Header = "method_common_protein_eval_sample_1"
     sample1Breakdown = MethodSample1Breakdown(expectedOutputDirectory)
     inputFilePath = os.path.join(
-        inputFileDirectoryChild, f"CsoDIAq-file_{sample1Header}_fullOutput.csv"
+        inputFileDirectoryChild, f"zoDIAq-file_{sample1Header}_fullOutput.csv"
     )
     sample1Breakdown.inputDf.to_csv(inputFilePath, index=False)
     sample2Header = "method_common_protein_eval_sample_2"
     sample2Breakdown = MethodSample2Breakdown(expectedOutputDirectory)
     inputFilePath = os.path.join(
-        inputFileDirectoryChild, f"CsoDIAq-file_{sample2Header}_fullOutput.csv"
+        inputFileDirectoryChild, f"zoDIAq-file_{sample2Header}_fullOutput.csv"
     )
     sample2Breakdown.inputDf.to_csv(inputFilePath, index=False)
     sample3Header = "method_common_protein_eval_sample_3"
     sample3Breakdown = MethodSample3Breakdown(expectedOutputDirectory)
     inputFilePath = os.path.join(
-        inputFileDirectoryChild, f"CsoDIAq-file_{sample3Header}_fullOutput.csv"
+        inputFileDirectoryChild, f"zoDIAq-file_{sample3Header}_fullOutput.csv"
     )
     sample3Breakdown.inputDf.to_csv(inputFilePath, index=False)
 
     args = [
-        "csodiaq",
+        "zodiaq",
         "score",
         "-i",
         inputFileDirectoryChild,
@@ -361,9 +361,9 @@ def evaluate_method_protein_quant_comparison(
     expectedCommonProteinDf = expectedCommonProteinDf.set_index(
         pd.Index(
             [
-                f"CsoDIAq-file_{sample1Header}_fullOutput",
-                f"CsoDIAq-file_{sample2Header}_fullOutput",
-                f"CsoDIAq-file_{sample3Header}_fullOutput",
+                f"zoDIAq-file_{sample1Header}_fullOutput",
+                f"zoDIAq-file_{sample2Header}_fullOutput",
+                f"zoDIAq-file_{sample3Header}_fullOutput",
             ]
         )
     )
@@ -421,24 +421,24 @@ def evaluate_common_proteins_one_peptide_match_in_maxlfq(
     sample1Header = "one_match_common_proteins_sample_1"
     sample1Breakdown = OneMatchSample1And2Breakdown(expectedOutputDirectory)
     inputFilePath = os.path.join(
-        inputFileDirectoryChild, f"CsoDIAq-file_{sample1Header}_fullOutput.csv"
+        inputFileDirectoryChild, f"zoDIAq-file_{sample1Header}_fullOutput.csv"
     )
     sample1Breakdown.inputDf.to_csv(inputFilePath, index=False)
     sample2Header = "one_match_common_proteins_sample_2"
     sample2Breakdown = OneMatchSample1And2Breakdown(expectedOutputDirectory)
     inputFilePath = os.path.join(
-        inputFileDirectoryChild, f"CsoDIAq-file_{sample2Header}_fullOutput.csv"
+        inputFileDirectoryChild, f"zoDIAq-file_{sample2Header}_fullOutput.csv"
     )
     sample2Breakdown.inputDf.to_csv(inputFilePath, index=False)
     sample3Header = "one_match_common_proteins_sample_3"
     sample3Breakdown = OneMatchSample3Breakdown(expectedOutputDirectory)
     inputFilePath = os.path.join(
-        inputFileDirectoryChild, f"CsoDIAq-file_{sample3Header}_fullOutput.csv"
+        inputFileDirectoryChild, f"zoDIAq-file_{sample3Header}_fullOutput.csv"
     )
     sample3Breakdown.inputDf.to_csv(inputFilePath, index=False)
 
     args = [
-        "csodiaq",
+        "zodiaq",
         "score",
         "-i",
         inputFileDirectoryChild,
@@ -461,9 +461,9 @@ def evaluate_common_proteins_one_peptide_match_in_maxlfq(
     expectedCommonProteinDf = expectedCommonProteinDf.set_index(
         pd.Index(
             [
-                f"CsoDIAq-file_{sample1Header}_fullOutput",
-                f"CsoDIAq-file_{sample2Header}_fullOutput",
-                f"CsoDIAq-file_{sample3Header}_fullOutput",
+                f"zoDIAq-file_{sample1Header}_fullOutput",
+                f"zoDIAq-file_{sample2Header}_fullOutput",
+                f"zoDIAq-file_{sample3Header}_fullOutput",
             ]
         )
     )
@@ -509,30 +509,30 @@ def test__scoring__evaluate_protein_quantities_are_calculated_even_with_multiple
     sample1Header = "maxlfq_multiple_peptide_clusters_sample_1"
     sample1Breakdown = ClusterSample1And2Breakdown(expectedOutputDirectory)
     inputFilePath = os.path.join(
-        inputFileDirectoryChild, f"CsoDIAq-file_{sample1Header}_fullOutput.csv"
+        inputFileDirectoryChild, f"zoDIAq-file_{sample1Header}_fullOutput.csv"
     )
     sample1Breakdown.inputDf.to_csv(inputFilePath, index=False)
     sample2Header = "maxlfq_multiple_peptide_clusters_sample_2"
     sample2Breakdown = ClusterSample1And2Breakdown(expectedOutputDirectory)
     inputFilePath = os.path.join(
-        inputFileDirectoryChild, f"CsoDIAq-file_{sample2Header}_fullOutput.csv"
+        inputFileDirectoryChild, f"zoDIAq-file_{sample2Header}_fullOutput.csv"
     )
     sample2Breakdown.inputDf.to_csv(inputFilePath, index=False)
     sample3Header = "maxlfq_multiple_peptide_clusters_sample_3"
     sample3Breakdown = ClusterSample3And4Breakdown(expectedOutputDirectory)
     inputFilePath = os.path.join(
-        inputFileDirectoryChild, f"CsoDIAq-file_{sample3Header}_fullOutput.csv"
+        inputFileDirectoryChild, f"zoDIAq-file_{sample3Header}_fullOutput.csv"
     )
     sample3Breakdown.inputDf.to_csv(inputFilePath, index=False)
     sample4Header = "maxlfq_multiple_peptide_clusters_sample_4"
     sample4Breakdown = ClusterSample3And4Breakdown(expectedOutputDirectory)
     inputFilePath = os.path.join(
-        inputFileDirectoryChild, f"CsoDIAq-file_{sample4Header}_fullOutput.csv"
+        inputFileDirectoryChild, f"zoDIAq-file_{sample4Header}_fullOutput.csv"
     )
     sample4Breakdown.inputDf.to_csv(inputFilePath, index=False)
 
     args = [
-        "csodiaq",
+        "zodiaq",
         "score",
         "-i",
         inputFileDirectoryChild,
@@ -561,10 +561,10 @@ def test__scoring__evaluate_protein_quantities_are_calculated_even_with_multiple
         ],
         columns=["1/protein", "1/proteinX"],
         index=[
-                f"CsoDIAq-file_{sample1Header}_fullOutput",
-                f"CsoDIAq-file_{sample2Header}_fullOutput",
-                f"CsoDIAq-file_{sample3Header}_fullOutput",
-                f"CsoDIAq-file_{sample4Header}_fullOutput",
+                f"zoDIAq-file_{sample1Header}_fullOutput",
+                f"zoDIAq-file_{sample2Header}_fullOutput",
+                f"zoDIAq-file_{sample3Header}_fullOutput",
+                f"zoDIAq-file_{sample4Header}_fullOutput",
             ]
     )
     commonProteinDf = pd.read_csv(

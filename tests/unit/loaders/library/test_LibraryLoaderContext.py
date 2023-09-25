@@ -1,8 +1,8 @@
-from csodiaq.loaders.library.libraryLoaderContext import LibraryLoaderContext
-from csodiaq.loaders.library.libraryLoaderStrategyTable import (
+from zodiaq.loaders.library.libraryLoaderContext import LibraryLoaderContext
+from zodiaq.loaders.library.libraryLoaderStrategyTable import (
     LibraryLoaderStrategyTable,
 )
-from csodiaq.loaders.library.libraryLoaderStrategyMgf import LibraryLoaderStrategyMgf
+from zodiaq.loaders.library.libraryLoaderStrategyMgf import LibraryLoaderStrategyMgf
 
 import pytest
 import os
@@ -25,8 +25,8 @@ def test__library_loader_context__table__initialization(tableContext):
     assert isinstance(tableContext._strategy, LibraryLoaderStrategyTable)
 
 
-def test__library_loader_context__table__load_csodiaq_library_dict(tableContext):
-    expectedCsodiaqLibDict = {
+def test__library_loader_context__table__load_zodiaq_library_dict(tableContext):
+    expectedZodiaqLibDict = {
         (516.801083027, "YRPGTVALR"): {
             "precursorCharge": 2,
             "identification": "51327_YRPGTVALR_2",
@@ -43,12 +43,12 @@ def test__library_loader_context__table__load_csodiaq_library_dict(tableContext)
                 (745.399149844, 324.1, 0),
                 (858.483213826, 271.9, 0),
             ],
-            "csodiaqKeyIdx": 0,
+            "zodiaqKeyIdx": 0,
             "isDecoy": 0,
         }
     }
-    csodiaqLibDict = tableContext.load_csodiaq_library_dict()
-    assert csodiaqLibDict == expectedCsodiaqLibDict
+    zodiaqLibDict = tableContext.load_zodiaq_library_dict()
+    assert zodiaqLibDict == expectedZodiaqLibDict
 
 
 def test__library_loader_context__table__initialization_csv():
@@ -69,8 +69,8 @@ def test__library_loader_context__mgf__initialization(mgfContext):
     assert isinstance(mgfContext._strategy, LibraryLoaderStrategyMgf)
 
 
-def test__library_loader_context__mgf__load_csodiaq_library_dict(mgfContext):
-    expectedCsodiaqLibDict = {
+def test__library_loader_context__mgf__load_zodiaq_library_dict(mgfContext):
+    expectedZodiaqLibDict = {
         (798.93, "AAAAAAAAAAAAAAAGAGAGAK"): {
             "precursorCharge": 2,
             "identification": 'human.faims.1.1. File:"", NativeID:"scan=1" Retention Time: 1910.238',
@@ -87,12 +87,12 @@ def test__library_loader_context__mgf__load_csodiaq_library_dict(mgfContext):
                 (886.474, 448.2, 0),
                 (1099.585, 366.1, 0),
             ],
-            "csodiaqKeyIdx": 0,
+            "zodiaqKeyIdx": 0,
             "isDecoy": 0,
         }
     }
-    csodiaqLibDict = mgfContext.load_csodiaq_library_dict()
-    assert csodiaqLibDict == expectedCsodiaqLibDict
+    zodiaqLibDict = mgfContext.load_zodiaq_library_dict()
+    assert zodiaqLibDict == expectedZodiaqLibDict
 
 
 def test__library_loader_context__initialization_msp_raises_specific_error():

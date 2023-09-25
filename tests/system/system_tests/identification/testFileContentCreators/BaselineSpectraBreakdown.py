@@ -268,7 +268,7 @@ def calculate_mz_value_from_ppm(mz, ppm):
 def _write_query_scan_data_to_mzml_file(queryScanData, filePath):
     with MzMLWriter(open(filePath, "wb")) as outWriter:
         _initialize_mzml_file_parameters(outWriter)
-        with outWriter.run(id="csodiaq_test_analysis"):
+        with outWriter.run(id="zodiaq_test_analysis"):
             with outWriter.spectrum_list(count=len(queryScanData)):
                 _write_spectra_to_file(queryScanData, outWriter)
 

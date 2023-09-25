@@ -58,7 +58,7 @@ def libraryTemplateDataFrame():
 
 @pytest.fixture(scope="module")
 def systemTestFileDirectory():
-    return TemporaryDirectory(prefix="csodiaq_identification_system_test_files_")
+    return TemporaryDirectory(prefix="zodiaq_identification_system_test_files_")
 
 
 @pytest.fixture(scope="module")
@@ -112,9 +112,9 @@ def test__identification__baseline_run__spectrast_library(
     baselineSpectraBreakdown.expectedOutputDf.to_csv(
         os.path.join(expectedOutputDirectory, f"{inputFileHeader}.csv"), index=False
     )
-    outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
+    outputDir = TemporaryDirectory(prefix="zodiaq_system_test")
     args = [
-        "csodiaq",
+        "zodiaq",
         "id",
         "-i",
         inputQueryFile,
@@ -127,10 +127,10 @@ def test__identification__baseline_run__spectrast_library(
     subprocess.run(args, capture_output=True)
     outputDirContents = os.listdir(outputDir.name)
     assert len(outputDirContents) == 1
-    csodiaqDir = os.path.join(outputDir.name, outputDirContents[0])
-    csodiaqDirContents = os.listdir(csodiaqDir)
-    assert len(csodiaqDirContents) == 1
-    outputFile = os.path.join(csodiaqDir, csodiaqDirContents[0])
+    zodiaqDir = os.path.join(outputDir.name, outputDirContents[0])
+    zodiaqDirContents = os.listdir(zodiaqDir)
+    assert len(zodiaqDirContents) == 1
+    outputFile = os.path.join(zodiaqDir, zodiaqDirContents[0])
     outputDf = pd.read_csv(outputFile)
     outputDf = (
         outputDf.drop(["fileName"], axis=1)
@@ -158,9 +158,9 @@ def test__identification__baseline_run__mgf_library(
     baselineSpectraBreakdown.expectedOutputDf.to_csv(
         os.path.join(expectedOutputDirectory, f"{inputFileHeader}.csv"), index=False
     )
-    outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
+    outputDir = TemporaryDirectory(prefix="zodiaq_system_test")
     args = [
-        "csodiaq",
+        "zodiaq",
         "id",
         "-i",
         inputQueryFile,
@@ -173,10 +173,10 @@ def test__identification__baseline_run__mgf_library(
     subprocess.run(args, capture_output=True)
     outputDirContents = os.listdir(outputDir.name)
     assert len(outputDirContents) == 1
-    csodiaqDir = os.path.join(outputDir.name, outputDirContents[0])
-    csodiaqDirContents = os.listdir(csodiaqDir)
-    assert len(csodiaqDirContents) == 1
-    outputFile = os.path.join(csodiaqDir, csodiaqDirContents[0])
+    zodiaqDir = os.path.join(outputDir.name, outputDirContents[0])
+    zodiaqDirContents = os.listdir(zodiaqDir)
+    assert len(zodiaqDirContents) == 1
+    outputFile = os.path.join(zodiaqDir, zodiaqDirContents[0])
     outputDf = pd.read_csv(outputFile)
     outputDf = (
         outputDf.drop(["fileName"], axis=1)
@@ -203,9 +203,9 @@ def test__identification__baseline__two_inputs_creates_two_outputs_independent_o
     libraryFile = os.path.join(libraryFileDirectory, "spectrast_test_library.csv")
     inputQueryFile1 = os.path.join(inputFileDirectory, f"{inputFileHeader1}.mzXML")
     inputQueryFile2 = os.path.join(inputFileDirectory, f"{inputFileHeader2}.mzXML")
-    outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
+    outputDir = TemporaryDirectory(prefix="zodiaq_system_test")
     args = [
-        "csodiaq",
+        "zodiaq",
         "id",
         "-i",
         inputQueryFile1,
@@ -221,11 +221,11 @@ def test__identification__baseline__two_inputs_creates_two_outputs_independent_o
     subprocess.run(args, capture_output=True)
     outputDirContents = os.listdir(outputDir.name)
     assert len(outputDirContents) == 1
-    csodiaqDir = os.path.join(outputDir.name, outputDirContents[0])
-    csodiaqDirContents = os.listdir(csodiaqDir)
-    assert len(csodiaqDirContents) == 2
-    outputFile1 = os.path.join(csodiaqDir, csodiaqDirContents[0])
-    outputFile2 = os.path.join(csodiaqDir, csodiaqDirContents[0])
+    zodiaqDir = os.path.join(outputDir.name, outputDirContents[0])
+    zodiaqDirContents = os.listdir(zodiaqDir)
+    assert len(zodiaqDirContents) == 2
+    outputFile1 = os.path.join(zodiaqDir, zodiaqDirContents[0])
+    outputFile2 = os.path.join(zodiaqDir, zodiaqDirContents[0])
     outputDf1 = pd.read_csv(outputFile1)
     outputDf2 = pd.read_csv(outputFile2)
     outputDf1 = (
@@ -269,7 +269,7 @@ def test__identification__baseline_no_matches_raises_error(
     noMatchSpectraBreakdown.expectedOutputDf.to_csv(
         os.path.join(expectedOutputDirectory, f"{noMatchFileHeader}.csv"), index=False
     )
-    outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
+    outputDir = TemporaryDirectory(prefix="zodiaq_system_test")
     assert_no_matches_before_correction_raises_warning_and_skips_offending_file_only(
         inputQueryFile,
         noMatchQueryFile,
@@ -284,7 +284,7 @@ def assert_no_matches_before_correction_raises_warning_and_skips_offending_file_
     inputQueryFile, noMatchQueryFile, libraryFile, outputDir, baselineSpectraBreakdown
 ):
     args = [
-        "csodiaq",
+        "zodiaq",
         "id",
         "-i",
         inputQueryFile,
@@ -301,10 +301,10 @@ def assert_no_matches_before_correction_raises_warning_and_skips_offending_file_
     assert errorOutput in str(output.stderr)
     outputDirContents = os.listdir(outputDir.name)
     assert len(outputDirContents) == 1
-    csodiaqDir = os.path.join(outputDir.name, outputDirContents[0])
-    csodiaqDirContents = os.listdir(csodiaqDir)
-    assert len(csodiaqDirContents) == 1
-    outputFile = os.path.join(csodiaqDir, csodiaqDirContents[0])
+    zodiaqDir = os.path.join(outputDir.name, outputDirContents[0])
+    zodiaqDirContents = os.listdir(zodiaqDir)
+    assert len(zodiaqDirContents) == 1
+    outputFile = os.path.join(zodiaqDir, zodiaqDirContents[0])
     outputDf = pd.read_csv(outputFile)
     outputDf = (
         outputDf.drop(["fileName"], axis=1)
@@ -331,7 +331,7 @@ def assert_no_matches_after_correction_raises_warning(
     '''
     """
     args = [
-        "csodiaq",
+        "zodiaq",
         "id",
         "-i",
         inputQueryFile,
@@ -363,9 +363,9 @@ def test__identification__no_compensation_voltage_succeeds(
     noCompensationVoltageSpectraBreakdown.expectedOutputDf.to_csv(
         os.path.join(expectedOutputDirectory, f"{inputFileHeader}.csv"), index=False
     )
-    outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
+    outputDir = TemporaryDirectory(prefix="zodiaq_system_test")
     args = [
-        "csodiaq",
+        "zodiaq",
         "id",
         "-i",
         inputQueryFile,
@@ -378,10 +378,10 @@ def test__identification__no_compensation_voltage_succeeds(
     subprocess.run(args, capture_output=True)
     outputDirContents = os.listdir(outputDir.name)
     assert len(outputDirContents) == 1
-    csodiaqDir = os.path.join(outputDir.name, outputDirContents[0])
-    csodiaqDirContents = os.listdir(csodiaqDir)
-    assert len(csodiaqDirContents) == 1
-    outputFile = os.path.join(csodiaqDir, csodiaqDirContents[0])
+    zodiaqDir = os.path.join(outputDir.name, outputDirContents[0])
+    zodiaqDirContents = os.listdir(zodiaqDir)
+    assert len(zodiaqDirContents) == 1
+    outputFile = os.path.join(zodiaqDir, zodiaqDirContents[0])
     outputDf = pd.read_csv(outputFile)
     outputDf = (
         outputDf.drop(["fileName"], axis=1)
@@ -405,9 +405,9 @@ def test__identification__match_tolerance_excludes_values_that_exceed_ppm_value_
     )
     inputQueryFile = os.path.join(inputFileDirectory, f"{inputFileHeader}.mzXML")
     libraryFile = os.path.join(libraryFileDirectory, "spectrast_test_library.csv")
-    outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
+    outputDir = TemporaryDirectory(prefix="zodiaq_system_test")
     args = [
-        "csodiaq",
+        "zodiaq",
         "id",
         "-i",
         inputQueryFile,
@@ -420,8 +420,8 @@ def test__identification__match_tolerance_excludes_values_that_exceed_ppm_value_
         "29",
     ]
     subprocess.run(args, capture_output=True)
-    csodiaqDir = os.path.join(outputDir.name, os.listdir(outputDir.name)[0])
-    outputFile = os.path.join(csodiaqDir, os.listdir(csodiaqDir)[0])
+    zodiaqDir = os.path.join(outputDir.name, os.listdir(outputDir.name)[0])
+    outputFile = os.path.join(zodiaqDir, os.listdir(zodiaqDir)[0])
     outputDf = pd.read_csv(outputFile)
     matchedPeakNum = list(set(outputDf["shared"]))
     assert len(matchedPeakNum) == 1
@@ -440,9 +440,9 @@ def test__identification__match_tolerance_excludes_values_that_exceed_ppm_value_
     )
     inputQueryFile = os.path.join(inputFileDirectory, f"{inputFileHeader}.mzXML")
     libraryFile = os.path.join(libraryFileDirectory, "spectrast_test_library.csv")
-    outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
+    outputDir = TemporaryDirectory(prefix="zodiaq_system_test")
     args = [
-        "csodiaq",
+        "zodiaq",
         "id",
         "-i",
         inputQueryFile,
@@ -455,8 +455,8 @@ def test__identification__match_tolerance_excludes_values_that_exceed_ppm_value_
         "28",
     ]
     subprocess.run(args, capture_output=True)
-    csodiaqDir = os.path.join(outputDir.name, os.listdir(outputDir.name)[0])
-    outputFile = os.path.join(csodiaqDir, os.listdir(csodiaqDir)[0])
+    zodiaqDir = os.path.join(outputDir.name, os.listdir(outputDir.name)[0])
+    outputFile = os.path.join(zodiaqDir, os.listdir(zodiaqDir)[0])
     outputDf = pd.read_csv(outputFile)
     matchedPeakNum = list(set(outputDf["shared"]))
     assert len(matchedPeakNum) == 1
@@ -475,9 +475,9 @@ def test__identification__custom_correction_creates_expected_number_of_matched_p
     )
     inputQueryFile = os.path.join(inputFileDirectory, f"{inputFileHeader}.mzXML")
     libraryFile = os.path.join(libraryFileDirectory, "spectrast_test_library.csv")
-    outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
+    outputDir = TemporaryDirectory(prefix="zodiaq_system_test")
     args = [
-        "csodiaq",
+        "zodiaq",
         "id",
         "-i",
         inputQueryFile,
@@ -488,9 +488,9 @@ def test__identification__custom_correction_creates_expected_number_of_matched_p
     ]
 
     subprocess.run(args, capture_output=True)
-    csodiaqDir = os.path.join(outputDir.name, os.listdir(outputDir.name)[0])
-    assert len(os.listdir(csodiaqDir)) == 1
-    outputFile = os.path.join(csodiaqDir, os.listdir(csodiaqDir)[0])
+    zodiaqDir = os.path.join(outputDir.name, os.listdir(outputDir.name)[0])
+    assert len(os.listdir(zodiaqDir)) == 1
+    outputFile = os.path.join(zodiaqDir, os.listdir(zodiaqDir)[0])
     outputDf = pd.read_csv(outputFile)
     matchedPeakNum = list(set(outputDf["shared"]))
     assert len(matchedPeakNum) == 1
@@ -509,9 +509,9 @@ def test__identification__hist_flag_creates_histogram_image(
     )
     inputQueryFile = os.path.join(inputFileDirectory, f"{inputFileHeader}.mzXML")
     libraryFile = os.path.join(libraryFileDirectory, "spectrast_test_library.csv")
-    outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
+    outputDir = TemporaryDirectory(prefix="zodiaq_system_test")
     args = [
-        "csodiaq",
+        "zodiaq",
         "id",
         "-i",
         inputQueryFile,
@@ -523,9 +523,9 @@ def test__identification__hist_flag_creates_histogram_image(
     ]
 
     subprocess.run(args, capture_output=True)
-    csodiaqDir = os.path.join(outputDir.name, os.listdir(outputDir.name)[0])
-    assert len(os.listdir(csodiaqDir)) == 2
-    extensions = [os.path.splitext(file)[1] for file in os.listdir(csodiaqDir)]
+    zodiaqDir = os.path.join(outputDir.name, os.listdir(outputDir.name)[0])
+    assert len(os.listdir(zodiaqDir)) == 2
+    extensions = [os.path.splitext(file)[1] for file in os.listdir(zodiaqDir)]
     assert ".png" in extensions
 
 
@@ -539,9 +539,9 @@ def test__identification__correction_with_first_standard_deviation_creates_expec
     )
     inputQueryFile = os.path.join(inputFileDirectory, f"{inputFileHeader}.mzXML")
     libraryFile = os.path.join(libraryFileDirectory, "spectrast_test_library.csv")
-    outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
+    outputDir = TemporaryDirectory(prefix="zodiaq_system_test")
     args = [
-        "csodiaq",
+        "zodiaq",
         "id",
         "-i",
         inputQueryFile,
@@ -553,8 +553,8 @@ def test__identification__correction_with_first_standard_deviation_creates_expec
         "1",
     ]
     subprocess.run(args, capture_output=True)
-    csodiaqDir = os.path.join(outputDir.name, os.listdir(outputDir.name)[0])
-    outputFile = os.path.join(csodiaqDir, os.listdir(csodiaqDir)[0])
+    zodiaqDir = os.path.join(outputDir.name, os.listdir(outputDir.name)[0])
+    outputFile = os.path.join(zodiaqDir, os.listdir(zodiaqDir)[0])
     outputDf = pd.read_csv(outputFile)
     matchedPeakMean = np.mean(outputDf["shared"])
     assert matchedPeakMean > 6.62 and matchedPeakMean < 7.02
@@ -570,9 +570,9 @@ def test__identification__correction_with_second_standard_deviation_creates_expe
     )
     inputQueryFile = os.path.join(inputFileDirectory, f"{inputFileHeader}.mzXML")
     libraryFile = os.path.join(libraryFileDirectory, "spectrast_test_library.csv")
-    outputDir = TemporaryDirectory(prefix="csodiaq_system_test")
+    outputDir = TemporaryDirectory(prefix="zodiaq_system_test")
     args = [
-        "csodiaq",
+        "zodiaq",
         "id",
         "-i",
         inputQueryFile,
@@ -584,8 +584,8 @@ def test__identification__correction_with_second_standard_deviation_creates_expe
         "2",
     ]
     subprocess.run(args, capture_output=True)
-    csodiaqDir = os.path.join(outputDir.name, os.listdir(outputDir.name)[0])
-    outputFile = os.path.join(csodiaqDir, os.listdir(csodiaqDir)[0])
+    zodiaqDir = os.path.join(outputDir.name, os.listdir(outputDir.name)[0])
+    outputFile = os.path.join(zodiaqDir, os.listdir(zodiaqDir)[0])
     outputDf = pd.read_csv(outputFile)
     matchedPeakMean = np.mean(outputDf["shared"])
     assert matchedPeakMean > 9.34 and matchedPeakMean < 9.74
@@ -604,21 +604,21 @@ def test__identification__stress_test_memory():
     )
     stDevSpectraBreakdown = StDevCorrectionSpectraBreakdown(denseLibraryDf)
     inputFileHeader = "stress_test"
-    inputDir = TemporaryDirectory(prefix="csodiaq_system_stress_test_input")
+    inputDir = TemporaryDirectory(prefix="zodiaq_system_stress_test_input")
     stDevSpectraBreakdown.write_query_scan_data_input_files(
         inputDir.name, inputFileHeader
     )
     inputQueryFile = os.path.join(inputDir.name, f"{inputFileHeader}.mzXML")
     libraryFileDirectory = TemporaryDirectory(
-        prefix="csodiaq_system_stress_test_library"
+        prefix="zodiaq_system_stress_test_library"
     )
     denseLibraryDf.columns = spectrastColumns
     denseLibraryDf.to_csv(
         os.path.join(libraryFileDirectory.name, "spectrast_stress_test_lib.csv")
     )
-    outputDir = TemporaryDirectory(prefix="csodiaq_system_stress_test_output")
+    outputDir = TemporaryDirectory(prefix="zodiaq_system_stress_test_output")
     args = [
-        "csodiaq",
+        "zodiaq",
         "id",
         "-i",
         inputQueryFile,
@@ -635,6 +635,6 @@ def test__identification__stress_test_memory():
 )
 def test__identification__make_permanent_copy_of_test_files(systemTestFileDirectory):
     parentDir = os.path.dirname(systemTestFileDirectory.name)
-    permanentTestDirectory = os.path.join(parentDir, "csodiaq_system_test_files")
+    permanentTestDirectory = os.path.join(parentDir, "zodiaq_system_test_files")
     shutil.copytree(systemTestFileDirectory.name, permanentTestDirectory)
     print(f"\nsaved test files to {permanentTestDirectory}")

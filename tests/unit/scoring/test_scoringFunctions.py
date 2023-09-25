@@ -4,7 +4,7 @@ import re
 import numpy as np
 from math import isclose
 
-from csodiaq.scoring.scoringFunctions import (
+from zodiaq.scoring.scoringFunctions import (
     score_library_to_query_matches,
     calculate_cosine_similarity_score,
     calculate_macc_score,

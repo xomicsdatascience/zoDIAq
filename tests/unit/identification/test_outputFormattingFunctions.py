@@ -1,4 +1,4 @@
-from csodiaq.identification.outputFormattingFunctions import (
+from zodiaq.identification.outputFormattingFunctions import (
     format_output_line,
     extract_metadata_from_match_and_score_dataframes,
     format_output_as_pandas_dataframe,

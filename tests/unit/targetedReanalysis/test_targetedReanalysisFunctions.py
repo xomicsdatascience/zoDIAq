@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import pytest
-from csodiaq.targetedReanalysis.targetedReanalysisFunctions import (
+from zodiaq.targetedReanalysis.targetedReanalysisFunctions import (
     calculate_mz_of_heavy_version_of_peptide,
     filter_to_only_keep_peptides_with_possibly_heavy_K_or_R_terminal_residue,
     filter_to_only_keep_top_peptides_unique_to_protein,

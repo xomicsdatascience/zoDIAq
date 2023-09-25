@@ -2,7 +2,7 @@ import pytest
 import os
 from pyteomics import mgf
 
-from csodiaq.loaders.library.libraryLoaderStrategyMgf import LibraryLoaderStrategyMgf
+from zodiaq.loaders.library.libraryLoaderStrategyMgf import LibraryLoaderStrategyMgf
 
 
 @pytest.fixture
@@ -31,11 +31,11 @@ def test__library_loader_strategy_mgf__load_raw_library_object_from_file(
     assert isinstance(loader.rawUploadedLibraryObject, mgf.IndexedMGF)
 
 
-def test__library_loader_strategy_mgf__format_raw_library_object_into_csodiaq_library_dict(
+def test__library_loader_strategy_mgf__format_raw_library_object_into_zodiaq_library_dict(
     loader, libFilePath
 ):
     loader._load_raw_library_object_from_file(libFilePath)
-    outputDict = loader._format_raw_library_object_into_csodiaq_library_dict()
+    outputDict = loader._format_raw_library_object_into_zodiaq_library_dict()
     expectedOutputDict = {
         (798.93, "AAAAAAAAAAAAAAAGAGAGAK"): {
             "precursorCharge": 2,
@@ -53,7 +53,7 @@ def test__library_loader_strategy_mgf__format_raw_library_object_into_csodiaq_li
                 (886.474, 448.2, 0),
                 (1099.585, 366.1, 0),
             ],
-            "csodiaqKeyIdx": 0,
+            "zodiaqKeyIdx": 0,
             "isDecoy": 0,
         }
     }
@@ -61,23 +61,23 @@ def test__library_loader_strategy_mgf__format_raw_library_object_into_csodiaq_li
 
 
 def assert_final_dict_output_matches_expected(outputDict, expectedOutputDict):
-    for csodiaqLibKey in expectedOutputDict:
-        assert csodiaqLibKey in outputDict
-        for libEntryKey in expectedOutputDict[csodiaqLibKey]:
-            assert libEntryKey in outputDict[csodiaqLibKey]
+    for zodiaqLibKey in expectedOutputDict:
+        assert zodiaqLibKey in outputDict
+        for libEntryKey in expectedOutputDict[zodiaqLibKey]:
+            assert libEntryKey in outputDict[zodiaqLibKey]
             assert (
-                outputDict[csodiaqLibKey][libEntryKey]
-                == expectedOutputDict[csodiaqLibKey][libEntryKey]
+                outputDict[zodiaqLibKey][libEntryKey]
+                == expectedOutputDict[zodiaqLibKey][libEntryKey]
             )
 
 
-def test__library_loader_strategy_mgf__format_raw_library_object_into_csodiaq_library_dict(
+def test__library_loader_strategy_mgf__format_raw_library_object_into_zodiaq_library_dict(
     loader, libFilePath
 ):
     loader._load_raw_library_object_from_file(
         os.path.join(get_parent_dir(), "test_files", "sample_lib_mgf_multiple.mgf")
     )
-    outputDict = loader._format_raw_library_object_into_csodiaq_library_dict()
+    outputDict = loader._format_raw_library_object_into_zodiaq_library_dict()
     expectedOutputDict = {
         (798.93, "AAAAAAAAAAAAAAAGAGAGAK"): {
             "precursorCharge": 2,
@@ -95,7 +95,7 @@ def test__library_loader_strategy_mgf__format_raw_library_object_into_csodiaq_li
                 (886.474, 448.2, 0),
                 (1099.585, 366.1, 0),
             ],
-            "csodiaqKeyIdx": 0,
+            "zodiaqKeyIdx": 0,
             "isDecoy": 0,
         },
         (798.93, "AGAAGAAAAAAAAAAAAAAGAK"): {
@@ -114,7 +114,7 @@ def test__library_loader_strategy_mgf__format_raw_library_object_into_csodiaq_li
                 (914.505, 448.2, 1),
                 (1127.617, 366.1, 1),
             ],
-            "csodiaqKeyIdx": 1,
+            "zodiaqKeyIdx": 1,
             "isDecoy": 1,
         },
     }

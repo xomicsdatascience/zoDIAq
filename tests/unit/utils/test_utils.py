@@ -1,4 +1,4 @@
-from csodiaq.utils import (
+from zodiaq.utils import (
     create_outfile_header,
     confirm_proteins_in_list_are_in_appropriate_format,
 )
@@ -27,32 +27,32 @@ def inputFilePath(inputFile):
 
 
 @pytest.fixture
-def outputCsodiaqTag():
-    return "CsoDIAq-file_"
+def outputZodiaqTag():
+    return "zoDIAq-file_"
 
 
 def test__utils__create_outfile_header__no_correction(
-    outputDirectory, inputFileName, inputFilePath, outputCsodiaqTag
+    outputDirectory, inputFileName, inputFilePath, outputZodiaqTag
 ):
-    expectedOutput = f"{outputDirectory}/{outputCsodiaqTag}{inputFileName}"
+    expectedOutput = f"{outputDirectory}/{outputZodiaqTag}{inputFileName}"
     output = create_outfile_header(outputDirectory, inputFilePath, correction=-1)
     assert expectedOutput == output
 
 
 def test__utils__create_outfile_header__no_correction__output_directory_ends_in_slash(
-    outputDirectory, inputFileName, inputFilePath, outputCsodiaqTag
+    outputDirectory, inputFileName, inputFilePath, outputZodiaqTag
 ):
-    expectedOutput = f"{outputDirectory}/{outputCsodiaqTag}{inputFileName}"
+    expectedOutput = f"{outputDirectory}/{outputZodiaqTag}{inputFileName}"
     output = create_outfile_header(outputDirectory + "/", inputFilePath, correction=-1)
     assert expectedOutput == output
 
 
 def test__utils__create_outfile_header__no_correction__includes_non_file_type_dots(
-    outputDirectory, inputFileName, inputFilePath, outputCsodiaqTag
+    outputDirectory, inputFileName, inputFilePath, outputZodiaqTag
 ):
     inputFileNameWithPeriods = inputFileName + ".dots.added"
     inputFilePathWithPeriods = inputFileNameWithPeriods + ".mzxml"
-    expectedOutput = f"{outputDirectory}/{outputCsodiaqTag}{inputFileNameWithPeriods}"
+    expectedOutput = f"{outputDirectory}/{outputZodiaqTag}{inputFileNameWithPeriods}"
     output = create_outfile_header(
         outputDirectory, inputFilePathWithPeriods, correction=-1
     )
@@ -60,17 +60,17 @@ def test__utils__create_outfile_header__no_correction__includes_non_file_type_do
 
 
 def test__utils__create_outfile_header__custom_correction(
-    outputDirectory, inputFileName, inputFilePath, outputCsodiaqTag
+    outputDirectory, inputFileName, inputFilePath, outputZodiaqTag
 ):
-    expectedOutput = f"{outputDirectory}/{outputCsodiaqTag}{inputFileName}_corrected"
+    expectedOutput = f"{outputDirectory}/{outputZodiaqTag}{inputFileName}_corrected"
     output = create_outfile_header(outputDirectory, inputFilePath, correction=0)
     assert expectedOutput == output
 
 
 def test__utils__create_outfile_header__stdev_correction(
-    outputDirectory, inputFileName, inputFilePath, outputCsodiaqTag
+    outputDirectory, inputFileName, inputFilePath, outputZodiaqTag
 ):
-    expectedOutput = f"{outputDirectory}/{outputCsodiaqTag}{inputFileName}_corrected"
+    expectedOutput = f"{outputDirectory}/{outputZodiaqTag}{inputFileName}_corrected"
     output = create_outfile_header(outputDirectory, inputFilePath, correction=1)
     assert expectedOutput == output
 

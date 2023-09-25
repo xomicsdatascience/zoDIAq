@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from csodiaq.identification.matchingFunctions import (
+from zodiaq.identification.matchingFunctions import (
     match_library_to_query_pooled_spectra,
     calculate_parts_per_million_relative_difference,
     is_within_tolerance,
