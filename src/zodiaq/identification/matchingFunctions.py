@@ -37,6 +37,10 @@ def determine_smallest_peak_outside_ppm_tolerance(libMz, queryMz, ppmTolerance):
 def match_query_peak_to_all_succeeding_library_peaks_within_tolerance(
     baselineLibraryIdx: int, libraryPeaks, queryPeak, ppmTolerance
 ):
+    """
+    Function temporarily not in use. Generator functions with the @njit decorator can have memory leak issues
+        at the present time.
+    """
     tempLibraryIdx = baselineLibraryIdx + 0
     mzIdx, intensityIdx, tagIdx = 0, 1, 2
 
