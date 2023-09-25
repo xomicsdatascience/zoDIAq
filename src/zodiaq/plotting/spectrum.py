@@ -1,11 +1,11 @@
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
-class Spectrum():
-    def __init__(self,
-                 mz: np.array = None,
-                 intensity: np.array = None,
-                 num_fragments: int = 10):
+
+class Spectrum:
+    def __init__(
+        self, mz: np.array = None, intensity: np.array = None, num_fragments: int = 10
+    ):
         """
         Creates a mass spectrometry spectrum, defined by its m/z bins and corresponding intensity values.
         Parameters
@@ -24,8 +24,7 @@ class Spectrum():
         self._extract_most_intense(num_fragments=num_fragments)
         return
 
-    def _extract_most_intense(self,
-                             num_fragments: int = 10):
+    def _extract_most_intense(self, num_fragments: int = 10):
         """
         Extracts the most intense m/z bins, and stores the intensity and m/z sorted values in self.extracted_mz and
         self.extracted_intensity
@@ -56,15 +55,14 @@ class Spectrum():
             # Take all fragments
             arg_idx = arg_idx[::-1]
         else:
-            arg_idx = arg_idx[-1:-(num_fragments + 1):-1]
+            arg_idx = arg_idx[-1 : -(num_fragments + 1) : -1]
         self.extracted_mz = self.mz[arg_idx]
         self.extracted_intensity = self.intensity[arg_idx]
         return
 
-
-    def get_matching_mz_indices(self,
-                                spectrum_to_match: 'Spectrum',
-                                match_tolerance_ppm: int = 30) -> tuple:
+    def get_matching_mz_indices(
+        self, spectrum_to_match: "Spectrum", match_tolerance_ppm: int = 30
+    ) -> tuple:
         """
         Checks whether the extracted fragments from this spectrum matches those of another. Matches are defined as two
          spectra having high intensity values at the same m/z bin, within tolerance.
@@ -95,8 +93,10 @@ class Spectrum():
         other_idx = []
         for other_mz_idx, other_mz in enumerate(sorted_other_mz):
             smallest_difference = np.inf
-            for self_mz_idx, self_mz in zip(range(self_start_idx, len(sorted_self_mz)),
-                                            sorted_self_mz[self_start_idx:]):
+            for self_mz_idx, self_mz in zip(
+                range(self_start_idx, len(sorted_self_mz)),
+                sorted_self_mz[self_start_idx:],
+            ):
                 # Since they're sorted, we can skip the ones we've already checked
                 # Check whether we're within tolerance
                 # (ref_val - val) * (1e6) / ref_val
@@ -109,7 +109,9 @@ class Spectrum():
                         continue
                     self_idx.append(closest_self_idx)
                     other_idx.append(closest_other_idx)
-                    self_start_idx = self_mz_idx - 1  # Previous one might also be closest to the next bin
+                    self_start_idx = (
+                        self_mz_idx - 1
+                    )  # Previous one might also be closest to the next bin
                     break
                 # Check whether other_mz is larger; indicates we should increment self_mz
                 elif self_mz > other_mz:
@@ -119,8 +121,7 @@ class Spectrum():
         # Need to remap sorted idx to original idx:
         return self_arg_sorted[self_idx], other_arg_sorted[other_idx]
 
-    def extracted_cosine_similarity(self,
-                                    spectrum_to_compare: 'Spectrum') -> float:
+    def extracted_cosine_similarity(self, spectrum_to_compare: "Spectrum") -> float:
         """
         Computes the cosine similarity between the extracted fragments of this spectrum and the input.
 
@@ -135,9 +136,14 @@ class Spectrum():
         """
 
         # Get fragment idx
-        self_fragment_idx, other_fragment_idx = self.get_matching_mz_indices(spectrum_to_match=spectrum_to_compare,
-                                                                             match_tolerance_ppm=30)
+        self_fragment_idx, other_fragment_idx = self.get_matching_mz_indices(
+            spectrum_to_match=spectrum_to_compare, match_tolerance_ppm=30
+        )
         # if len(self_fragment_idx) == 0:
         #     return cosine_similarity(np.ones((1,1)), np.zeros((1,1)))
-        return cosine_similarity(np.expand_dims(self.extracted_intensity[self_fragment_idx], axis=0),
-                                 np.expand_dims(spectrum_to_compare.extracted_intensity[other_fragment_idx], axis=0))
+        return cosine_similarity(
+            np.expand_dims(self.extracted_intensity[self_fragment_idx], axis=0),
+            np.expand_dims(
+                spectrum_to_compare.extracted_intensity[other_fragment_idx], axis=0
+            ),
+        )

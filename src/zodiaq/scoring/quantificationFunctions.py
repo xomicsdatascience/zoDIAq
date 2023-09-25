@@ -56,7 +56,10 @@ def extract_all_ion_counts_from_df(df, allValuesToCompare, columnName):
 def compile_common_protein_quantification_file(
     proteinDfs, commonPeptidesDf, proteinQuantificationMethod, minNumDifferences
 ):
-    headerToProteinPresenceDict = {header: set(proteinDf["leadingProtein"]) for header, proteinDf in proteinDfs.items()}
+    headerToProteinPresenceDict = {
+        header: set(proteinDf["leadingProtein"])
+        for header, proteinDf in proteinDfs.items()
+    }
     proteinPeptideDict = (
         pd.concat(list(proteinDfs.values()))
         .groupby("leadingProtein")["peptide"]
@@ -72,15 +75,21 @@ def compile_common_protein_quantification_file(
         if proteinQuantificationMethod == "sum":
             proteinSampleQuantities = ion_count_sum(peptideQuantityDf)
         elif proteinQuantificationMethod == "maxlfq":
-            proteinSampleQuantities = run_maxlfq_with_normalizations(peptideQuantityDf, minNumDifferences)
+            proteinSampleQuantities = run_maxlfq_with_normalizations(
+                peptideQuantityDf, minNumDifferences
+            )
         proteinQuantitiesDict[protein] = proteinSampleQuantities
     commonProteinsDf = pd.DataFrame.from_dict(proteinQuantitiesDict)
     commonProteinsDf.index = commonPeptidesDf.index
     return commonProteinsDf
 
+
 def ion_count_sum(sampleByPeptideMatrix):
-    sampleByPeptideMatrix = sampleByPeptideMatrix.loc[:, (sampleByPeptideMatrix != 0).all(axis=0)]
+    sampleByPeptideMatrix = sampleByPeptideMatrix.loc[
+        :, (sampleByPeptideMatrix != 0).all(axis=0)
+    ]
     return np.array(sampleByPeptideMatrix.sum(axis=1))
+
 
 def set_non_present_protein_levels_to_zero(
     peptideQuantityDf, protein, headerToProteinPresenceDict
@@ -92,14 +101,14 @@ def set_non_present_protein_levels_to_zero(
             for key, value in headerToProteinPresenceDict.items()
         ]
     )
-    peptideQuantityDf.loc[
-        peptideQuantityDf.index.isin(indicesWithoutProtein), :
-    ] = 0
+    peptideQuantityDf.loc[peptideQuantityDf.index.isin(indicesWithoutProtein), :] = 0
     return peptideQuantityDf
 
 
 def run_maxlfq_with_normalizations(peptideQuantityDf, minNumDifferences):
-    proteinSampleQuantities = maxlfq(np.log(peptideQuantityDf).to_numpy(), minNumDifferences)
+    proteinSampleQuantities = maxlfq(
+        np.log(peptideQuantityDf).to_numpy(), minNumDifferences
+    )
     proteinSampleQuantities = np.exp(proteinSampleQuantities)
     proteinSampleQuantities[proteinSampleQuantities == 1] = 0
     return proteinSampleQuantities
@@ -151,7 +160,9 @@ def calculate_protein_intensities_across_samples_from_cholesky_factorization(A, 
 
 def maxlfq(sampleByPeptideMatrix, minNumDifferences, tolerance=-10.0):
     sampleByPeptideMatrix[sampleByPeptideMatrix < tolerance] = 0
-    A, B = prepare_matrices_for_cholesky_factorization(sampleByPeptideMatrix, minNumDifferences)
+    A, B = prepare_matrices_for_cholesky_factorization(
+        sampleByPeptideMatrix, minNumDifferences
+    )
     unmatchedIdx = np.diagonal(A) == 0
     A, B = apply_regularization_to_matrices(sampleByPeptideMatrix, A, B)
     proteinScoreAcrossSamples = (

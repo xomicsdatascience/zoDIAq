@@ -17,7 +17,7 @@ class Printer:
         currentTime = timer()
         fiveMinutes = 300
         if checkPoint and self.timeSinceLastPrint < fiveMinutes:
-            self.timeSinceLastPrint += (currentTime - self.timeSinceLastCheckpoint)
+            self.timeSinceLastPrint += currentTime - self.timeSinceLastCheckpoint
             self.timeSinceLastCheckpoint = currentTime
             return
         self.timeSinceLastCheckpoint = currentTime

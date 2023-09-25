@@ -2,10 +2,9 @@ from matplotlib import pyplot as plt
 from src.zodiaq.plotting.spectrum import Spectrum
 
 
-def spectrum_lineplot(spectrum: Spectrum,
-                      positive: bool = True,
-                      color: str = 'black',
-                      label: str = None):
+def spectrum_lineplot(
+    spectrum: Spectrum, positive: bool = True, color: str = "black", label: str = None
+):
     """
     Plots the input Spectrum as a line plot
     Parameters
@@ -25,20 +24,22 @@ def spectrum_lineplot(spectrum: Spectrum,
     """
     intensity = spectrum.intensity
     max_intensity = max(intensity)
-    intensity = [i/max_intensity for i in intensity]
+    intensity = [i / max_intensity for i in intensity]
     if not positive:
         intensity = [-i for i in intensity]
-    plt.vlines(spectrum.mz, [0]*len(intensity), intensity, colors=color, label=label)
+    plt.vlines(spectrum.mz, [0] * len(intensity), intensity, colors=color, label=label)
     x_min, x_max = plt.xlim()
-    plt.hlines(0, x_min, x_max, colors='black')
+    plt.hlines(0, x_min, x_max, colors="black")
     plt.xlim(x_min, x_max)
     return
 
 
-def spectrum_comparison_lineplot(spectrum_positive: Spectrum,
-                                 spectrum_negative: Spectrum,
-                                 colors: list = ('dodgerblue', 'purple'),
-                                 labels: list = None):
+def spectrum_comparison_lineplot(
+    spectrum_positive: Spectrum,
+    spectrum_negative: Spectrum,
+    colors: list = ("dodgerblue", "purple"),
+    labels: list = None,
+):
     """
     Produces a plot with input Spectrum in positive/negative y directions.
     Parameters
@@ -56,6 +57,10 @@ def spectrum_comparison_lineplot(spectrum_positive: Spectrum,
     None
     """
     plt.figure()
-    spectrum_lineplot(spectrum_positive, positive=True, color=colors[0], label=labels[0])
-    spectrum_lineplot(spectrum_negative, positive=False, color=colors[1], label=labels[1])
+    spectrum_lineplot(
+        spectrum_positive, positive=True, color=colors[0], label=labels[0]
+    )
+    spectrum_lineplot(
+        spectrum_negative, positive=False, color=colors[1], label=labels[1]
+    )
     return

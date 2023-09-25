@@ -60,9 +60,7 @@ class QueryLoaderStrategyMzxml(QueryLoaderStrategy):
         pooledQueryPeaks = []
         for scan in scans:
             spectrum = reader.get_by_id(scan)
-            pooledQueryPeaks += (
-                create_peaks_from_mz_intensity_lists_and_zodiaq_key_id(
-                    spectrum["m/z array"], spectrum["intensity array"], int(scan)
-                )
+            pooledQueryPeaks += create_peaks_from_mz_intensity_lists_and_zodiaq_key_id(
+                spectrum["m/z array"], spectrum["intensity array"], int(scan)
             )
         return sorted(pooledQueryPeaks)

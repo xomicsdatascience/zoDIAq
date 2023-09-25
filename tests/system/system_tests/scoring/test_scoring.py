@@ -410,8 +410,12 @@ def test__scoring__evaluate_common_proteins_maxlfq_method_works_correctly(
         expectedCommonProteinDf=expectedCommonProteinDf,
     )
 
+
 def evaluate_common_proteins_one_peptide_match_in_maxlfq(
-    inputFileDirectory, expectedOutputDirectory, expectedCommonProteinDf, minNumDifferences
+    inputFileDirectory,
+    expectedOutputDirectory,
+    expectedCommonProteinDf,
+    minNumDifferences,
 ):
     inputHeader = f"one_match_common_proteins_{minNumDifferences}minNumDifferences"
 
@@ -472,6 +476,7 @@ def evaluate_common_proteins_one_peptide_match_in_maxlfq(
     ).sort_index()
     assert_pandas_dataframes_are_equal(expectedCommonProteinDf, commonProteinDf)
 
+
 def test__scoring__evaluate_common_proteins_one_peptide_match__excludes_protein_in_maxlfq_when_minNumDifferences_2(
     inputFileDirectory, expectedOutputDirectory
 ):
@@ -483,7 +488,13 @@ def test__scoring__evaluate_common_proteins_one_peptide_match__excludes_protein_
         ],
         columns=["1/protein", "1/proteinX"],
     )
-    evaluate_common_proteins_one_peptide_match_in_maxlfq(inputFileDirectory, expectedOutputDirectory, expectedCommonProteinDf, minNumDifferences=2)
+    evaluate_common_proteins_one_peptide_match_in_maxlfq(
+        inputFileDirectory,
+        expectedOutputDirectory,
+        expectedCommonProteinDf,
+        minNumDifferences=2,
+    )
+
 
 def test__scoring__evaluate_common_proteins_one_peptide_match__includes_protein_in_maxlfq_when_minNumDifferences_1(
     inputFileDirectory, expectedOutputDirectory
@@ -496,7 +507,13 @@ def test__scoring__evaluate_common_proteins_one_peptide_match__includes_protein_
         ],
         columns=["1/protein", "1/proteinX"],
     )
-    evaluate_common_proteins_one_peptide_match_in_maxlfq(inputFileDirectory, expectedOutputDirectory, expectedCommonProteinDf, minNumDifferences=1)
+    evaluate_common_proteins_one_peptide_match_in_maxlfq(
+        inputFileDirectory,
+        expectedOutputDirectory,
+        expectedCommonProteinDf,
+        minNumDifferences=1,
+    )
+
 
 def test__scoring__evaluate_protein_quantities_are_calculated_even_with_multiple_peptide_clusters(
     inputFileDirectory, expectedOutputDirectory
@@ -546,7 +563,7 @@ def test__scoring__evaluate_protein_quantities_are_calculated_even_with_multiple
             sample3Header: sample3Breakdown,
             sample4Header: sample4Breakdown,
         },
-        method='maxlfq',
+        method="maxlfq",
     )
 
     outputDirPath = os.path.join(inputFileDirectoryChild, f"fdrScores-macc-maxlfq")
@@ -561,11 +578,11 @@ def test__scoring__evaluate_protein_quantities_are_calculated_even_with_multiple
         ],
         columns=["1/protein", "1/proteinX"],
         index=[
-                f"zoDIAq-file_{sample1Header}_fullOutput",
-                f"zoDIAq-file_{sample2Header}_fullOutput",
-                f"zoDIAq-file_{sample3Header}_fullOutput",
-                f"zoDIAq-file_{sample4Header}_fullOutput",
-            ]
+            f"zoDIAq-file_{sample1Header}_fullOutput",
+            f"zoDIAq-file_{sample2Header}_fullOutput",
+            f"zoDIAq-file_{sample3Header}_fullOutput",
+            f"zoDIAq-file_{sample4Header}_fullOutput",
+        ],
     )
     commonProteinDf = pd.read_csv(
         os.path.join(outputDirPath, "commonProteins.csv"), index_col=0

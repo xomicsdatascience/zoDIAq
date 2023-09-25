@@ -258,7 +258,7 @@ def create_vector_that_can_be_used_to_create_cosine_score(vectorA, cosineScore):
     vectorB = (
         cosineScore * unitVector + np.sqrt(1 - cosineScore**2) * perpendicularVector
     )
-    return vectorB ** 2
+    return vectorB**2
 
 
 def calculate_mz_value_from_ppm(mz, ppm):

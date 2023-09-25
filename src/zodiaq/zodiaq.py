@@ -37,8 +37,8 @@ def main():
 
 
 def run_identification(args):
-    if args['cancelWarnings']:
-        warnings.filterwarnings('ignore')
+    if args["cancelWarnings"]:
+        warnings.filterwarnings("ignore")
     printer = Printer()
     printer(f"Begin Peptide Identification Process - output in '{args['output']}'")
     os.mkdir(args["output"])
@@ -111,7 +111,10 @@ def run_scoring(args):
     if len(proteinDfs) > 0:
         printer("Begin Quantifying Common Proteins")
         commonProteinDf = compile_common_protein_quantification_file(
-            proteinDfs, commonPeptideDf, args["proteinQuantMethod"], args["minNumDifferences"]
+            proteinDfs,
+            commonPeptideDf,
+            args["proteinQuantMethod"],
+            args["minNumDifferences"],
         )
         commonProteinDf.to_csv(os.path.join(outputDir, "commonProteins.csv"))
     printer("Finish Scoring")

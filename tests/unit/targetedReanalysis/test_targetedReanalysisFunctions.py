@@ -15,8 +15,8 @@ from zodiaq.targetedReanalysis.targetedReanalysisFunctions import (
     create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides,
 )
 
-def assert_pandas_dataframes_are_equal(expectedDf, df):
 
+def assert_pandas_dataframes_are_equal(expectedDf, df):
     for columnName in expectedDf.columns:
         assert columnName in df.columns
         expectedColumn = np.array(expectedDf[columnName])
@@ -25,6 +25,7 @@ def assert_pandas_dataframes_are_equal(expectedDf, df):
             np.testing.assert_array_almost_equal(expectedColumn, column)
         else:
             np.testing.assert_array_equal(expectedColumn, column)
+
 
 def test__output_formatting_functions__calculate_mz_of_heavy_version_of_peptide():
     testMz = 0.0
@@ -139,9 +140,6 @@ def test__output_formatting_functions__filter_to_only_keep_top_peptides_unique_t
     outputDf = filter_to_only_keep_top_peptides_unique_to_protein(
         inputDf, topProteinsToKeep
     )
-    print()
-    print(expectedOutputDf)
-    print(outputDf)
     assert_pandas_dataframes_are_equal(expectedOutputDf, outputDf)
 
 
@@ -209,9 +207,6 @@ def test__output_formatting_functions__filter_out_peptides_based_on_user_setting
         isIncludeHeavyIsotopes=isIncludeHeavyIsotopes,
         maximumPeptidesPerProtein=maximumPeptidesPerProtein,
     )
-    print()
-    print(expectedOutputDf)
-    print(outputDf)
     assert_pandas_dataframes_are_equal(expectedOutputDf, outputDf)
 
 
@@ -238,9 +233,6 @@ def test__output_formatting_functions__filter_out_peptides_based_on_user_setting
         isIncludeHeavyIsotopes=isIncludeHeavyIsotopes,
         maximumPeptidesPerProtein=maximumPeptidesPerProtein,
     )
-    print()
-    print(expectedOutputDf)
-    print(outputDf)
     assert_pandas_dataframes_are_equal(expectedOutputDf, outputDf)
 
 

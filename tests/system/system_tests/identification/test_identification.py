@@ -31,7 +31,6 @@ def get_file_from_system_test_folder(file):
 
 
 def assert_pandas_dataframes_are_equal(expectedDf, df):
-
     for columnName in expectedDf.columns:
         assert columnName in df.columns
         expectedColumn = np.array(expectedDf[columnName])
@@ -277,7 +276,6 @@ def test__identification__baseline_no_matches_raises_error(
         outputDir,
         baselineSpectraBreakdown,
     )
-
 
 
 def assert_no_matches_before_correction_raises_warning_and_skips_offending_file_only(

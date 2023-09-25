@@ -736,15 +736,15 @@ def test__zodiaq_parser__set_args_from_command_line_input__score_suceeds_with_ma
     args = vars(parser.parse_args(scoreArgs))
     assert args["proteinQuantMethod"] == "sum"
 
+
 def test__zodiaq_parser__set_args_from_command_line_input__score_fails_with_invalid_protein_quant_method(
     parser, scoreArgs
 ):
     scoreArgs += ["-p", "shouldFail"]
-    errorOutput = (
-        "argument -p/--proteinQuantMethod: invalid choice: 'shouldFail' (choose from 'maxlfq', 'sum')"
-    )
+    errorOutput = "argument -p/--proteinQuantMethod: invalid choice: 'shouldFail' (choose from 'maxlfq', 'sum')"
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
         args = vars(parser.parse_args(scoreArgs))
+
 
 def test__zodiaq_parser__set_args_from_command_line_input__score_suceeds_with_min_num_differences_equal_to_1(
     parser, scoreArgs
@@ -753,6 +753,7 @@ def test__zodiaq_parser__set_args_from_command_line_input__score_suceeds_with_mi
     args = vars(parser.parse_args(scoreArgs))
     assert args["minNumDifferences"] == 1
 
+
 def test__zodiaq_parser__set_args_from_command_line_input__score_suceeds_with_min_num_differences_equal_to_2(
     parser, scoreArgs
 ):
@@ -760,15 +761,15 @@ def test__zodiaq_parser__set_args_from_command_line_input__score_suceeds_with_mi
     args = vars(parser.parse_args(scoreArgs))
     assert args["minNumDifferences"] == 2
 
+
 def test__zodiaq_parser__set_args_from_command_line_input__score_fails_with_float_min_num_differences(
     parser, scoreArgs
 ):
     scoreArgs += ["-min", "1.2"]
-    errorOutput = (
-        "The minNumDifferences argument must be an integer."
-    )
+    errorOutput = "The minNumDifferences argument must be an integer."
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
         args = vars(parser.parse_args(scoreArgs))
+
 
 def test__zodiaq_parser__set_args_from_command_line_input__score_fails_when_min_num_differences_less_than_1(
     parser, scoreArgs
@@ -780,15 +781,6 @@ def test__zodiaq_parser__set_args_from_command_line_input__score_fails_when_min_
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
         args = vars(parser.parse_args(scoreArgs))
 
-def test__zodiaq_parser__set_args_from_command_line_input__score_fails_when_min_num_differences_greater_than_2(
-    parser, scoreArgs
-):
-    scoreArgs += ["-min", "3"]
-    errorOutput = (
-        "The minNumDifferences argument must be an integer less than or equal to 2."
-    )
-    with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
-        args = vars(parser.parse_args(scoreArgs))
 
 def test__zodiaq_parser__set_args_from_command_line_input__score_fails_when_min_num_differences_greater_than_2(
     parser, scoreArgs
@@ -799,6 +791,18 @@ def test__zodiaq_parser__set_args_from_command_line_input__score_fails_when_min_
     )
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
         args = vars(parser.parse_args(scoreArgs))
+
+
+def test__zodiaq_parser__set_args_from_command_line_input__score_fails_when_min_num_differences_greater_than_2(
+    parser, scoreArgs
+):
+    scoreArgs += ["-min", "3"]
+    errorOutput = (
+        "The minNumDifferences argument must be an integer less than or equal to 2."
+    )
+    with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
+        args = vars(parser.parse_args(scoreArgs))
+
 
 @pytest.mark.skip(
     "This test would require a huge setup for a minor warning message (in test_zodiaq.py). Skipping"
@@ -808,11 +812,10 @@ def test__zodiaq_parser__check_for_conflicting_args__score_throws_error_when_non
 ):
     scoreArgs += ["-p", "average"]
     scoreArgs += ["-min", "1"]
-    errorOutput = (
-        "The minNumDifferences flag will only have an effect when paired with the 'maxlfq' proteinQuantMethod flag. You used it with the 'average' method, so this flag will be ignored."
-    )
+    errorOutput = "The minNumDifferences flag will only have an effect when paired with the 'maxlfq' proteinQuantMethod flag. You used it with the 'average' method, so this flag will be ignored."
     with pytest.raises(argparse.ArgumentTypeError, match=re.escape(errorOutput)):
         args = vars(parser.parse_args(scoreArgs))
+
 
 @pytest.fixture
 def reanalysisFiles():

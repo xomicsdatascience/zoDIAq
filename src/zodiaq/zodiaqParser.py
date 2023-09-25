@@ -83,7 +83,6 @@ def add_id_parser(commandParser):
     )
 
 
-
 def add_score_parser(commandParser):
     scoringParser = commandParser.add_parser(
         "score",
@@ -163,9 +162,14 @@ def check_for_conflicting_args(args):
         raise argparse.ArgumentTypeError(
             "The correctionDegree parameter is invalidated by the noCorrection flag. Please inspect your input and remove one of them."
         )
-    if args["command"] == "score" and args["proteinQuantMethod"] != "maxlfq" and args["minNumDifferences"] != 2:
+    if (
+        args["command"] == "score"
+        and args["proteinQuantMethod"] != "maxlfq"
+        and args["minNumDifferences"] != 2
+    ):
         warnings.warn(
-            f"The minNumDifferences flag will only have an effect when paired with the 'maxlfq' proteinQuantMethod flag. You used it with the '{args['proteinQuantMethod']}' method, so this flag will be ignored.", UserWarning
+            f"The minNumDifferences flag will only have an effect when paired with the 'maxlfq' proteinQuantMethod flag. You used it with the '{args['proteinQuantMethod']}' method, so this flag will be ignored.",
+            UserWarning,
         )
     if (
         args["command"] == "targetedReanalysis"

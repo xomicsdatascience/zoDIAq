@@ -56,9 +56,7 @@ class LibraryLoaderStrategyTable(LibraryLoaderStrategy):
         reformattedLibDf = _reformat_raw_library_object_columns(
             self.rawUploadedLibraryObject, self.oldToNewColumnDict
         )
-        organizedDataDict = _organize_data_by_zodiaq_library_dict_keys(
-            reformattedLibDf
-        )
+        organizedDataDict = _organize_data_by_zodiaq_library_dict_keys(reformattedLibDf)
         zodiaqLibraryDict = {}
         for zodiaqKeyIdx in range(len(organizedDataDict["zodiaqKeys"])):
             zodiaqKey, zodiaqValue = _create_zodiaq_library_entry(
@@ -123,9 +121,9 @@ def _create_zodiaq_library_entry(
         "decoy" in organizedDataDict["metadata"][zodiaqKey]["proteinName"].lower()
     )
     return zodiaqKey, {
-        finalVariableNames["precursorCharge"]: organizedDataDict["metadata"][
-            zodiaqKey
-        ]["precursorCharge"],
+        finalVariableNames["precursorCharge"]: organizedDataDict["metadata"][zodiaqKey][
+            "precursorCharge"
+        ],
         finalVariableNames["identification"]: organizedDataDict["metadata"][zodiaqKey][
             "identification"
         ],

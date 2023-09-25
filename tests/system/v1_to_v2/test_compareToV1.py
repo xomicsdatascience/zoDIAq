@@ -90,6 +90,7 @@ def get_columns_that_should_match(type):
             "leadingProteinFDR",
         ]
 
+
 def test__scoring_workflow():
     fullDf = pd.read_csv(
         get_file_from_system_test_folder("v2FullOutput.csv.gz"), compression="gzip"
