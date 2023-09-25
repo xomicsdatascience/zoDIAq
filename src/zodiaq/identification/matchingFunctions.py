@@ -61,11 +61,10 @@ def match_query_peak_to_all_succeeding_library_peaks_within_tolerance(
 
 @njit
 def numba_enhanced_matching_of_library_to_query_pooled_spectra(
-    libraryPeaks, queryPeaks, ppmTolerance
+    libraryPeaks, queryPeaks, ppmTolerance, baselineLibraryIdx, baselineQueryIdx
 ):
-    baselineLibraryIdx, baselineQueryIdx = np.int64(0), np.int64(0)
     mzIdx, intensityIdx, tagIdx = 0, 1, 2
-    rowNum = 8000
+    rowNum = 1000000
     data = np.empty(shape=(rowNum, 6))
     dataInsertIdx = 0
     while baselineLibraryIdx < len(libraryPeaks) and baselineQueryIdx < len(queryPeaks):
@@ -80,20 +79,30 @@ def numba_enhanced_matching_of_library_to_query_pooled_spectra(
         if incrementation == Increment.QUERY:
             baselineQueryIdx += 1
             continue
-        for match in match_query_peak_to_all_succeeding_library_peaks_within_tolerance(
-            baselineLibraryIdx,
-            libraryPeaks,
-            queryPeaks[baselineQueryIdx],
-            ppmTolerance,
-        ):
+        tempLibraryIdx = baselineLibraryIdx + 0
+
+        while tempLibraryIdx < len(libraryPeaks):
+            ppm = calculate_parts_per_million_relative_difference(
+                libraryPeaks[tempLibraryIdx][mzIdx], queryPeaks[baselineQueryIdx][mzIdx]
+            )
+            if not is_within_tolerance(ppm, ppmTolerance):
+                break
             if dataInsertIdx == rowNum:
-                yield data
-                data = np.empty(shape=(rowNum, 6))
-                dataInsertIdx = 0
-            data[dataInsertIdx] = match
+                return data, baselineLibraryIdx, baselineQueryIdx
+
+            data[dataInsertIdx] = [
+                libraryPeaks[tempLibraryIdx][tagIdx],
+                libraryPeaks[tempLibraryIdx][intensityIdx],
+                queryPeaks[baselineQueryIdx][tagIdx],
+                queryPeaks[baselineQueryIdx][intensityIdx],
+                queryPeaks[baselineQueryIdx][mzIdx],
+                ppm,
+            ]
+
+            tempLibraryIdx += 1
             dataInsertIdx += 1
         baselineQueryIdx += 1
-    yield data[:dataInsertIdx]
+    return data[:dataInsertIdx], baselineLibraryIdx, baselineQueryIdx
 
 
 def match_library_to_query_pooled_spectra(libraryPeaks, queryPeaks, ppmTolerance):
@@ -130,15 +139,18 @@ def match_library_to_query_pooled_spectra(libraryPeaks, queryPeaks, ppmTolerance
     """
     libraryArray = np.array(libraryPeaks)
     queryArray = np.array(queryPeaks)
-    dataArrays = [
-        dataArray
-        for dataArray in numba_enhanced_matching_of_library_to_query_pooled_spectra(
-            libraryArray, queryArray, ppmTolerance
+    dataArrays = []
+    baselineLibraryIdx, baselineQueryIdx = np.int64(0), np.int64(0)
+    while baselineLibraryIdx < len(libraryArray) and baselineQueryIdx < len(queryArray):
+        (
+            dataArray,
+            baselineLibraryIdx,
+            baselineQueryIdx,
+        ) = numba_enhanced_matching_of_library_to_query_pooled_spectra(
+            libraryArray, queryArray, ppmTolerance, baselineLibraryIdx, baselineQueryIdx
         )
-    ]
-    data = dataArrays
-    if len(dataArrays):
-        data = np.concatenate(dataArrays, axis=0)
+        dataArrays.append(dataArray)
+    data = np.concatenate(dataArrays, axis=0)
     matchDf = pd.DataFrame(
         data,
         columns=[
@@ -153,7 +165,7 @@ def match_library_to_query_pooled_spectra(libraryPeaks, queryPeaks, ppmTolerance
     matchDf[["libraryIdx", "queryIdx"]] = matchDf[["libraryIdx", "queryIdx"]].astype(
         int
     )
-    return matchDf
+    return matchDf.drop_duplicates()
 
 
 def eliminate_low_count_matches(matches, minNumMatches=3):
