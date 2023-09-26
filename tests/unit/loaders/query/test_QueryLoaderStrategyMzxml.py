@@ -1,5 +1,5 @@
-from csodiaq.loaders.query import QueryLoaderStrategy
-from csodiaq.loaders.query import QueryLoaderStrategyMzxml
+from zodiaq.loaders.query import QueryLoaderStrategy
+from zodiaq.loaders.query import QueryLoaderStrategyMzxml
 import pytest
 import os
 import re
@@ -90,13 +90,15 @@ def test__query_loader_strategy_mzxml__extract_metadata_from_query_scans(loader)
 
 def test__query_loader_strategy_mzxml__pool_query_scans__single_scan(loader):
     singleScan = ["456"]
-    outputPool = loader.pool_peaks_of_query_scans(singleScan)
-    for i in range(len(expectedOutputPoolSingleScan)):
-        assert outputPool[i] == expectedOutputPoolSingleScan[i]
+    with loader.get_query_file_reader() as reader:
+        outputPool = loader.pool_peaks_of_query_scans(singleScan, reader)
+        for i in range(len(expectedOutputPoolSingleScan)):
+            assert outputPool[i] == expectedOutputPoolSingleScan[i]
 
 
 def test__query_loader_strategy_mzxml__pool_query_scans__multiple_scan(loader):
     multipleScans = ["1", "119"]
-    outputPool = loader.pool_peaks_of_query_scans(multipleScans)
-    for i in range(len(expectedOutputPoolMultipleScans)):
-        assert outputPool[i] == expectedOutputPoolMultipleScans[i]
+    with loader.get_query_file_reader() as reader:
+        outputPool = loader.pool_peaks_of_query_scans(multipleScans, reader)
+        for i in range(len(expectedOutputPoolMultipleScans)):
+            assert outputPool[i] == expectedOutputPoolMultipleScans[i]

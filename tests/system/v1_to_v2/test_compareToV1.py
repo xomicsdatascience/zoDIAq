@@ -1,16 +1,16 @@
 import pandas as pd
 import numpy as np
-from csodiaq.identification import Identifier
-from csodiaq.scoring import (
+from zodiaq.identification import Identifier
+from zodiaq.scoring import (
     create_spectral_fdr_output_from_full_output_sorted_by_desired_score,
     create_peptide_fdr_output_from_full_output_sorted_by_desired_score,
     create_protein_fdr_output_from_peptide_fdr_output,
     calculate_macc_score,
 )
-from csodiaq.targetedReanalysis import (
+from zodiaq.targetedReanalysis import (
     create_mass_spec_input_dataframes_for_targeted_reanalysis_of_identified_peptides,
 )
-from csodiaq.loaders.query import QueryLoaderContext
+from zodiaq.loaders.query import QueryLoaderContext
 import os
 import pickle
 import pytest
@@ -89,6 +89,7 @@ def get_columns_that_should_match(type):
             "peptideFDR",
             "leadingProteinFDR",
         ]
+
 
 def test__scoring_workflow():
     fullDf = pd.read_csv(

@@ -4,7 +4,7 @@ import re
 import numpy as np
 from math import isclose
 
-from csodiaq.scoring.scoringFunctions import (
+from zodiaq.scoring.scoringFunctions import (
     score_library_to_query_matches,
     calculate_cosine_similarity_score,
     calculate_macc_score,
@@ -66,7 +66,9 @@ def test__score_functions__score_library_to_query_matches(vectorA, vectorB):
     lowScoreMatchesDf["libraryIdx"] = [libraryIdx - 1 for i in vectorA.index]
     reverseVectorA = pd.Series(list(vectorA)[::-1])
     lowScoreMatchesDf["libraryIntensity"] = reverseVectorA
-    lowCosineScore = calculate_cosine_similarity_score(np.sqrt(reverseVectorA), np.sqrt(vectorB))
+    lowCosineScore = calculate_cosine_similarity_score(
+        np.sqrt(reverseVectorA), np.sqrt(vectorB)
+    )
     unsortedMatchesDf = pd.concat([lowScoreMatchesDf, matchesDf])
     expectedOutputDf = pd.DataFrame(
         data=[

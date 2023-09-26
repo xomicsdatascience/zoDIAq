@@ -1,6 +1,6 @@
-from csodiaq.loaders.library.libraryLoaderStrategy import (
+from zodiaq.loaders.library.libraryLoaderStrategy import (
     LibraryLoaderStrategy,
-    create_peaks_from_mz_intensity_lists_and_csodiaq_key_id,
+    create_peaks_from_mz_intensity_lists_and_zodiaq_key_id,
     remove_low_intensity_peaks_below_max_peak_num,
 )
 import pytest
@@ -27,14 +27,14 @@ def testPeaks():
     ]
 
 
-def test__library_loader_strategy_traml__create_peaks_from_mz_intensity_lists_and_csodiaq_key_id(
+def test__library_loader_strategy_traml__create_peaks_from_mz_intensity_lists_and_zodiaq_key_id(
     testPeaks,
 ):
     numPeaks = 15
     mzList = [i for i in range(0, numPeaks, 2)] + [i for i in range(1, numPeaks - 1, 2)]
     intensityList = [i for i in range(numPeaks)]
     id = 0
-    peaks = create_peaks_from_mz_intensity_lists_and_csodiaq_key_id(
+    peaks = create_peaks_from_mz_intensity_lists_and_zodiaq_key_id(
         mzList, intensityList, id
     )
     assert peaks == testPeaks

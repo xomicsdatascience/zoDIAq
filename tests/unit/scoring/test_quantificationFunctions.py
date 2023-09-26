@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from csodiaq.scoring.quantificationFunctions import (
+from zodiaq.scoring.quantificationFunctions import (
     calculate_ion_count_from_peptides_of_protein,
     calculate_ion_count_for_each_protein_in_protein_fdr_df,
     compile_ion_count_comparison_across_runs_df,
@@ -108,11 +108,9 @@ def test__quantification_functions__compile_common_protein_quantification_file__
     fileHeader1 = "test1"
     fileHeader2 = "test2"
     commonPeptidesDf = pd.DataFrame(
-        [
-            [100.0,200.0,300.0,400.0,500.0] for _ in range(2)
-        ],
-        columns = ["peptide1","peptide2","peptide3","peptide4","peptide5"],
-        index = [fileHeader1, fileHeader2]
+        [[100.0, 200.0, 300.0, 400.0, 500.0] for _ in range(2)],
+        columns=["peptide1", "peptide2", "peptide3", "peptide4", "peptide5"],
+        index=[fileHeader1, fileHeader2],
     )
     expectedOutputDf = pd.DataFrame(
         [[600.0, 900.0], [600.0, 900.0]],
@@ -209,9 +207,16 @@ def test__ion_count_sum():
     peptideIntensityIncrease = [10**i for i in range(numPeptides)]
     sampleIntensityIncrease = list(range(numSamples, 0, -1))
     inputDf = pd.DataFrame(
-        np.multiply.outer(sampleIntensityIncrease, peptideIntensityIncrease).astype(float),
+        np.multiply.outer(sampleIntensityIncrease, peptideIntensityIncrease).astype(
+            float
+        ),
         columns=[f"P{i}" for i in range(1, numPeptides + 1)],
-        index=["A", "B", "C", "D",],
+        index=[
+            "A",
+            "B",
+            "C",
+            "D",
+        ],
     )
     cellsToDelete = [
         (0, 3),
@@ -320,6 +325,7 @@ def test__maxlfq__from_paper__default_2_peptide_connections_required_per_sample(
 
     output = maxlfq(normalizedInputDf.to_numpy(), minNumDifferences=2)
     np.testing.assert_array_almost_equal(expectedOutput, output)
+
 
 def test__maxlfq__from_paper__only_1_peptide_connection_required_per_sample():
     """

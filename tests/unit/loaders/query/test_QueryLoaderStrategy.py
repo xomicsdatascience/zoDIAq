@@ -1,1 +1,1 @@
-from csodiaq.loaders.query import QueryLoaderStrategy
+from zodiaq.loaders.query import QueryLoaderStrategy

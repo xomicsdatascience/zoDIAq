@@ -1,40 +1,40 @@
 # csdev_tdd_rewrite
 
-This is the dev branch for the csodiaq 2.0 rewrite. In summary, we are enhancing the modularity and testability of csodiaq.
+This is the dev branch for the zodiaq 2.0 rewrite. In summary, we are enhancing the modularity and testability of zodiaq.
 
-# CsoDIAq
+# zoDIAq
 ## Introduction
 
 *Uses an MIT License* 
 
-CsoDIAq (Cosine Similarity Optimization for DIA qualitative and quantitative analysis, pronounced "Zodiac") is a software tool 
+zoDIAq (derived from "csodiaq" acronym, Cosine Similarity Optimization for DIA qualitative and quantitative analysis) is a software tool 
 for the analysis of direct infusion shotgun proteome analysis (DISPA) data and data independent acquisition (DIA) data.
 
 [Click here for the paper published in *Analytical Chemistry*.](https://doi.org/10.1021/acs.analchem.1c02021)
 
-![Paper Title Header](https://github.com/xomicsdatascience/CsoDIAq/blob/main/img/csodiaq-paper.png)
+![Paper Title Header](https://github.com/xomicsdatascience/zoDIAq/blob/main/img/zodiaq-paper.png)
 
 ## Instructions
 ### Installation
 
-All installation instructions are done from the command line. Download and use of CsoDIAq requires access to the `git` and `pip` packages. For system-specific instructions on using the command line or installing these packages, see the [wiki page.](https://github.com/CCranney/CsoDIAq/wiki)
+All installation instructions are done from the command line. Download and use of zoDIAq requires access to the `git` and `pip` packages. For system-specific instructions on using the command line or installing these packages, see the [wiki page.](https://github.com/CCranney/zoDIAq/wiki)
 
-* [Windows install instructions click here](https://github.com/CCranney/CsoDIAq/wiki/Install-Instructions-for-Windows)
-* [Mac install instructions click here](https://github.com/CCranney/CsoDIAq/wiki/Install-Instructions-for-Mac)
+* [Windows install instructions click here](https://github.com/CCranney/zoDIAq/wiki/Install-Instructions-for-Windows)
+* [Mac install instructions click here](https://github.com/CCranney/zoDIAq/wiki/Install-Instructions-for-Mac)
 
 ### Accessing the GUI
 
-From the command line enter `csodiaq gui` to start the GUI. Aside from the MGF library prep all instructions in this README file pertain to use of the GUI. 
-Instructions for use from the command line can be accessed by entering `csodiaq -h`.
+From the command line enter `zodiaq gui` to start the GUI. Aside from the MGF library prep all instructions in this README file pertain to use of the GUI. 
+Instructions for use from the command line can be accessed by entering `zodiaq -h`.
 
 ### Peptide/Protein Identification
 
-![Peptide/Protein Identification GUI Picture](https://github.com/CCranney/CsoDIAq/blob/master/Python%20Extras/ID_pic.png)
+![Peptide/Protein Identification GUI Picture](https://github.com/CCranney/zoDIAq/blob/master/Python%20Extras/ID_pic.png)
 
 Files: 
 1. DIA Data File: This is a required field. Choose at least one data file from a DISPA or DIA data run.
 2. Library File: This is a required field. Choose a reference library file that is in TraML (.tsv or .csv) or MGF format. 
-It should go without saying, but CsoDIAq treats .tsv files as tab-deliminated and .csv as comma-deliminated. 
+It should go without saying, but zoDIAq treats .tsv files as tab-deliminated and .csv as comma-deliminated. 
 Some pan-human .csv files are tab-deliminated and therefore need to be adapted accordingly.
 3. Outfile Directory: This is a required field. Choose a folder that the output files should go into.
 
@@ -61,16 +61,16 @@ If checked, files generated for targeted re-analysis will include targets for he
 
 ### SILAC Quantification
 
-![SILAC Quantification GUI Picture](https://github.com/CCranney/CsoDIAq/blob/master/Python%20Extras/quant_pic.png)
+![SILAC Quantification GUI Picture](https://github.com/CCranney/zoDIAq/blob/master/Python%20Extras/quant_pic.png)
 
 
 Files:
 1. DIA Data File: This is a required field. Choose at least one data file from a DISPA or DIA targetted re-analysis data run.
 2. Library File: This is a required field. Choose a reference library file that is in TraML (.tsv or .csv) or MGF format. 
-It should go without saying, but CsoDIAq treats .tsv files as tab-deliminated and .csv as comma-deliminated. 
+It should go without saying, but zoDIAq treats .tsv files as tab-deliminated and .csv as comma-deliminated. 
 Some pan-human .csv files are tab-deliminated and therefore need to be adapted accordingly.
 3. Outfile Directory: This is a required field. Choose a folder that the output files should go into.
-4. CsoDIAq ID Output File: This is a required field. 
+4. zoDIAq ID Output File: This is a required field. 
 Choose the required output from the Peptide/Protein Identification portion. The file should end with "allCVs."
 
 Settings:
@@ -94,10 +94,10 @@ This setting determines if the mean or median of those matched peaks should be u
 ## Extras
 ### MGF Library Prep
 
-The MGF library used to develop CsoDIAq lacked protein references. 
+The MGF library used to develop zoDIAq lacked protein references. 
 We therefore created a function that adds protein references from a given FASTA file. 
 While not part of the original publication and therefore not in the GUI, we kept the functionality as made it accessible from the command line.
-`csodiaq mgf -m <path to mgf file> -f <path to fasta file>`
+`zodiaq mgf -m <path to mgf file> -f <path to fasta file>`
 
 Additionally, the `-i` tag can limit peaks to those identified as a fragment of the peptide sequence. This setting was not used in the publication.
 

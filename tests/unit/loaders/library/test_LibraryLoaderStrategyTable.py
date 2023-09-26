@@ -3,10 +3,10 @@ import os
 import pandas as pd
 import re
 from tempfile import TemporaryDirectory, NamedTemporaryFile
-from csodiaq.loaders.library.libraryLoaderStrategyTable import (
+from zodiaq.loaders.library.libraryLoaderStrategyTable import (
     LibraryLoaderStrategyTable,
     _reformat_raw_library_object_columns,
-    _organize_data_by_csodiaq_library_dict_keys,
+    _organize_data_by_zodiaq_library_dict_keys,
     _determine_library_source_from_file,
 )
 
@@ -47,7 +47,7 @@ def check_value_error_thrown_when_missing_columns(loader, dfPath, missingColumnV
     libDf = pd.read_csv(dfPath, sep=separator)
     libDf.drop(missingColumnValues, axis=1, inplace=True)
     invalidLibFile = NamedTemporaryFile(
-        prefix=f'csodiaq_table_loader_missing_column_{"_".join(missingColumnValues)}_',
+        prefix=f'zodiaq_table_loader_missing_column_{"_".join(missingColumnValues)}_',
         suffix=".tsv",
     )
     libDf.to_csv(invalidLibFile.name, sep="\t", index=False)
@@ -120,21 +120,21 @@ def test__library_loader_strategy_table__load_raw_library_object_from_file__fail
 
 
 def assert_final_dict_output_matches_expected(outputDict, expectedOutputDict):
-    for csodiaqLibKey in expectedOutputDict:
-        assert csodiaqLibKey in outputDict
-        for libEntryKey in expectedOutputDict[csodiaqLibKey]:
-            assert libEntryKey in outputDict[csodiaqLibKey]
+    for zodiaqLibKey in expectedOutputDict:
+        assert zodiaqLibKey in outputDict
+        for libEntryKey in expectedOutputDict[zodiaqLibKey]:
+            assert libEntryKey in outputDict[zodiaqLibKey]
             assert (
-                outputDict[csodiaqLibKey][libEntryKey]
-                == expectedOutputDict[csodiaqLibKey][libEntryKey]
+                outputDict[zodiaqLibKey][libEntryKey]
+                == expectedOutputDict[zodiaqLibKey][libEntryKey]
             )
 
 
-def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_library_dict__spectrast_library(
+def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_library_dict__spectrast_library(
     loader, libFilePath
 ):
     loader._load_raw_library_object_from_file(libFilePath)
-    outputDict = loader._format_raw_library_object_into_csodiaq_library_dict()
+    outputDict = loader._format_raw_library_object_into_zodiaq_library_dict()
     expectedOutputDict = {
         (516.801083027, "YRPGTVALR"): {
             "precursorCharge": 2,
@@ -152,21 +152,21 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
                 (745.399149844, 324.1, 0),
                 (858.483213826, 271.9, 0),
             ],
-            "csodiaqKeyIdx": 0,
+            "zodiaqKeyIdx": 0,
             "isDecoy": 0,
         }
     }
     assert_final_dict_output_matches_expected(outputDict, expectedOutputDict)
 
 
-def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_library_dict__multi_peptide_spectrast_library(
+def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_library_dict__multi_peptide_spectrast_library(
     loader,
 ):
     libFilePath = os.path.join(
         get_parent_dir(), "test_files", "sample_lib_table_spectrast_multiple.tsv"
     )
     loader._load_raw_library_object_from_file(libFilePath)
-    outputDict = loader._format_raw_library_object_into_csodiaq_library_dict()
+    outputDict = loader._format_raw_library_object_into_zodiaq_library_dict()
     expectedOutputDict = {
         (300.83985497, "FVVGSHVR"): {
             "precursorCharge": 3,
@@ -179,7 +179,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
                 (555.299770156, 10000.0, 0),
                 (654.368184074, 1368.4, 0),
             ],
-            "csodiaqKeyIdx": 0,
+            "zodiaqKeyIdx": 0,
             "isDecoy": 0,
         },
         (300.83985497, "SVHGVVFR"): {
@@ -193,7 +193,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
                 (577.345657708, 10000.0, 1),
                 (714.404569582, 1368.4, 1),
             ],
-            "csodiaqKeyIdx": 1,
+            "zodiaqKeyIdx": 1,
             "isDecoy": 1,
         },
     }
@@ -202,22 +202,22 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
 
 def test__library_loader_strategy_table__reformat_raw_library_object_columns():
     numColumns = 10
-    csodiaqKeyColumns = ["precursorMz", "peptideName"]
+    zodiaqKeyColumns = ["precursorMz", "peptideName"]
     oldMappedColumns = [str(i) for i in range(numColumns)]
     newMappedColumns = [columnName + "_new" for columnName in oldMappedColumns]
-    oldMappedColumns += csodiaqKeyColumns
-    newMappedColumns += csodiaqKeyColumns
+    oldMappedColumns += zodiaqKeyColumns
+    newMappedColumns += zodiaqKeyColumns
     oldToNewColumnDict = dict(zip(oldMappedColumns, newMappedColumns))
     superfluousColumns = ["random", "superfluous", "columns"]
     oldColumns = oldMappedColumns + superfluousColumns
-    newColumns = newMappedColumns + ["csodiaqLibKey"]
+    newColumns = newMappedColumns + ["zodiaqLibKey"]
     data = [[0 for i in range(len(oldColumns))]]
     df = pd.DataFrame(data, columns=oldColumns)
     newDf = _reformat_raw_library_object_columns(df, oldToNewColumnDict)
     assert set(newDf.columns) == set(newColumns)
 
 
-def test__library_loader_strategy_table__organize_data_by_csodiaq_library_dict_keys(
+def test__library_loader_strategy_table__organize_data_by_zodiaq_library_dict_keys(
     loader, libFilePath
 ):
     loader._load_raw_library_object_from_file(libFilePath)
@@ -264,8 +264,8 @@ def test__library_loader_strategy_table__organize_data_by_csodiaq_library_dict_k
         }
     }
 
-    dataDict = _organize_data_by_csodiaq_library_dict_keys(reformattedDf)
-    assert dataDict["csodiaqKeys"] == expectedKeys
+    dataDict = _organize_data_by_zodiaq_library_dict_keys(reformattedDf)
+    assert dataDict["zodiaqKeys"] == expectedKeys
     assert dataDict["mz"] == expectedTupleToListMzDict
     assert dataDict["intensities"] == expectedTupleToListIntensityDict
     assert dataDict["metadata"] == expectedTupleToDictMetadataDict
@@ -330,11 +330,11 @@ def test__library_loader_strategy_table__load_raw_library_object_from_file__fail
     )
 
 
-def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_library_dict__fragpipe_library(
+def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_library_dict__fragpipe_library(
     loader, fragpipeLibFilePath
 ):
     loader._load_raw_library_object_from_file(fragpipeLibFilePath)
-    outputDict = loader._format_raw_library_object_into_csodiaq_library_dict()
+    outputDict = loader._format_raw_library_object_into_zodiaq_library_dict()
     expectedOutputDict = {
         (375.873226, "FANYIDKVR"): {
             "precursorCharge": 3,
@@ -352,14 +352,14 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
                 (630.393339, 8233.006, 0),
                 (793.456668, 5096.472, 0),
             ],
-            "csodiaqKeyIdx": 0,
+            "zodiaqKeyIdx": 0,
             "isDecoy": 0,
         }
     }
     assert_final_dict_output_matches_expected(outputDict, expectedOutputDict)
 
 
-def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_library_dict__multi_peptides_fragpipe_library(
+def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_library_dict__multi_peptides_fragpipe_library(
     loader, fragpipeLibFilePath
 ):
     loader._load_raw_library_object_from_file(
@@ -367,7 +367,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
             get_parent_dir(), "test_files", "sample_lib_table_fragpipe_multiple.tsv"
         )
     )
-    outputDict = loader._format_raw_library_object_into_csodiaq_library_dict()
+    outputDict = loader._format_raw_library_object_into_zodiaq_library_dict()
     expectedOutputDict = {
         (375.873226, "FANYIDKVR"): {
             "precursorCharge": 3,
@@ -385,7 +385,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
                 (630.393339, 8233.006, 0),
                 (793.456668, 5096.472, 0),
             ],
-            "csodiaqKeyIdx": 0,
+            "zodiaqKeyIdx": 0,
             "isDecoy": 0,
         },
         (375.885354, "FGTINIVHPK"): {
@@ -404,7 +404,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
                 (707.419888, 5087.7124, 1),
                 (820.503953, 865.17474, 1),
             ],
-            "csodiaqKeyIdx": 1,
+            "zodiaqKeyIdx": 1,
             "isDecoy": 0,
         },
     }
@@ -470,11 +470,11 @@ def test__library_loader_strategy_table__load_raw_library_object_from_file__fail
     )
 
 
-def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_library_dict__prosit_library(
+def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_library_dict__prosit_library(
     loader, prositLibFilePath
 ):
     loader._load_raw_library_object_from_file(prositLibFilePath)
-    outputDict = loader._format_raw_library_object_into_csodiaq_library_dict()
+    outputDict = loader._format_raw_library_object_into_zodiaq_library_dict()
     expectedOutputDict = {
         (374.1867597566666, "_MMPAAALIM[Oxidation (O)]R_"): {
             "precursorCharge": 3,
@@ -492,14 +492,14 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
                 (619.359619140625, 0.1164016127586364, 0),
                 (690.396728515625, 0.0937163606286048, 0),
             ],
-            "csodiaqKeyIdx": 0,
+            "zodiaqKeyIdx": 0,
             "isDecoy": 0,
         }
     }
     assert_final_dict_output_matches_expected(outputDict, expectedOutputDict)
 
 
-def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_library_dict__multi_peptide_prosit_library(
+def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_library_dict__multi_peptide_prosit_library(
     loader, prositLibFilePath
 ):
     loader._load_raw_library_object_from_file(
@@ -507,7 +507,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
             get_parent_dir(), "test_files", "sample_lib_table_prosit_multiple.csv"
         )
     )
-    outputDict = loader._format_raw_library_object_into_csodiaq_library_dict()
+    outputDict = loader._format_raw_library_object_into_zodiaq_library_dict()
     expectedOutputDict = {
         (254.3121828783333, "_MRALLLIPPPPM[Oxidation (O)]R_"): {
             "precursorCharge": 6,
@@ -525,7 +525,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
                 (585.3541259765625, 0.5721365809440613, 0),
                 (613.3126220703125, 0.7858051657676697, 0),
             ],
-            "csodiaqKeyIdx": 0,
+            "zodiaqKeyIdx": 0,
             "isDecoy": 0,
         },
         (374.1867597566666, "_MMPAAALIM[Oxidation (O)]R_"): {
@@ -544,7 +544,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
                 (619.359619140625, 0.1164016127586364, 1),
                 (690.396728515625, 0.0937163606286048, 1),
             ],
-            "csodiaqKeyIdx": 1,
+            "zodiaqKeyIdx": 1,
             "isDecoy": 0,
         },
         (507.272473135, "_MLAPPPIM[Oxidation (O)]K_"): {
@@ -563,7 +563,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_csodiaq_
                 (698.3905639648438, 1.0, 2),
                 (769.4276733398438, 0.3755797147750854, 2),
             ],
-            "csodiaqKeyIdx": 2,
+            "zodiaqKeyIdx": 2,
             "isDecoy": 0,
         },
     }

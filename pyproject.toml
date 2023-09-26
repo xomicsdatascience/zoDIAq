@@ -3,7 +3,7 @@ requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "CsoDIAq"
+name = "zoDIAq"
 version = "2.0.0"
 authors = [
   { name="Caleb Cranney", email="caleb.cranney.github@proton.me" },
@@ -32,8 +32,8 @@ dependencies = [
 
 
 [project.urls]
-"Homepage" = "https://github.com/xomicsdatascience/CsoDIAq"
-"Bug Tracker" = "https://github.com/xomicsdatascience/CsoDIAq/issues"
+"Homepage" = "https://github.com/xomicsdatascience/zoDIAq"
+"Bug Tracker" = "https://github.com/xomicsdatascience/zoDIAq/issues"
 
 [project.scripts]
-csodiaq = "csodiaq.csodiaq:main"
+zodiaq = "zodiaq.zodiaq:main"

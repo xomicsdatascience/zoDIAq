@@ -5,7 +5,7 @@ import pytest
 
 @pytest.fixture(scope="module")
 def systemTestFileDirectory():
-    return TemporaryDirectory(prefix="csodiaq_scoring_system_test_files_")
+    return TemporaryDirectory(prefix="zodiaq_scoring_system_test_files_")
 
 
 @pytest.fixture(scope="module")

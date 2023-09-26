@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 
-from csodiaq.scoring.fdrCalculationFunctions import (
+from zodiaq.scoring.fdrCalculationFunctions import (
     drop_duplicate_values_from_df_in_given_column,
     create_spectral_fdr_output_from_full_output_sorted_by_desired_score,
     create_peptide_fdr_output_from_full_output_sorted_by_desired_score,

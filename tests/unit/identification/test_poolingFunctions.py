@@ -1,9 +1,9 @@
-from csodiaq.identification.poolingFunctions import (
+from zodiaq.identification.poolingFunctions import (
     _pool_library_spectra_by_mz_window,
     generate_pooled_library_and_query_spectra_by_mz_windows,
 )
-from csodiaq.loaders.library.libraryLoaderContext import LibraryLoaderContext
-from csodiaq.loaders.query.queryLoaderContext import QueryLoaderContext
+from zodiaq.loaders.library.libraryLoaderContext import LibraryLoaderContext
+from zodiaq.loaders.query.queryLoaderContext import QueryLoaderContext
 from expectedPooledPeaks import expectedLibraryPeaks, expectedQueryPeaks
 import os
 import pytest
@@ -30,7 +30,7 @@ def queryFile():
 
 @pytest.fixture
 def libraryDict(libraryFile):
-    return LibraryLoaderContext(libraryFile).load_csodiaq_library_dict()
+    return LibraryLoaderContext(libraryFile).load_zodiaq_library_dict()
 
 
 @pytest.fixture
@@ -39,13 +39,13 @@ def queryContext(queryFile):
 
 
 def assert_final_dict_output_matches_expected(outputDict, expectedOutputDict):
-    for csodiaqLibKey in expectedOutputDict:
-        assert csodiaqLibKey in outputDict
-        for libEntryKey in expectedOutputDict[csodiaqLibKey]:
-            assert libEntryKey in outputDict[csodiaqLibKey]
+    for zodiaqLibKey in expectedOutputDict:
+        assert zodiaqLibKey in outputDict
+        for libEntryKey in expectedOutputDict[zodiaqLibKey]:
+            assert libEntryKey in outputDict[zodiaqLibKey]
             assert (
-                outputDict[csodiaqLibKey][libEntryKey]
-                == expectedOutputDict[csodiaqLibKey][libEntryKey]
+                outputDict[zodiaqLibKey][libEntryKey]
+                == expectedOutputDict[zodiaqLibKey][libEntryKey]
             )
 
 
