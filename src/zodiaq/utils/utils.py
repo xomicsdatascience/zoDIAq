@@ -62,7 +62,7 @@ def format_protein_list_to_string(proteinList):
         separated by slashes.
     """
 
-    return f"{len(proteinList)}/{'/'.join(proteinList)}"
+    return f"{len(proteinList)}/{'/'.join(sorted(proteinList))}"
 
 
 def confirm_proteins_in_list_are_in_appropriate_format(proteinList):
