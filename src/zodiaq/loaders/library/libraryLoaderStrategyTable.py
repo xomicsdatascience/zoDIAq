@@ -50,9 +50,8 @@ class LibraryLoaderStrategyTable(LibraryLoaderStrategy):
             self.oldToNewColumnDict.keys(), self.rawUploadedLibraryObject.columns
         )
 
-    def _format_raw_library_object_into_zodiaq_library_dict(self) -> dict:
+    def _format_raw_library_object_into_zodiaq_library_dict(self, maxPeakNum = 10) -> dict:
         """abstract class implementation - see 'libraryLoaderStrategy.py' for details"""
-        maxPeakNum = 10
         reformattedLibDf = _reformat_raw_library_object_columns(
             self.rawUploadedLibraryObject, self.oldToNewColumnDict
         )
@@ -93,16 +92,18 @@ def _organize_data_by_zodiaq_library_dict_keys(df: pd.DataFrame) -> dict:
     keys = sorted(set(df["zodiaqLibKey"]))
     mz = df.groupby("zodiaqLibKey")["peakMz"].apply(list).to_dict()
     intensities = df.groupby("zodiaqLibKey")["peakIntensity"].apply(list).to_dict()
+    fragmentTypes = df.groupby("zodiaqLibKey").apply(lambda group: list(zip(group['fragmentType'], group['fragmentNumber']))).to_dict()
     df.drop_duplicates(subset="zodiaqLibKey", inplace=True)
     df.set_index("zodiaqLibKey", drop=True, inplace=True)
     df.drop(
-        ["precursorMz", "peakMz", "peptideName", "peakIntensity"], axis=1, inplace=True
+        ["precursorMz", "peakMz", "peptideName", "peakIntensity", "fragmentType", "fragmentNumber"], axis=1, inplace=True
     )
     metadata = df.to_dict(orient="index")
     return {
         "zodiaqKeys": keys,
         "mz": mz,
         "intensities": intensities,
+        "fragmentTypes": fragmentTypes,
         "metadata": metadata,
     }
 
@@ -116,7 +117,9 @@ def _create_zodiaq_library_entry(
         organizedDataDict["intensities"][zodiaqKey],
         zodiaqKeyIdx,
     )
+    fragments = list(zip(organizedDataDict["mz"][zodiaqKey], organizedDataDict["intensities"][zodiaqKey], organizedDataDict["fragmentTypes"][zodiaqKey]))
     reducedPeaks = remove_low_intensity_peaks_below_max_peak_num(peaks, maxPeakNum)
+    reducedFragments = remove_low_intensity_peaks_below_max_peak_num(fragments, maxPeakNum)
     isDecoy = int(
         "decoy" in organizedDataDict["metadata"][zodiaqKey]["proteinName"].lower()
     )
@@ -133,6 +136,7 @@ def _create_zodiaq_library_entry(
         finalVariableNames["peaks"]: sorted(reducedPeaks),
         finalVariableNames["zodiaqKeyIdx"]: zodiaqKeyIdx,
         finalVariableNames["isDecoy"]: isDecoy,
+        finalVariableNames["fragmentTypes"]: [x[-1] for x in sorted(reducedFragments)]
     }
 
 

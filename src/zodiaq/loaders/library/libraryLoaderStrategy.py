@@ -139,4 +139,5 @@ finalVariableNames = {
     "peaks": "peaks",
     "zodiaqKeyIdx": "zodiaqKeyIdx",
     "isDecoy": "isDecoy",
+    "fragmentTypes": "fragmentTypes",
 }

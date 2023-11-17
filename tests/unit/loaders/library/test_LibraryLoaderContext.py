@@ -45,6 +45,18 @@ def test__library_loader_context__table__load_zodiaq_library_dict(tableContext):
             ],
             "zodiaqKeyIdx": 0,
             "isDecoy": 0,
+            "fragmentTypes": [
+                ('b', 8),
+                ('y', 8),
+                ('y', 4),
+                ('y', 5),
+                ('b', 5),
+                ('y', 6),
+                ('b', 6),
+                ('y', 7),
+                ('b', 7),
+                ('b', 8),
+            ],
         }
     }
     zodiaqLibDict = tableContext.load_zodiaq_library_dict()

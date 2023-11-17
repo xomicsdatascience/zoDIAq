@@ -6,6 +6,8 @@ newColumns = [
     "precursorCharge",
     "identification",
     "proteinName",
+    "fragmentType",
+    "fragmentNumber",
 ]
 
 oldColumnsSpectrast = [
@@ -16,6 +18,8 @@ oldColumnsSpectrast = [
     "PrecursorCharge",
     "transition_group_id",
     "ProteinName",
+    "FragmentType",
+    "FragmentSeriesNumber",
 ]
 
 oldColumnsFragpipe = [
@@ -26,6 +30,8 @@ oldColumnsFragpipe = [
     "PrecursorCharge",
     "PeptideSequence",
     "ProteinId",
+    "FragmentType",
+    "FragmentSeriesNumber",
 ]
 
 oldColumnsProsit = [
@@ -36,4 +42,6 @@ oldColumnsProsit = [
     "PrecursorCharge",
     "StrippedPeptide",
     "FragmentLossType",
+    "FragmentType",
+    "FragmentNumber",
 ]

@@ -224,6 +224,7 @@ def test__library_loader_strategy_table__organize_data_by_zodiaq_library_dict_ke
     reformattedDf = _reformat_raw_library_object_columns(
         loader.rawUploadedLibraryObject, loader.oldToNewColumnDict
     )
+    df = reformattedDf[['peakMz','peakIntensity','fragmentType','fragmentNumber']]
     expectedKeys = [(516.801083027, "YRPGTVALR")]
 
     expectedTupleToListMzDict = {
@@ -264,11 +265,28 @@ def test__library_loader_strategy_table__organize_data_by_zodiaq_library_dict_ke
         }
     }
 
+    expectedTupleToFragmentTypeDf = {
+        (516.801083027, "YRPGTVALR"): [
+            ('y', 7),
+            ('b', 7),
+            ('b', 8),
+            ('b', 6),
+            ('y', 6),
+            ('y', 8),
+            ('y', 5),
+            ('y', 4),
+            ('b', 5),
+            ('b', 8),
+        ]
+
+    }
+
     dataDict = _organize_data_by_zodiaq_library_dict_keys(reformattedDf)
     assert dataDict["zodiaqKeys"] == expectedKeys
     assert dataDict["mz"] == expectedTupleToListMzDict
     assert dataDict["intensities"] == expectedTupleToListIntensityDict
     assert dataDict["metadata"] == expectedTupleToDictMetadataDict
+    assert dataDict["fragmentTypes"] == expectedTupleToFragmentTypeDf
 
 
 @pytest.fixture
@@ -334,6 +352,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_l
     loader, fragpipeLibFilePath
 ):
     loader._load_raw_library_object_from_file(fragpipeLibFilePath)
+    df = loader.rawUploadedLibraryObject
     outputDict = loader._format_raw_library_object_into_zodiaq_library_dict()
     expectedOutputDict = {
         (375.873226, "FANYIDKVR"): {
@@ -354,6 +373,18 @@ def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_l
             ],
             "zodiaqKeyIdx": 0,
             "isDecoy": 0,
+            "fragmentTypes": [
+                ('y', 1),
+                ('y', 2),
+                ('b', 3),
+                ('y', 6),
+                ('y', 3),
+                ('y', 7),
+                ('y', 8),
+                ('y', 4),
+                ('y', 5),
+                ('y', 6),
+            ],
         }
     }
     assert_final_dict_output_matches_expected(outputDict, expectedOutputDict)
