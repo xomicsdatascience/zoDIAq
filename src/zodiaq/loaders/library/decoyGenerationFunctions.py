@@ -1,4 +1,7 @@
 import random
+from Bio.Seq import Seq
+from Bio.SeqUtils import molecular_weight
+
 nonCleavageAminoAcids = [ "A", "N", "D", "C", "E", "Q", "G", "H", "I", "L", "M", "F", "S", "T", "W", "Y", "V"]
 cleavageAminoAcids = set(['K', 'P', 'R'])
 
@@ -44,3 +47,24 @@ def calculate_similarities_between_strings(s1, s2):
     for i in range(minLength):
         if s1[i] == s2[i]: similarities += 1
     return similarities / minLength
+
+
+def calculate_ion_mz(sequence, type, position, charge):
+    terminalSequence = determine_terminal_end_of_sequence(sequence, type, position)
+    mass = calculate_molecular_mass_of_sequence(terminalSequence, type, charge)
+    return mass / charge
+
+
+def determine_terminal_end_of_sequence(sequence, type, position):
+    if type == 'y':
+        return Seq(sequence[-position:])
+    else:
+        return Seq(sequence[:position])
+
+
+def calculate_molecular_mass_of_sequence(sequence, type, charge):
+    H2O = 18.01468
+    mass = molecular_weight(sequence, seq_type='protein')
+    if type == 'b':
+        mass -= H2O
+    return mass + charge

@@ -267,16 +267,16 @@ def test__library_loader_strategy_table__organize_data_by_zodiaq_library_dict_ke
 
     expectedTupleToFragmentTypeDf = {
         (516.801083027, "YRPGTVALR"): [
-            ('y', 7),
-            ('b', 7),
-            ('b', 8),
-            ('b', 6),
-            ('y', 6),
-            ('y', 8),
-            ('y', 5),
-            ('y', 4),
-            ('b', 5),
-            ('b', 8),
+            ('y', 7, 1),
+            ('b', 7, 1),
+            ('b', 8, 1),
+            ('b', 6, 1),
+            ('y', 6, 1),
+            ('y', 8, 2),
+            ('y', 5, 1),
+            ('y', 4, 1),
+            ('b', 5, 1),
+            ('b', 8, 2),
         ]
 
     }
@@ -374,16 +374,16 @@ def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_l
             "zodiaqKeyIdx": 0,
             "isDecoy": 0,
             "fragmentTypes": [
-                ('y', 1),
-                ('y', 2),
-                ('b', 3),
-                ('y', 6),
-                ('y', 3),
-                ('y', 7),
-                ('y', 8),
-                ('y', 4),
-                ('y', 5),
-                ('y', 6),
+                ('y', 1, 1),
+                ('y', 2, 1),
+                ('b', 3, 1),
+                ('y', 6, 2),
+                ('y', 3, 1),
+                ('y', 7, 2),
+                ('y', 8, 2),
+                ('y', 4, 1),
+                ('y', 5, 1),
+                ('y', 6, 1),
             ],
         }
     }

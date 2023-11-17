@@ -92,11 +92,11 @@ def _organize_data_by_zodiaq_library_dict_keys(df: pd.DataFrame) -> dict:
     keys = sorted(set(df["zodiaqLibKey"]))
     mz = df.groupby("zodiaqLibKey")["peakMz"].apply(list).to_dict()
     intensities = df.groupby("zodiaqLibKey")["peakIntensity"].apply(list).to_dict()
-    fragmentTypes = df.groupby("zodiaqLibKey").apply(lambda group: list(zip(group['fragmentType'], group['fragmentNumber']))).to_dict()
+    fragmentTypes = df.groupby("zodiaqLibKey").apply(lambda group: list(zip(group['fragmentType'], group['fragmentNumber'], group['fragmentCharge']))).to_dict()
     df.drop_duplicates(subset="zodiaqLibKey", inplace=True)
     df.set_index("zodiaqLibKey", drop=True, inplace=True)
     df.drop(
-        ["precursorMz", "peakMz", "peptideName", "peakIntensity", "fragmentType", "fragmentNumber"], axis=1, inplace=True
+        ["precursorMz", "peakMz", "peptideName", "peakIntensity", "fragmentType", "fragmentNumber", "fragmentCharge"], axis=1, inplace=True
     )
     metadata = df.to_dict(orient="index")
     return {

@@ -8,6 +8,7 @@ newColumns = [
     "proteinName",
     "fragmentType",
     "fragmentNumber",
+    "fragmentCharge",
 ]
 
 oldColumnsSpectrast = [
@@ -20,6 +21,7 @@ oldColumnsSpectrast = [
     "ProteinName",
     "FragmentType",
     "FragmentSeriesNumber",
+    "FragmentCharge",
 ]
 
 oldColumnsFragpipe = [
@@ -32,6 +34,7 @@ oldColumnsFragpipe = [
     "ProteinId",
     "FragmentType",
     "FragmentSeriesNumber",
+    "FragmentCharge",
 ]
 
 oldColumnsProsit = [
@@ -44,4 +47,5 @@ oldColumnsProsit = [
     "FragmentLossType",
     "FragmentType",
     "FragmentNumber",
+    "FragmentCharge",
 ]
