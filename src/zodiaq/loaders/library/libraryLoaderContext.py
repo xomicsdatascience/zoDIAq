@@ -31,6 +31,6 @@ class LibraryLoaderContext:
                 "The .msp library format is not currently supported. If the library file was generated via prosit, please reset the output into a tab-delimited (.tsv) format."
             )
 
-    def load_zodiaq_library_dict(self):
+    def load_zodiaq_library_dict(self, isTest=False):
         """See 'load_zodiaq_library_dict_from_file' in 'LibraryLoaderStrategy'"""
-        return self._strategy.load_zodiaq_library_dict_from_file(self._libraryFilePath)
+        return self._strategy.load_zodiaq_library_dict_from_file(self._libraryFilePath, isTest)

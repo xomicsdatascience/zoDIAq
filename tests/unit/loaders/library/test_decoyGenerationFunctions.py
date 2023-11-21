@@ -2,7 +2,7 @@ import random
 import re
 from Bio.Seq import Seq
 from Bio.SeqUtils import molecular_weight
-from zodiaq.loaders.library.decoyGenerationFunctions import shuffle_peptide_sequence_with_preserved_cleavage_points, calculate_similarities_between_strings, calculate_ion_mz, add_decoys_to_zodiaq_library
+from zodiaq.loaders.library.decoyGenerationFunctions import shuffle_peptide_sequence_with_preserved_cleavage_points, calculate_similarities_between_strings, calculate_ion_mz, add_decoys_to_zodiaq_library, determine_if_decoys_should_be_generated
 from test_LibraryLoaderStrategyTable import assert_final_dict_output_matches_expected
 
 def test__decoy_generation_functions__shuffle_peptide_sequence_with_preserved_cleavage_points():
@@ -219,4 +219,96 @@ def test__decoy_generation_functions__add_decoys_to_zodiaq_library__ambiguous_pe
     outputDict = add_decoys_to_zodiaq_library(zodiaqLibraryDict)
     assert_final_dict_output_matches_expected(outputDict, zodiaqLibraryDict)
 
-#def test__decoy_generation_functions__add_decoys_to_zodiaq_library__unimod_values_included():
+def test__decoy_generation_functions__determine_if_decoys_should_be_generated():
+    zodiaqLibraryDict_shouldGenerate = {
+        (375.873226, "FANYIDKVR"): {
+            "precursorCharge": 3,
+            "identification": "FANYIDKVR",
+            "proteinName": "1/P08670",
+            "peaks": [
+                (175.118953, 2926.18, 0),
+                (274.187367, 1647.689, 0),
+                (333.155733, 1071.177, 0),
+                (397.231972, 2078.822, 0),
+                (402.282331, 4932.288, 0),
+                (454.253437, 1301.4617, 0),
+                (489.771994, 1395.553, 0),
+                (517.309275, 10000.0, 0),
+                (630.393339, 8233.006, 0),
+                (793.456668, 5096.472, 0),
+            ],
+            "zodiaqKeyIdx": 0,
+            "isDecoy": 0,
+            "fragmentTypes": [
+                ('y', 1, 1),
+                ('y', 2, 1),
+                ('b', 3, 1),
+                ('y', 6, 2),
+                ('y', 3, 1),
+                ('y', 7, 2),
+                ('y', 8, 2),
+                ('y', 4, 1),
+                ('y', 5, 1),
+                ('y', 6, 1),
+            ],
+        }
+    }
+    zodiaqLibraryDict_shouldNotGenerate_hasDecoys = {
+        (375.873226, "INALDYKVR"): {
+            "precursorCharge": 3,
+            "identification": "INALDYKVR_375.873226_DECOY",
+            "proteinName": "1/DECOY_P08670",
+            "peaks": [
+                (175.201, 2926.18, 1),
+                (274.332, 1647.689, 1),
+                (299.33872, 1071.177, 1),
+                (397.46125, 2078.822, 1),
+                (402.5043, 4932.288, 1),
+                (433.00019999999995, 1301.4617, 1),
+                (490.05150000000003, 1395.553, 1),
+                (565.6775, 10000.0, 1),
+                (680.7649, 8233.006, 1),
+                (793.9225, 5096.472, 1),
+            ],
+            "zodiaqKeyIdx": 1,
+            "isDecoy": 1,
+            "fragmentTypes": [
+                ('y', 1, 1),
+                ('y', 2, 1),
+                ('b', 3, 1),
+                ('y', 6, 2),
+                ('y', 3, 1),
+                ('y', 7, 2),
+                ('y', 8, 2),
+                ('y', 4, 1),
+                ('y', 5, 1),
+                ('y', 6, 1),
+            ],
+        }
+    } | zodiaqLibraryDict_shouldGenerate
+    zodiaqLibraryDict_shouldNotGenerate_hasNoDecoysButNoFragmentTypes = {
+        (375.873226, "FANYIDKVR"): {
+            "precursorCharge": 3,
+            "identification": "FANYIDKVR",
+            "proteinName": "1/P08670",
+            "peaks": [
+                (175.118953, 2926.18, 0),
+                (274.187367, 1647.689, 0),
+                (333.155733, 1071.177, 0),
+                (397.231972, 2078.822, 0),
+                (402.282331, 4932.288, 0),
+                (454.253437, 1301.4617, 0),
+                (489.771994, 1395.553, 0),
+                (517.309275, 10000.0, 0),
+                (630.393339, 8233.006, 0),
+                (793.456668, 5096.472, 0),
+            ],
+            "zodiaqKeyIdx": 0,
+            "isDecoy": 0,
+        }
+    }
+    assert determine_if_decoys_should_be_generated(zodiaqLibraryDict_shouldGenerate)
+    assert not determine_if_decoys_should_be_generated(zodiaqLibraryDict_shouldNotGenerate_hasDecoys)
+    assert not determine_if_decoys_should_be_generated(zodiaqLibraryDict_shouldNotGenerate_hasNoDecoysButNoFragmentTypes)
+
+

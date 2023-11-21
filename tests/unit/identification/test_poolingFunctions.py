@@ -30,7 +30,7 @@ def queryFile():
 
 @pytest.fixture
 def libraryDict(libraryFile):
-    return LibraryLoaderContext(libraryFile).load_zodiaq_library_dict()
+    return LibraryLoaderContext(libraryFile).load_zodiaq_library_dict(isTest=True)
 
 
 @pytest.fixture

@@ -116,3 +116,21 @@ def recalculate_zodiaq_library_key_idx_to_account_for_inserted_decoys(outputDict
         value['zodiaqKeyIdx'] = i
         outputDict[key] = value
     return outputDict
+
+def determine_if_decoys_should_be_generated(zodiaqLibraryDict):
+    if there_are_any_decoys_in_library(zodiaqLibraryDict): return False
+    if any_library_entries_dont_have_fragment_type_data_requirement_for_decoy_generation(zodiaqLibraryDict): return False
+    return True
+
+def there_are_any_decoys_in_library(zodiaqLibraryDict):
+    for key, value in zodiaqLibraryDict.items():
+        if value['isDecoy']: return True
+    return False
+
+def any_library_entries_dont_have_fragment_type_data_requirement_for_decoy_generation(zodiaqLibraryDict):
+    for key, value in zodiaqLibraryDict.items():
+        if 'fragmentTypes' not in value: return True
+    return False
+
+
+

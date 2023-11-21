@@ -59,7 +59,7 @@ def test__library_loader_context__table__load_zodiaq_library_dict(tableContext):
             ],
         }
     }
-    zodiaqLibDict = tableContext.load_zodiaq_library_dict()
+    zodiaqLibDict = tableContext.load_zodiaq_library_dict(isTest=True)
     assert zodiaqLibDict == expectedZodiaqLibDict
 
 
