@@ -6,9 +6,10 @@ from zodiaq.utils import format_protein_string_to_list, format_protein_list_to_s
 from zodiaq.loaders.library.modificationMassDict import modificationMassDict
 nonCleavageAminoAcids = [ "A", "N", "D", "C", "E", "Q", "G", "H", "I", "L", "M", "F", "S", "T", "W", "Y", "V"]
 cleavageAminoAcids = set(['K', 'P', 'R'])
-modificationRegexStr = r'(.(?:[\[\(][^\)\]]+[\]\)])?)'
+modificationRegexStr = r'([A-Z](?:[\[\(][^\)\]]+[\]\)])?)'
 
 def shuffle_peptide_sequence_with_preserved_cleavage_points(peptide):
+    peptide = re.sub('^(?:[\[\(][^\)\]]+[\]\)])', '', peptide)
     originalPeptide = re.findall(modificationRegexStr, peptide)
     cleavageAALocations = [(i-len(originalPeptide)+1,char) for (i, char) in enumerate(originalPeptide) if char in cleavageAminoAcids]
     otherAAs = [char for char in originalPeptide if char not in cleavageAminoAcids]

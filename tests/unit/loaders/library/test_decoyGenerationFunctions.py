@@ -52,10 +52,23 @@ def test__decoy_generation_functions__shuffle_peptide_sequence_with_preserved_cl
     assert shuffledPeptide[rIdx] == testPeptide[rIdx]
     assert (shuffledPeptide[modifiedKIdx] != testPeptide[modifiedKIdx]) or (shuffledPeptide[modifiedCIdx] != testPeptide[modifiedCIdx])
     assert shuffledPeptide != testPeptide
-    matches = set(re.findall(r'(.(?:[\[\(][^\)\]]+[\]\)]))', shuffledPeptide))
+    matches = set(re.findall(r'([A-Z](?:[\[\(][^\)\]]+[\]\)]))', shuffledPeptide))
     expectedMatches = set(['K(UniMod:1)','C(UniMod:4)'])
     assert matches == expectedMatches
 
+def test__decoy_generation_functions__shuffle_peptide_sequence_with_preserved_cleavage_points__modifications_at_start_preserved_with_following_amino_acid():
+    random.seed(0)
+    testPeptide = '(UniMod:1)MDFQ(UniMod:2)HRPGGK'
+    rIdx = -1
+    modifiedKIdx = 4
+    modifiedCIdx = 15
+    shuffledPeptide = shuffle_peptide_sequence_with_preserved_cleavage_points(testPeptide)
+    assert shuffledPeptide[rIdx] == testPeptide[rIdx]
+    assert (shuffledPeptide[modifiedKIdx] != testPeptide[modifiedKIdx]) or (shuffledPeptide[modifiedCIdx] != testPeptide[modifiedCIdx])
+    assert shuffledPeptide != testPeptide
+    assert '1' not in shuffledPeptide
+    assert '(UniMod:2)' in shuffledPeptide
+    assert len('MDFQ(UniMod:2)HRPGGK') == len(shuffledPeptide)
 
 def test__decoy_generation_functions__calculate_differences_between_strings():
     numChars = 10
