@@ -158,7 +158,7 @@ def test__decoy_generation_functions__add_decoys_to_zodiaq_library():
             ],
         }
     }
-    outputDict = add_decoys_to_zodiaq_library(zodiaqLibraryDict)
+    outputDict = add_decoys_to_zodiaq_library(zodiaqLibraryDict.copy())
     expectedOutputDict = {
         (375.873226, "INALDYKVR"): {
             "precursorCharge": 3,
@@ -191,7 +191,7 @@ def test__decoy_generation_functions__add_decoys_to_zodiaq_library():
                 ('y', 6, 1),
             ],
         }
-    } | zodiaqLibraryDict
+    } | zodiaqLibraryDict.copy()
     assert_final_dict_output_matches_expected(outputDict, expectedOutputDict)
 
 def test__decoy_generation_functions__add_decoys_to_zodiaq_library__ambiguous_peptides_ignored():

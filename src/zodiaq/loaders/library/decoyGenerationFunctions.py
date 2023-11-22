@@ -81,7 +81,7 @@ def calculate_molecular_mass_of_sequence(sequence, type, charge):
 def add_decoys_to_zodiaq_library(zodiaqLibraryDict):
     decoyDict = {}
     for key, value in zodiaqLibraryDict.items():
-        decoyKey, decoyValue = create_decoy_from_target_in_zodiaq_library(key, value)
+        decoyKey, decoyValue = create_decoy_from_target_in_zodiaq_library(key, value.copy())
         if decoyKey:
             decoyDict[decoyKey] = decoyValue
     outputDict = recalculate_zodiaq_library_key_idx_to_account_for_inserted_decoys(decoyDict | zodiaqLibraryDict)
