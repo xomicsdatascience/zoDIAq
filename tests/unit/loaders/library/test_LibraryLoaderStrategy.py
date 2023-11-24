@@ -1,7 +1,7 @@
 from zodiaq.loaders.library.libraryLoaderStrategy import (
-    LibraryLoaderStrategy,
     create_peaks_from_mz_intensity_lists_and_zodiaq_key_id,
     remove_low_intensity_peaks_below_max_peak_num,
+    format_proteins_into_list_format,
 )
 import pytest
 
@@ -27,7 +27,7 @@ def testPeaks():
     ]
 
 
-def test__library_loader_strategy_traml__create_peaks_from_mz_intensity_lists_and_zodiaq_key_id(
+def test__library_loader_strategy__create_peaks_from_mz_intensity_lists_and_zodiaq_key_id(
     testPeaks,
 ):
     numPeaks = 15
@@ -40,7 +40,7 @@ def test__library_loader_strategy_traml__create_peaks_from_mz_intensity_lists_an
     assert peaks == testPeaks
 
 
-def test__library_loader_strategy_traml__remove_low_intensity_peaks_below_max_peak_num(
+def test__library_loader_strategy__remove_low_intensity_peaks_below_max_peak_num(
     testPeaks,
 ):
     maxPeakNum = 10
@@ -62,7 +62,7 @@ def test__library_loader_strategy_traml__remove_low_intensity_peaks_below_max_pe
     assert reducedTestPeaks == expectedReducedTestPeaks
 
 
-def test__library_loader_strategy_traml__remove_low_intensity_peaks_below_max_peak_num__all_peaks_returned_when_length_fewer_than_max_peak_num(
+def test__library_loader_strategy__remove_low_intensity_peaks_below_max_peak_num__all_peaks_returned_when_length_fewer_than_max_peak_num(
     testPeaks,
 ):
     maxPeakNum = 10
@@ -82,3 +82,21 @@ def test__library_loader_strategy_traml__remove_low_intensity_peaks_below_max_pe
         shortTestPeaks, maxPeakNum
     )
     assert reducedShortTestPeaks == expectedReducedShortTestPeaks
+
+
+def test__library_loader_strategy__format_proteins_into_list_format():
+    zodiaqLibraryDict = {
+        (100.0, "PEPTIDE"): {
+            "proteinName": "PROTEIN",
+        }
+    }
+    format_proteins_into_list_format(zodiaqLibraryDict)
+    assert zodiaqLibraryDict[(100.0, "PEPTIDE")]["proteinName"] == "1/PROTEIN"
+
+    zodiaqLibraryDict = {
+        (200.0, "PEPTIDE"): {
+            "proteinName": "",
+        }
+    }
+    format_proteins_into_list_format(zodiaqLibraryDict)
+    assert zodiaqLibraryDict[(200.0, "PEPTIDE")]["proteinName"] == ""

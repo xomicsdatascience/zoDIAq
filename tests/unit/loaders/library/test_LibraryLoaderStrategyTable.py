@@ -120,10 +120,10 @@ def test__library_loader_strategy_table__load_raw_library_object_from_file__fail
 
 
 def assert_final_dict_output_matches_expected(outputDict, expectedOutputDict):
-    for zodiaqLibKey in expectedOutputDict:
-        assert zodiaqLibKey in outputDict
-        for libEntryKey in expectedOutputDict[zodiaqLibKey]:
-            assert libEntryKey in outputDict[zodiaqLibKey]
+    for zodiaqLibKey in outputDict:
+        assert zodiaqLibKey in expectedOutputDict
+        for libEntryKey in outputDict[zodiaqLibKey]:
+            assert libEntryKey in expectedOutputDict[zodiaqLibKey]
             assert (
                 outputDict[zodiaqLibKey][libEntryKey]
                 == expectedOutputDict[zodiaqLibKey][libEntryKey]
@@ -154,6 +154,18 @@ def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_l
             ],
             "zodiaqKeyIdx": 0,
             "isDecoy": 0,
+            "fragmentTypes": [
+                ("b", 8, 2),
+                ("y", 8, 2),
+                ("y", 4, 1),
+                ("y", 5, 1),
+                ("b", 5, 1),
+                ("y", 6, 1),
+                ("b", 6, 1),
+                ("y", 7, 1),
+                ("b", 7, 1),
+                ("b", 8, 1),
+            ],
         }
     }
     assert_final_dict_output_matches_expected(outputDict, expectedOutputDict)
@@ -181,6 +193,13 @@ def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_l
             ],
             "zodiaqKeyIdx": 0,
             "isDecoy": 0,
+            "fragmentTypes": [
+                ("y", 3, 1),
+                ("b", 5, 1),
+                ("y", 4, 1),
+                ("y", 5, 1),
+                ("y", 6, 1),
+            ],
         },
         (300.83985497, "SVHGVVFR"): {
             "precursorCharge": 3,
@@ -195,6 +214,13 @@ def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_l
             ],
             "zodiaqKeyIdx": 1,
             "isDecoy": 1,
+            "fragmentTypes": [
+                ("y", 3, 1),
+                ("b", 5, 1),
+                ("y", 4, 1),
+                ("y", 5, 1),
+                ("y", 6, 1),
+            ],
         },
     }
     assert_final_dict_output_matches_expected(outputDict, expectedOutputDict)
@@ -224,6 +250,7 @@ def test__library_loader_strategy_table__organize_data_by_zodiaq_library_dict_ke
     reformattedDf = _reformat_raw_library_object_columns(
         loader.rawUploadedLibraryObject, loader.oldToNewColumnDict
     )
+    df = reformattedDf[["peakMz", "peakIntensity", "fragmentType", "fragmentNumber"]]
     expectedKeys = [(516.801083027, "YRPGTVALR")]
 
     expectedTupleToListMzDict = {
@@ -264,11 +291,27 @@ def test__library_loader_strategy_table__organize_data_by_zodiaq_library_dict_ke
         }
     }
 
+    expectedTupleToFragmentTypeDf = {
+        (516.801083027, "YRPGTVALR"): [
+            ("y", 7, 1),
+            ("b", 7, 1),
+            ("b", 8, 1),
+            ("b", 6, 1),
+            ("y", 6, 1),
+            ("y", 8, 2),
+            ("y", 5, 1),
+            ("y", 4, 1),
+            ("b", 5, 1),
+            ("b", 8, 2),
+        ]
+    }
+
     dataDict = _organize_data_by_zodiaq_library_dict_keys(reformattedDf)
     assert dataDict["zodiaqKeys"] == expectedKeys
     assert dataDict["mz"] == expectedTupleToListMzDict
     assert dataDict["intensities"] == expectedTupleToListIntensityDict
     assert dataDict["metadata"] == expectedTupleToDictMetadataDict
+    assert dataDict["fragmentTypes"] == expectedTupleToFragmentTypeDf
 
 
 @pytest.fixture
@@ -334,6 +377,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_l
     loader, fragpipeLibFilePath
 ):
     loader._load_raw_library_object_from_file(fragpipeLibFilePath)
+    df = loader.rawUploadedLibraryObject
     outputDict = loader._format_raw_library_object_into_zodiaq_library_dict()
     expectedOutputDict = {
         (375.873226, "FANYIDKVR"): {
@@ -354,6 +398,18 @@ def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_l
             ],
             "zodiaqKeyIdx": 0,
             "isDecoy": 0,
+            "fragmentTypes": [
+                ("y", 1, 1),
+                ("y", 2, 1),
+                ("b", 3, 1),
+                ("y", 6, 2),
+                ("y", 3, 1),
+                ("y", 7, 2),
+                ("y", 8, 2),
+                ("y", 4, 1),
+                ("y", 5, 1),
+                ("y", 6, 1),
+            ],
         }
     }
     assert_final_dict_output_matches_expected(outputDict, expectedOutputDict)
@@ -387,6 +443,18 @@ def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_l
             ],
             "zodiaqKeyIdx": 0,
             "isDecoy": 0,
+            "fragmentTypes": [
+                ("y", 1, 1),
+                ("y", 2, 1),
+                ("b", 3, 1),
+                ("y", 6, 2),
+                ("y", 3, 1),
+                ("y", 7, 2),
+                ("y", 8, 2),
+                ("y", 4, 1),
+                ("y", 5, 1),
+                ("y", 6, 1),
+            ],
         },
         (375.885354, "FGTINIVHPK"): {
             "precursorCharge": 3,
@@ -406,6 +474,18 @@ def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_l
             ],
             "zodiaqKeyIdx": 1,
             "isDecoy": 0,
+            "fragmentTypes": [
+                ("b", 2, 1),
+                ("y", 2, 1),
+                ("b", 3, 1),
+                ("y", 3, 1),
+                ("y", 4, 1),
+                ("b", 9, 2),
+                ("b", 5, 1),
+                ("y", 5, 1),
+                ("y", 6, 1),
+                ("y", 7, 1),
+            ],
         },
     }
     assert_final_dict_output_matches_expected(outputDict, expectedOutputDict)
@@ -494,6 +574,18 @@ def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_l
             ],
             "zodiaqKeyIdx": 0,
             "isDecoy": 0,
+            "fragmentTypes": [
+                ("y", 1, 1),
+                ("b", 2, 1),
+                ("y", 2, 1),
+                ("b", 3, 1),
+                ("b", 4, 1),
+                ("y", 3, 1),
+                ("b", 5, 1),
+                ("y", 4, 1),
+                ("y", 5, 1),
+                ("y", 6, 1),
+            ],
         }
     }
     assert_final_dict_output_matches_expected(outputDict, expectedOutputDict)
@@ -527,6 +619,18 @@ def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_l
             ],
             "zodiaqKeyIdx": 0,
             "isDecoy": 0,
+            "fragmentTypes": [
+                ("y", 1, 1),
+                ("y", 4, 2),
+                ("b", 2, 1),
+                ("y", 5, 2),
+                ("y", 6, 2),
+                ("b", 3, 1),
+                ("y", 3, 1),
+                ("y", 4, 1),
+                ("b", 5, 1),
+                ("y", 5, 1),
+            ],
         },
         (374.1867597566666, "_MMPAAALIM[Oxidation (O)]R_"): {
             "precursorCharge": 3,
@@ -546,6 +650,18 @@ def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_l
             ],
             "zodiaqKeyIdx": 1,
             "isDecoy": 0,
+            "fragmentTypes": [
+                ("y", 1, 1),
+                ("b", 2, 1),
+                ("y", 2, 1),
+                ("b", 3, 1),
+                ("b", 4, 1),
+                ("y", 3, 1),
+                ("b", 5, 1),
+                ("y", 4, 1),
+                ("y", 5, 1),
+                ("y", 6, 1),
+            ],
         },
         (507.272473135, "_MLAPPPIM[Oxidation (O)]K_"): {
             "precursorCharge": 2,
@@ -565,6 +681,18 @@ def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_l
             ],
             "zodiaqKeyIdx": 2,
             "isDecoy": 0,
+            "fragmentTypes": [
+                ("b", 2, 1),
+                ("y", 2, 1),
+                ("y", 5, 2),
+                ("b", 3, 1),
+                ("y", 6, 2),
+                ("y", 7, 2),
+                ("y", 4, 1),
+                ("y", 5, 1),
+                ("y", 6, 1),
+                ("y", 7, 1),
+            ],
         },
     }
     assert_final_dict_output_matches_expected(outputDict, expectedOutputDict)

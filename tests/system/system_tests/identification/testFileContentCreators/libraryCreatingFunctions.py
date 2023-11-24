@@ -38,6 +38,9 @@ def create_template_library_dataframe(
                     variableDict["protein"],
                     peakMz,
                     peakIntensity,
+                    "y",
+                    1,
+                    1,
                 ]
             )
 
@@ -51,6 +54,9 @@ def create_template_library_dataframe(
             "protein",
             "peakMz",
             "peakIntensity",
+            "fragmentType",
+            "fragmentNumber",
+            "fragmentCharge",
         ],
     )
     return df
@@ -81,6 +87,9 @@ spectrastColumns = [
     "ProteinName",
     "ProductMz",
     "LibraryIntensity",
+    "FragmentType",
+    "FragmentSeriesNumber",
+    "FragmentCharge",
 ]
 
 fragpipeColumns = [
@@ -91,6 +100,9 @@ fragpipeColumns = [
     "ProteinId",
     "ProductMz",
     "LibraryIntensity",
+    "FragmentType",
+    "FragmentSeriesNumber",
+    "FragmentCharge",
 ]
 
 prositColumns = [
@@ -101,4 +113,7 @@ prositColumns = [
     "FragmentLossType",
     "FragmentMz",
     "RelativeIntensity",
+    "FragmentType",
+    "FragmentNumber",
+    "FragmentCharge",
 ]

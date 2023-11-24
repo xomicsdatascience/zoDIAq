@@ -2,7 +2,6 @@ from zodiaq.utils import (
     create_outfile_header,
     format_protein_list_to_string,
     confirm_proteins_in_list_are_in_appropriate_format,
-
 )
 import pandas as pd
 import pytest
@@ -76,15 +75,16 @@ def test__utils__create_outfile_header__stdev_correction(
     output = create_outfile_header(outputDirectory, inputFilePath, correction=1)
     assert expectedOutput == output
 
+
 def test__format_protein_list_to_string__sets_are_formatted_in_sorted_order():
     numbers = [str(i) for i in range(10)]
-    letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     numSet = set(numbers)
     letterSet = set([letter for letter in letters])
     expectedNumberString = f'10/{"/".join(numbers)}'
     expectedLetterString = f'26/{"/".join(letters)}'
     assert format_protein_list_to_string(numSet) == expectedNumberString
-    assert format_protein_list_to_string(letterSet) ==  expectedLetterString
+    assert format_protein_list_to_string(letterSet) == expectedLetterString
 
 
 @pytest.fixture
