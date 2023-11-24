@@ -56,7 +56,7 @@ def calculate_similarities_between_strings(s1, s2):
 def calculate_ion_mz(sequence, type, position, charge):
     terminalSequence = determine_terminal_end_of_sequence(sequence, type, position)
     mass = calculate_molecular_mass_of_sequence(terminalSequence, type, charge)
-    return mass / charge
+    return mass
 
 
 def determine_terminal_end_of_sequence(sequence, type, position):
