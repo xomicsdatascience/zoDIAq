@@ -1,7 +1,6 @@
 import re
 import random
-from Bio.Seq import Seq
-from Bio.SeqUtils import molecular_weight
+from pyteomics import mass
 from zodiaq.utils import format_protein_string_to_list, format_protein_list_to_string
 from zodiaq.loaders.library.modificationMassDict import modificationMassDict
 nonCleavageAminoAcids = [ "A", "N", "D", "C", "E", "Q", "G", "H", "I", "L", "M", "F", "S", "T", "W", "Y", "V"]
@@ -69,14 +68,11 @@ def determine_terminal_end_of_sequence(sequence, type, position):
 
 
 def calculate_molecular_mass_of_sequence(sequence, type, charge):
-    H2O = 18.01468
     modifications = re.findall(r'([\[\(][^\)\]]+[\]\)])', sequence)
-    strippedSequence = re.sub(r'([\[\(][^\)\]]+[\]\)])', '', sequence)
-    mass = molecular_weight(Seq(strippedSequence), seq_type='protein')
+    unmodifiedSequence = re.sub(r'([\[\(][^\)\]]+[\]\)])', '', sequence)
+    unmodifiedMass = mass.calculate_mass(sequence=unmodifiedSequence, ion_type=type, charge=charge)
     modificationMass = sum([modificationMassDict[m] for m in modifications])
-    if type == 'b':
-        mass -= H2O
-    return mass + charge + modificationMass
+    return unmodifiedMass + modificationMass
 
 def add_decoys_to_zodiaq_library(zodiaqLibraryDict):
     decoyDict = {}

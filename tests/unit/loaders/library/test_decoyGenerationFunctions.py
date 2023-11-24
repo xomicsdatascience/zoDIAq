@@ -107,7 +107,7 @@ def test__decoy_generation_functions__calculate_ion_mz():
     ]
     for i in range(len(mzs)):
         calculatedMz = calculate_ion_mz(sequence, *fragments[i])
-        assert abs(mzs[i] - calculatedMz) < 0.5
+        assert abs(mzs[i] - calculatedMz) < 0.0001
 
 def test__decoy_generation_functions__calculate_ion_mz__with_unimod_modification():
     originalPeptide = 'ABC(UniMod:4)R'
