@@ -33,4 +33,6 @@ class LibraryLoaderContext:
 
     def load_zodiaq_library_dict(self, isTest=False):
         """See 'load_zodiaq_library_dict_from_file' in 'LibraryLoaderStrategy'"""
-        return self._strategy.load_zodiaq_library_dict_from_file(self._libraryFilePath, isTest)
+        return self._strategy.load_zodiaq_library_dict_from_file(
+            self._libraryFilePath, isTest
+        )

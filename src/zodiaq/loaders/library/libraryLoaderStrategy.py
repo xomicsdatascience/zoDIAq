@@ -1,7 +1,11 @@
 from abc import ABC, abstractmethod
 import os
-from zodiaq.loaders.library.decoyGenerationFunctions import determine_if_decoys_should_be_generated, add_decoys_to_zodiaq_library
+from zodiaq.loaders.library.decoyGenerationFunctions import (
+    determine_if_decoys_should_be_generated,
+    add_decoys_to_zodiaq_library,
+)
 import random
+
 
 class LibraryLoaderStrategy(ABC):
     def __init__(self):
@@ -61,7 +65,9 @@ class LibraryLoaderStrategy(ABC):
         """
         pass
 
-    def load_zodiaq_library_dict_from_file(self, libraryFilePath: os.PathLike, isTest) -> dict:
+    def load_zodiaq_library_dict_from_file(
+        self, libraryFilePath: os.PathLike, isTest
+    ) -> dict:
         """
         Outputs a standardized dictionary object from a library file.
             The LibraryLoaderContext class calls this function, which uses
@@ -84,6 +90,7 @@ class LibraryLoaderStrategy(ABC):
         if determine_if_decoys_should_be_generated(zodiaqLibDict) and not isTest:
             zodiaqLibDict = add_decoys_to_zodiaq_library(zodiaqLibDict)
         return zodiaqLibDict
+
 
 def create_peaks_from_mz_intensity_lists_and_zodiaq_key_id(
     mz: list, intensities: list, id: int
@@ -134,6 +141,7 @@ def remove_low_intensity_peaks_below_max_peak_num(peaks: list, maxPeakNum: int) 
     """
     peaks.sort(key=lambda x: x[1], reverse=True)
     return peaks[:maxPeakNum]
+
 
 finalVariableNames = {
     "precursorCharge": "precursorCharge",
