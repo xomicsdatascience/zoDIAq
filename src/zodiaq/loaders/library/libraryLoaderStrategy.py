@@ -1,5 +1,10 @@
 from abc import ABC, abstractmethod
 import os
+from zodiaq.loaders.library.decoyGenerationFunctions import (
+    determine_if_decoys_should_be_generated,
+    add_decoys_to_zodiaq_library,
+)
+import random
 
 
 class LibraryLoaderStrategy(ABC):
@@ -60,7 +65,9 @@ class LibraryLoaderStrategy(ABC):
         """
         pass
 
-    def load_zodiaq_library_dict_from_file(self, libraryFilePath: os.PathLike) -> dict:
+    def load_zodiaq_library_dict_from_file(
+        self, libraryFilePath: os.PathLike, isTest
+    ) -> dict:
         """
         Outputs a standardized dictionary object from a library file.
             The LibraryLoaderContext class calls this function, which uses
@@ -77,8 +84,19 @@ class LibraryLoaderStrategy(ABC):
         zodiaqLibDict : dict
             see _format_raw_library_object_into_zodiaq_library_dict return value.
         """
+        random.seed(0)
         self._load_raw_library_object_from_file(libraryFilePath)
-        return self._format_raw_library_object_into_zodiaq_library_dict()
+        zodiaqLibDict = self._format_raw_library_object_into_zodiaq_library_dict()
+        format_proteins_into_list_format(zodiaqLibDict)
+        if determine_if_decoys_should_be_generated(zodiaqLibDict) and not isTest:
+            zodiaqLibDict = add_decoys_to_zodiaq_library(zodiaqLibDict)
+        return zodiaqLibDict
+
+
+def format_proteins_into_list_format(zodiaqLibDict):
+    for key, value in zodiaqLibDict.items():
+        if value["proteinName"] and not value["proteinName"][:1].isdigit():
+            value["proteinName"] = f'1/{value["proteinName"]}'
 
 
 def create_peaks_from_mz_intensity_lists_and_zodiaq_key_id(
@@ -139,4 +157,5 @@ finalVariableNames = {
     "peaks": "peaks",
     "zodiaqKeyIdx": "zodiaqKeyIdx",
     "isDecoy": "isDecoy",
+    "fragmentTypes": "fragmentTypes",
 }

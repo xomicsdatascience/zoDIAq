@@ -45,9 +45,21 @@ def test__library_loader_context__table__load_zodiaq_library_dict(tableContext):
             ],
             "zodiaqKeyIdx": 0,
             "isDecoy": 0,
+            "fragmentTypes": [
+                ("b", 8, 2),
+                ("y", 8, 2),
+                ("y", 4, 1),
+                ("y", 5, 1),
+                ("b", 5, 1),
+                ("y", 6, 1),
+                ("b", 6, 1),
+                ("y", 7, 1),
+                ("b", 7, 1),
+                ("b", 8, 1),
+            ],
         }
     }
-    zodiaqLibDict = tableContext.load_zodiaq_library_dict()
+    zodiaqLibDict = tableContext.load_zodiaq_library_dict(isTest=True)
     assert zodiaqLibDict == expectedZodiaqLibDict
 
 
