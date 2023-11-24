@@ -87,9 +87,16 @@ class LibraryLoaderStrategy(ABC):
         random.seed(0)
         self._load_raw_library_object_from_file(libraryFilePath)
         zodiaqLibDict = self._format_raw_library_object_into_zodiaq_library_dict()
+        format_proteins_into_list_format(zodiaqLibDict)
         if determine_if_decoys_should_be_generated(zodiaqLibDict) and not isTest:
             zodiaqLibDict = add_decoys_to_zodiaq_library(zodiaqLibDict)
         return zodiaqLibDict
+
+
+def format_proteins_into_list_format(zodiaqLibDict):
+    for key, value in zodiaqLibDict.items():
+        if value["proteinName"] and not value["proteinName"][:1].isdigit():
+            value["proteinName"] = f'1/{value["proteinName"]}'
 
 
 def create_peaks_from_mz_intensity_lists_and_zodiaq_key_id(
