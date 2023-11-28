@@ -39,7 +39,7 @@ oldColumnsFragpipe = [
 
 oldColumnsProsit = [
     "PrecursorMz",
-    "ModifiedPeptide",
+    "LabeledPeptide",
     "FragmentMz",
     "RelativeIntensity",
     "PrecursorCharge",
