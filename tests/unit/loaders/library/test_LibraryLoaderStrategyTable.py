@@ -508,7 +508,7 @@ def test__library_loader_strategy_table__load_raw_library_object_from_file__fail
 def test__library_loader_strategy_table__load_raw_library_object_from_file__fails_when_missing_required_columns__prosit_library__ModifiedPeptide(
     loader, prositLibFilePath
 ):
-    missingColumnValues = ["ModifiedPeptide"]
+    missingColumnValues = ["LabeledPeptide"]
     check_value_error_thrown_when_missing_columns(
         loader, prositLibFilePath, missingColumnValues
     )
@@ -556,7 +556,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_l
     loader._load_raw_library_object_from_file(prositLibFilePath)
     outputDict = loader._format_raw_library_object_into_zodiaq_library_dict()
     expectedOutputDict = {
-        (374.1867597566666, "_MMPAAALIM[Oxidation (O)]R_"): {
+        (374.1867597566666, "MMPAAALIMR"): {
             "precursorCharge": 3,
             "identification": "MMPAAALIMR",
             "proteinName": "noloss",
@@ -601,7 +601,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_l
     )
     outputDict = loader._format_raw_library_object_into_zodiaq_library_dict()
     expectedOutputDict = {
-        (254.3121828783333, "_MRALLLIPPPPM[Oxidation (O)]R_"): {
+        (254.3121828783333, "MRALLLIPPPPMR"): {
             "precursorCharge": 6,
             "identification": "MRALLLIPPPPMR",
             "proteinName": "noloss",
@@ -632,7 +632,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_l
                 ("y", 5, 1),
             ],
         },
-        (374.1867597566666, "_MMPAAALIM[Oxidation (O)]R_"): {
+        (374.1867597566666, "MMPAAALIMR"): {
             "precursorCharge": 3,
             "identification": "MMPAAALIMR",
             "proteinName": "noloss",
@@ -663,7 +663,7 @@ def test__library_loader_strategy_table__format_raw_library_object_into_zodiaq_l
                 ("y", 6, 1),
             ],
         },
-        (507.272473135, "_MLAPPPIM[Oxidation (O)]K_"): {
+        (507.272473135, "MLAPPPIMK"): {
             "precursorCharge": 2,
             "identification": "MLAPPPIMK",
             "proteinName": "noloss",
