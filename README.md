@@ -48,14 +48,17 @@ Generates a histogram to visualize the corrective PPM tolerance used in the corr
 
 ### Scoring and FDR Filtering
 
-![Scoring and FDR Filtering](https://github.com/xomicsdatascience/zoDIAq/assets/11773171/c0c36ffa-676c-4a7c-b30b-0fb66517d1d6)
+![Screenshot 2023-12-12 at 5 03 11 PM](https://github.com/xomicsdatascience/zoDIAq/assets/11773171/6c3ccc2c-ad4b-42c4-b7f8-3bdfae358292)
 
 Files: 
 1. `zoDIAq Scoring Output Directory`: This is a required field. Choose the directory created by the `Peptide Identification` output of zoDIAq.
 
 Settings:
 
-None.
+Note that it is recommended that the default value is used for each of these settings.
+
+1. `protein quantification method (if applicable)`: Two protein quantification methods are available. The first default option, `maxlfq`, is based on [the maxLFQ method](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4159666/). The second option, `sum`, is a simplified method that quantifies proteins by summing relevant peptides identified in all samples. More details regarding the implementation of these methods can be [found on the wiki](https://github.com/xomicsdatascience/zoDIAq/wiki/Quantification-in-zoDIAq).
+2. `minimum number of matching peptides between samples (only for 'maxlfq' method)`: The maxLFQ method requires comparing each sample to every other sample. This variable dictates how many matching quantified peptides need to have been found between two samples for them to be considered a match.
 
 ### Targeted Peptide Reanalysis
 
