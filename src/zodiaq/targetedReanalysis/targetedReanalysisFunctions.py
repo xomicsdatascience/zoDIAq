@@ -176,7 +176,7 @@ def create_targeted_reanalysis_dataframes_by_compensation_voltage(
     fdrDf, isIncludeHeavyIsotopes
 ):
     return {
-        make_cv_header(cv[0]): create_targeted_reanalysis_dataframe(
+        make_cv_header(cv): create_targeted_reanalysis_dataframe(
             df, isIncludeHeavyIsotopes
         )
         for cv, df in fdrDf.groupby(["CompensationVoltage"])
