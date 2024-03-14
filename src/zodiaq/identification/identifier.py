@@ -1,3 +1,6 @@
+import numpy as np
+import pickle
+
 from zodiaq.loaders import LibraryLoaderContext, QueryLoaderContext
 from zodiaq.identification.poolingFunctions import (
     generate_pooled_library_and_query_spectra_by_mz_windows,
@@ -9,10 +12,7 @@ from zodiaq.identification.matchingFunctions import (
     calculate_ppm_offset_tolerance,
     create_ppm_histogram,
 )
-from zodiaq.scoring import (
-    score_library_to_query_matches,
-    determine_index_of_fdr_cutoff,
-)
+from zodiaq.scoring import score_library_to_query_matches
 from zodiaq.identification.outputFormattingFunctions import (
     extract_metadata_from_match_and_score_dataframes,
     format_output_line,
@@ -25,6 +25,24 @@ import pandas as pd
 import os
 from zodiaq.utils import Printer
 
+
+def sum_spectra_across_cycles(matchDf):
+    cycleDf = pd.read_csv('/Users/cranneyc/Desktop/cycle_to_scan_delete.csv').sort_values(['cycle', 'scan'])
+    cycleDf['group_min_value'] = cycleDf.groupby('cycle')['scan'].transform('min')
+    cycleDict = cycleDf.set_index('scan')['group_min_value'].to_dict()
+
+    matchDf['queryIdx'] = [cycleDict[x] for x in matchDf['queryIdx']]
+    print(matchDf)
+
+    def get_closest_val(series, target):
+        """Return the value in `series` closest to the target."""
+        return series.abs().sort_values().iloc[0] if len(series) > 0 else np.nan
+
+    newMatchDf = matchDf.groupby(['libraryIdx', 'libraryIntensity', 'queryIdx', 'queryMz']).agg({
+        'queryIntensity': 'sum',
+        'ppmDifference': lambda gp: get_closest_val(gp, -4.95),
+    }).reset_index()
+    return newMatchDf
 
 class Identifier:
     """
@@ -56,9 +74,15 @@ class Identifier:
         if not isTesting:
             printer = Printer()
             printer("Loading Library File")
+        #'''
         self._libraryDict = LibraryLoaderContext(
             self._commandLineArgs["library"]
         ).load_zodiaq_library_dict()
+        #with open("/Users/cranneyc/Documents/Projects/csodiaq_data/LC-MS_Label-Free_Quantification_Data/libraries/lib.bin", "wb") as f:  # "wb" because we want to write in binary mode
+        #    pickle.dump(self._libraryDict, f)
+        #'''
+        #with open("/Users/cranneyc/Documents/Projects/csodiaq_data/LC-MS_Label-Free_Quantification_Data/libraries/lib.bin", "rb") as f:  # "wb" because we want to write in binary mode
+        #    self._libraryDict = pickle.load(f)
 
     def identify_library_spectra_in_query_file(self, queryFile):
         """
@@ -68,6 +92,7 @@ class Identifier:
         printer = Printer()
         self._queryContext = QueryLoaderContext(queryFile)
         printer("Begin matching library spectra to query spectra")
+        #'''
         matchDf = self._match_library_to_query_spectra()
         printer(f"Total number of peaks matched (pre-correction): {len(matchDf.index)}")
         if self._correction_process_is_to_be_applied():
@@ -77,6 +102,8 @@ class Identifier:
             )
         if len(matchDf) == 0:
             return "No matches found between library and query spectra."
+        #'''
+        #matchDf = sum_spectra_across_cycles(matchDf)
         scoreDf = self._score_spectra_matches(matchDf)
         printer("Formatting spectral matches for output")
         return self._format_identifications_as_dataframe(matchDf, scoreDf)
@@ -168,6 +195,11 @@ class Identifier:
         offset, tolerance = calculate_ppm_offset_tolerance(
             matchDf["ppmDifference"], self._commandLineArgs["correctionDegree"]
         )
+        if tolerance < 5:
+            _, tolerance = calculate_ppm_offset_tolerance(
+                matchDf["ppmDifference"], 0.5
+            )
+        #tolerance = 10
         queryFile = self._queryContext.filePath.split("/")[-1]
         outFile = os.path.splitext(queryFile)[0] + "_correctionHistogram.png"
         if self._commandLineArgs["histogram"]:
@@ -179,12 +211,6 @@ class Identifier:
             )
         matchDf = filter_matches_by_ppm_offset_and_tolerance(matchDf, offset, tolerance)
         return eliminate_low_count_matches(matchDf)
-
-    def _apply_correction_to_score_dataframe(self, matchDf, scoreDf):
-        scoreDf = score_library_to_query_matches(matchDf)
-        isDecoyArray = identify_all_decoys(self._decoySet, scoreDf)
-        scoreDfCutoffIdx = determine_index_of_fdr_cutoff(isDecoyArray)
-        return scoreDf.iloc[:scoreDfCutoffIdx, :]
 
     def _format_identifications_as_dataframe(self, matchDf, scoreDf):
         """

@@ -5,7 +5,7 @@ from zodiaq.scoring import (
 from zodiaq.utils import format_protein_list_to_string, format_protein_string_to_list
 import numpy as np
 import pandas as pd
-
+from collections import Counter
 
 def create_spectral_fdr_output_from_full_output_sorted_by_desired_score(
     fullDf, fdrCutoff=0.01
@@ -20,6 +20,9 @@ def create_spectral_fdr_output_from_full_output_sorted_by_desired_score(
 def create_peptide_fdr_output_from_full_output_sorted_by_desired_score(
     fullDf, fdrCutoff=0.01
 ):
+    peptideCount = Counter(fullDf['peptide'])
+    fullDf['peptideCount'] = [peptideCount[peptide] for peptide in fullDf['peptide']]
+    fullDf = fullDf[fullDf['peptideCount'] > 50]
     peptideDf = drop_duplicate_values_from_df_in_given_column(fullDf, "peptide")
     fdrs = calculate_fdr_rates_of_decoy_array(peptideDf["isDecoy"])
     peptideDf["peptideFDR"] = fdrs
@@ -180,6 +183,7 @@ def determine_if_peptides_are_unique_to_leading_protein(proteinDf):
             dataframe provided as input. 0 indicates the peptide is NOT unique, 1 that
             it is unique.
     """
+    proteinDf = proteinDf.reset_index(drop=True)
     uniqueValuesDf = proteinDf.groupby("leadingProtein").filter(
         lambda group: len(group) == 1
     )

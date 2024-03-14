@@ -154,7 +154,10 @@ def match_library_to_query_pooled_spectra(libraryPeaks, queryPeaks, ppmTolerance
             libraryArray, queryArray, ppmTolerance, baselineLibraryIdx, baselineQueryIdx
         )
         dataArrays.append(dataArray)
-    data = np.concatenate(dataArrays, axis=0)
+    if len(dataArrays) == 0:
+        data = []
+    else:
+        data = np.concatenate(dataArrays, axis=0)
     matchDf = pd.DataFrame(
         data,
         columns=[

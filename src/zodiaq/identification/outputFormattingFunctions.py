@@ -20,6 +20,7 @@ def format_output_line(libMetadata, queMetadata, matchMetadata):
         queMetadata["CV"],
         queMetadata["windowWidth"],
         matchMetadata["exclude_num"],
+        queMetadata["retentionTime"],
     ]
 
 
@@ -69,6 +70,7 @@ def format_output_as_pandas_dataframe(inputFileName, outputData):
         "CompensationVoltage",
         "totalWindowWidth",
         "exclude_num",
+        "retentionTime",
     ]
     outputDf = pd.DataFrame(outputData, columns=columns)
     outputDf.insert(0, "fileName", [inputFileName] * len(outputDf.index))
