@@ -28,6 +28,7 @@ def identifierOutputData():
         6,
         7,
         11,
+        12,
     ]
 
 
@@ -47,6 +48,7 @@ def test__output_formatting_functions__format_output_line(identifierOutputData):
         "peaksCount": 5,
         "CV": 6,
         "windowWidth": 7,
+        "retentionTime":12,
     }
     matchDict = {
         "cosineSimilarityScore": 8,
@@ -172,6 +174,7 @@ def test__output_formatting_functions__format_output_as_pandas_dataframe(
         "CompensationVoltage",
         "totalWindowWidth",
         "exclude_num",
+        "retentionTime",
     ]
     inputFileName = "dummyFile"
     expectedOutputDf = pd.DataFrame(

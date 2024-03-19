@@ -9,10 +9,7 @@ from zodiaq.identification.matchingFunctions import (
     calculate_ppm_offset_tolerance,
     create_ppm_histogram,
 )
-from zodiaq.scoring import (
-    score_library_to_query_matches,
-    determine_index_of_fdr_cutoff,
-)
+from zodiaq.scoring import score_library_to_query_matches
 from zodiaq.identification.outputFormattingFunctions import (
     extract_metadata_from_match_and_score_dataframes,
     format_output_line,
@@ -168,6 +165,11 @@ class Identifier:
         offset, tolerance = calculate_ppm_offset_tolerance(
             matchDf["ppmDifference"], self._commandLineArgs["correctionDegree"]
         )
+        toleranceMinimumCutoff = 5
+        if not self._commandLineArgs["correctionDegree"] and tolerance < toleranceMinimumCutoff:
+            _, tolerance = calculate_ppm_offset_tolerance(
+                matchDf["ppmDifference"], 0.5
+            )
         queryFile = self._queryContext.filePath.split("/")[-1]
         outFile = os.path.splitext(queryFile)[0] + "_correctionHistogram.png"
         if self._commandLineArgs["histogram"]:
@@ -179,12 +181,6 @@ class Identifier:
             )
         matchDf = filter_matches_by_ppm_offset_and_tolerance(matchDf, offset, tolerance)
         return eliminate_low_count_matches(matchDf)
-
-    def _apply_correction_to_score_dataframe(self, matchDf, scoreDf):
-        scoreDf = score_library_to_query_matches(matchDf)
-        isDecoyArray = identify_all_decoys(self._decoySet, scoreDf)
-        scoreDfCutoffIdx = determine_index_of_fdr_cutoff(isDecoyArray)
-        return scoreDf.iloc[:scoreDfCutoffIdx, :]
 
     def _format_identifications_as_dataframe(self, matchDf, scoreDf):
         """

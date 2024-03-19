@@ -32,6 +32,8 @@ def determine_index_of_fdr_cutoff(isDecoyArray, fdrCutoff=1e-2):
     if 1 not in isDecoyArray:
         return len(isDecoyArray)
     fdrs = calculate_fdr_rates_of_decoy_array(isDecoyArray)
+    if len(fdrs) == 0:
+        return 0
     lastDecoyIdx = np.argmax(fdrs > fdrCutoff)
     return lastDecoyIdx
 

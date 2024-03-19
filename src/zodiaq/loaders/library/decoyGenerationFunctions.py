@@ -36,6 +36,8 @@ def shuffle_peptide_sequence_with_preserved_cleavage_points(peptide):
         if char in cleavageAminoAcids
     ]
     otherAAs = [char for char in originalPeptide if char not in cleavageAminoAcids]
+    if len(otherAAs) < 2:
+        return peptide
     for i in range(100):
         shuffledPeptide = shuffle_non_cleavage_amino_acids(otherAAs, i)
         shuffledPeptide = insert_cleavage_amino_acids_into_shuffled_peptide(
