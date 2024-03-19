@@ -6,8 +6,10 @@ from zodiaq.utils import Printer
 def generate_pooled_library_and_query_spectra_by_mz_windows(libDict, queryContext):
     printer = Printer()
     queDict = queryContext.map_query_scan_ids_to_dia_mz_windows()
+    #yield 0,0
     printer(f"Total number of m/z windows: {len(queDict.keys())}")
     numWindowsTraversed = 0
+    totalNumOfPeaks = 0
     with queryContext.get_query_file_reader() as reader:
         for mzWindow, scans in queDict.items():
             numWindowsTraversed += 1
@@ -19,6 +21,13 @@ def generate_pooled_library_and_query_spectra_by_mz_windows(libDict, queryContex
             if len(pooledLibraryPeaks) == 0:
                 continue
             pooledQueryPeaks = queryContext.pool_peaks_of_query_scans(scans, reader)
+            totalNumOfPeaks += len(pooledQueryPeaks)
+            #print(mzWindow)
+            #print(len(scans))
+            print(len(pooledQueryPeaks))
+            print(len(pooledLibraryPeaks))
+            print('*' * 20, flush=True)
+
             yield pooledLibraryPeaks, pooledQueryPeaks
 
 

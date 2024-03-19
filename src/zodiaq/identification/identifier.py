@@ -1,6 +1,3 @@
-import numpy as np
-import pickle
-
 from zodiaq.loaders import LibraryLoaderContext, QueryLoaderContext
 from zodiaq.identification.poolingFunctions import (
     generate_pooled_library_and_query_spectra_by_mz_windows,
@@ -24,25 +21,6 @@ from zodiaq.identification.outputFormattingFunctions import (
 import pandas as pd
 import os
 from zodiaq.utils import Printer
-
-
-def sum_spectra_across_cycles(matchDf):
-    cycleDf = pd.read_csv('/Users/cranneyc/Desktop/cycle_to_scan_delete.csv').sort_values(['cycle', 'scan'])
-    cycleDf['group_min_value'] = cycleDf.groupby('cycle')['scan'].transform('min')
-    cycleDict = cycleDf.set_index('scan')['group_min_value'].to_dict()
-
-    matchDf['queryIdx'] = [cycleDict[x] for x in matchDf['queryIdx']]
-    print(matchDf)
-
-    def get_closest_val(series, target):
-        """Return the value in `series` closest to the target."""
-        return series.abs().sort_values().iloc[0] if len(series) > 0 else np.nan
-
-    newMatchDf = matchDf.groupby(['libraryIdx', 'libraryIntensity', 'queryIdx', 'queryMz']).agg({
-        'queryIntensity': 'sum',
-        'ppmDifference': lambda gp: get_closest_val(gp, -4.95),
-    }).reset_index()
-    return newMatchDf
 
 class Identifier:
     """
@@ -93,7 +71,9 @@ class Identifier:
         self._queryContext = QueryLoaderContext(queryFile)
         printer("Begin matching library spectra to query spectra")
         #'''
+        print(queryFile)
         matchDf = self._match_library_to_query_spectra()
+        #return
         printer(f"Total number of peaks matched (pre-correction): {len(matchDf.index)}")
         if self._correction_process_is_to_be_applied():
             matchDf = self._apply_correction_to_match_dataframe(matchDf)
@@ -103,7 +83,6 @@ class Identifier:
         if len(matchDf) == 0:
             return "No matches found between library and query spectra."
         #'''
-        #matchDf = sum_spectra_across_cycles(matchDf)
         scoreDf = self._score_spectra_matches(matchDf)
         printer("Formatting spectral matches for output")
         return self._format_identifications_as_dataframe(matchDf, scoreDf)
@@ -128,6 +107,7 @@ class Identifier:
         ) in generate_pooled_library_and_query_spectra_by_mz_windows(
             self._libraryDict, self._queryContext
         ):
+            #return
             matchDf = match_library_to_query_pooled_spectra(
                 pooledLibPeaks,
                 pooledQueryPeaks,

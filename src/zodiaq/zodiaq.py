@@ -48,6 +48,7 @@ def run_identification(args):
         identificationFullOutputDf = identifier.identify_library_spectra_in_query_file(
             queryFile
         )
+        #continue
         if isinstance(identificationFullOutputDf, str):
             warnings.warn(
                 f"{identificationFullOutputDf} Skipping {queryFile} file.", UserWarning
