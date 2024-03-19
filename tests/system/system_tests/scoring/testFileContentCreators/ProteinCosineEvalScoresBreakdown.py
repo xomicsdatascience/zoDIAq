@@ -21,9 +21,9 @@ class ProteinCosineEvalScoresBreakdown(MaccScoresBreakdown):
         )
         peptideInputDf = self._create_input_for_generic_peptides(rank=2, startingRow=2)
         allDecoyDf = self._create_input_for_all_decoys(numRows=3)
-        firstDecoyLayerInputDf = allDecoyDf.iloc[:2]
+        firstDecoyLayerInputDf = allDecoyDf.iloc[:2].copy()
         firstDecoyLayerInputDf["rank"] = [3] * len(firstDecoyLayerInputDf.index)
-        secondDecoyLayerInputDf = allDecoyDf.iloc[2:]
+        secondDecoyLayerInputDf = allDecoyDf.iloc[2:].copy()
         secondDecoyLayerInputDf["rank"] = [4] * len(secondDecoyLayerInputDf.index)
         self.inputDf = pd.concat(
             [

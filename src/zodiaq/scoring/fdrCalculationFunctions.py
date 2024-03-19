@@ -11,9 +11,11 @@ def create_spectral_fdr_output_from_full_output_sorted_by_desired_score(
     fullDf, fdrCutoff=0.01
 ):
     fdrs = calculate_fdr_rates_of_decoy_array(fullDf["isDecoy"])
-    scoreDfCutoffIdx = np.argmax(fdrs > fdrCutoff)
     spectralDf = fullDf.copy()
     spectralDf["spectralFDR"] = fdrs
+    if len(fdrs) == 0:
+        return spectralDf
+    scoreDfCutoffIdx = np.argmax(fdrs > fdrCutoff)
     return spectralDf.iloc[:scoreDfCutoffIdx, :]
 
 
@@ -23,6 +25,8 @@ def create_peptide_fdr_output_from_full_output_sorted_by_desired_score(
     peptideDf = drop_duplicate_values_from_df_in_given_column(fullDf, "peptide")
     fdrs = calculate_fdr_rates_of_decoy_array(peptideDf["isDecoy"])
     peptideDf["peptideFDR"] = fdrs
+    if len(fdrs) == 0:
+        return peptideDf
     scoreDfCutoffIdx = np.argmax(fdrs > fdrCutoff)
     if not scoreDfCutoffIdx:
         return peptideDf
