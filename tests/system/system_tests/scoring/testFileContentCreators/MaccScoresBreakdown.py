@@ -22,11 +22,11 @@ class MaccScoresBreakdown(BaselineScoresBreakdown):
         )
         duplicatePeptideInputDf["zLIB"] = [2] * len(duplicatePeptideInputDf.index)
         allDecoyDf = self._create_input_for_all_decoys()
-        firstDecoyLayerInputDf = allDecoyDf.iloc[:2]
+        firstDecoyLayerInputDf = allDecoyDf.iloc[:2].copy()
         firstDecoyLayerInputDf["rank"] = [3] * len(firstDecoyLayerInputDf.index)
-        secondDecoyLayerInputDf = allDecoyDf.iloc[2:4]
+        secondDecoyLayerInputDf = allDecoyDf.iloc[2:4].copy()
         secondDecoyLayerInputDf["rank"] = [4] * len(secondDecoyLayerInputDf.index)
-        thirdDecoyLayerInputDf = allDecoyDf.iloc[4:]
+        thirdDecoyLayerInputDf = allDecoyDf.iloc[4:].copy()
         thirdDecoyLayerInputDf["rank"] = [5] * len(thirdDecoyLayerInputDf.index)
         extraSpectralInputDf = self._create_input_for_generic_peptides(
             rank=6, startingRow=200

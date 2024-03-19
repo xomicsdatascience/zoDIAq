@@ -2,14 +2,13 @@ import pandas as pd
 import numpy as np
 from zodiaq.utils import format_protein_string_to_list
 from .idpickerFunctions import initialize__format_peptide_protein_connections
-from scipy import mean
 from collections import defaultdict
 from itertools import chain
 import scipy.linalg as linalg
 
 
 def calculate_ion_count_from_peptides_of_protein(ionCountList):
-    return mean(ionCountList)
+    return np.mean(ionCountList)
 
 
 def calculate_ion_count_for_each_protein_in_protein_fdr_df(proteinDf):
