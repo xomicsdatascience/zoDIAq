@@ -16,7 +16,7 @@ def create_spectral_fdr_output_from_full_output_sorted_by_desired_score(
     if len(fdrs) == 0:
         return spectralDf
     scoreDfCutoffIdx = np.argmax(fdrs > fdrCutoff)
-    return spectralDf.iloc[:scoreDfCutoffIdx, :]
+    return spectralDf#.iloc[:scoreDfCutoffIdx, :]
 
 
 def create_peptide_fdr_output_from_full_output_sorted_by_desired_score(
@@ -31,7 +31,7 @@ def create_peptide_fdr_output_from_full_output_sorted_by_desired_score(
     if not scoreDfCutoffIdx:
         return peptideDf
     else:
-        return peptideDf.iloc[:scoreDfCutoffIdx, :]
+        return peptideDf#.iloc[:scoreDfCutoffIdx, :]
 
 
 def create_protein_fdr_output_from_peptide_fdr_output(peptideDf):

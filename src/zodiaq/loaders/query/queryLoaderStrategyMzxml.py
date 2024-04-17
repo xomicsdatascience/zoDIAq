@@ -8,7 +8,7 @@ from zodiaq.loaders.library.libraryLoaderStrategy import (
 from collections import defaultdict
 from pyteomics import mzxml
 import warnings
-
+import numpy as np
 
 class QueryLoaderStrategyMzxml(QueryLoaderStrategy):
     """
@@ -31,6 +31,25 @@ class QueryLoaderStrategyMzxml(QueryLoaderStrategy):
                 windowWidth = spec["precursorMz"][0]["windowWideness"]
                 mzWindowToScanIdDict[precMz, windowWidth].append(scan)
         return dict(mzWindowToScanIdDict)
+
+    def find_all_ms1_mz_peaks_per_scan(self) -> dict:
+        mzWindowToMs1MzDict = defaultdict(list)
+        with mzxml.read(self.filePath) as spectra:
+            for spec in spectra:
+                scan = spec["num"]
+                if "precursorMz" in spec:
+                    #print()
+                    continue
+
+                #print(scan)
+                midIntensity = sorted(spec['intensity array'])[-600]#[-len(spec['intensity array'])//5]
+                #midIntensity = 0
+                #print(len(spec['intensity array']))
+                mzWindowToMs1MzDict[int(scan)] += list(spec['m/z array'][spec['intensity array'] >= midIntensity])
+
+        for key, value in mzWindowToMs1MzDict.items():
+            mzWindowToMs1MzDict[key] = np.array(sorted(value))
+        return dict(mzWindowToMs1MzDict)
 
     def extract_metadata_from_query_scans(self) -> dict:
         scanMetadataDict = {}
