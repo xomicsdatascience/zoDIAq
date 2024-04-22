@@ -4,7 +4,6 @@ from collections import Counter
 import re
 
 dirs = [
-    '/Users/cranneyc/Documents/Projects/csodiaqOutput/currentDevBranchOutput/SLIM_HeLa-zodiaq-id-20240319-075759/fdrScores-macc-maxlfq',
     '/Users/cranneyc/Documents/Projects/csodiaqOutput/currentDevBranchOutput/delete_SLIM_library_filtering_experiment_top010ms1Peaks-zodiaq-id-20240419-130648/fdrScores-macc-maxlfq',
     '/Users/cranneyc/Documents/Projects/csodiaqOutput/currentDevBranchOutput/delete_SLIM_library_filtering_experiment_top025ms1Peaks-zodiaq-id-20240419-130057/fdrScores-macc-maxlfq',
     '/Users/cranneyc/Documents/Projects/csodiaqOutput/currentDevBranchOutput/delete_SLIM_library_filtering_experiment_top050ms1Peaks-zodiaq-id-20240419-074339/fdrScores-macc-maxlfq',
@@ -13,6 +12,7 @@ dirs = [
     '/Users/cranneyc/Documents/Projects/csodiaqOutput/currentDevBranchOutput/delete_SLIM_library_filtering_experiment_top300ms1Peaks-zodiaq-id-20240419-075012/fdrScores-macc-maxlfq',
     '/Users/cranneyc/Documents/Projects/csodiaqOutput/currentDevBranchOutput/delete_SLIM_library_filtering_experiment_top400ms1Peaks-zodiaq-id-20240419-075115/fdrScores-macc-maxlfq',
     '/Users/cranneyc/Documents/Projects/csodiaqOutput/currentDevBranchOutput/delete_SLIM_library_filtering_experiment_top600ms1Peaks-zodiaq-id-20240419-075430/fdrScores-macc-maxlfq',
+    '/Users/cranneyc/Documents/Projects/csodiaqOutput/currentDevBranchOutput/SLIM_HeLa-zodiaq-id-20240319-075759/fdrScores-macc-maxlfq',
 ]
 filePattern = r'zoDIAq-file_400ng-uL_HeLa_SLIM-DIA_FT_2080ms_2.04s_MS2_30k_NCE35_([\d\.]+)min_([\d\.]+)_([\d\.]+)_([\d\.]+)_DIA_corrected_fullOutput_\w+.csv'
 dirPattern = r'delete_SLIM_library_filtering_experiment_top(\d+)ms1Peaks-zodiaq-id-\d+-\d+/fdrScores-macc-maxlfq'
