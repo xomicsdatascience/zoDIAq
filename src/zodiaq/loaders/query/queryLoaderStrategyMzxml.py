@@ -42,7 +42,7 @@ class QueryLoaderStrategyMzxml(QueryLoaderStrategy):
                     continue
 
                 #print(spec)
-                midIntensity = sorted(spec['intensity array'])[-10]#[-len(spec['intensity array'])//5]
+                midIntensity = sorted(spec['intensity array'])[-600]#[-len(spec['intensity array'])//5]
                 #midIntensity = 0
                 #print(len(spec['intensity array']))
                 mzWindowToMs1MzDict[int(scan)] += list(spec['m/z array'][spec['intensity array'] >= midIntensity])

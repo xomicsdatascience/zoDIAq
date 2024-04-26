@@ -61,7 +61,7 @@ def _pool_library_spectra_by_mz_window(mzWindow, ms1MzValues, libDict):
     #plt.show()
     libKeys = _find_keys_of_library_spectra_in_mz_window(mzWindow, libDict.keys())
     #print(len(libKeys))
-    libKeys = _filter_lib_keys_by_ms1_values_all(sorted(libKeys), sorted(ms1MzValues))
+    libKeys = _filter_lib_keys_by_ms1_values_ppm(sorted(libKeys), sorted(ms1MzValues))
     #print(len(libKeys))
     pooledLibPeaks = []
     for key in libKeys:

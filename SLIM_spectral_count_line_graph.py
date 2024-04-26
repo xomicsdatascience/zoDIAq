@@ -1,7 +1,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-df = pd.read_csv('/Users/cranneyc/Desktop/topNPeakAnalysis.csv')
+#df = pd.read_csv('/Users/cranneyc/Desktop/topNPeakAnalysis.csv')
+df = pd.read_csv('/Users/cranneyc/Desktop/topNPeakAnalysis_ppmCorrection.csv')
 
 
 # Merge the four category columns into a single column
