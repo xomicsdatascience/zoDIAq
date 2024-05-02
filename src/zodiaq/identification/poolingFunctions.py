@@ -22,16 +22,10 @@ def generate_pooled_library_and_query_spectra_by_mz_windows(libDict, queryContex
         for mzWindow, scans in queDict.items():
             scans = sorted([int(scan) for scan in scans])
             scans = [str(scan) for scan in scans]
-            #print(scans)
             for i in range(0, len(scans)):
                 ms2Scan = scans[i]
-
                 ms1Scan = _find_corresponding_number(int(ms2Scan), numScans, numMs2Gaps)
-
-                #print(f'{ms2Scan} -> {ms1Scan}')
-                ms1MzValues = ms1Dict[ms1Scan] #np.array([1])
-
-
+                ms1MzValues = ms1Dict[ms1Scan]
                 numWindowsTraversed += 1
                 printer(
                     f"Checkpoint: {numWindowsTraversed} / {len(queDict.keys())*len(scans)} windows traversed",
@@ -55,14 +49,8 @@ def _find_ms1_scan_span_and_number_of_ms2_cycles(lst):
     return None, None  # If no gap is found
 
 def _pool_library_spectra_by_mz_window(mzWindow, ms1MzValues, libDict):
-    #print('*'*20)
-    #plt.clf()
-    #plt.hist(ms1MzValues, bins=30)
-    #plt.show()
     libKeys = _find_keys_of_library_spectra_in_mz_window(mzWindow, libDict.keys())
-    #print(len(libKeys))
     libKeys = _filter_lib_keys_by_ms1_values_ppm(sorted(libKeys), sorted(ms1MzValues))
-    #print(len(libKeys))
     pooledLibPeaks = []
     for key in libKeys:
         pooledLibPeaks.extend(libDict[key]["peaks"])
@@ -77,10 +65,7 @@ def _filter_lib_keys_by_ms1_values_ppm(libKeys, ms1MzValues):
         matchDf["ppmDifference"], 0.5
     )
     matchDf.to_csv(f"/Users/cranneyc/Desktop/ppmCorrection/{time.strftime('%Y%m%d-%H%M%S')}.csv", index=False)
-    #print(f'offset {offset}, tolerance {tolerance}')
-    #print(len(matchDf))
     matchDf = filter_matches_by_ppm_offset_and_tolerance(matchDf, offset, tolerance)
-    #print(len(matchDf))
     keyIndices = sorted(set(matchDf['libraryIdx']))
     filteredKeys = [libKeys[i] for i in keyIndices]
     return filteredKeys
@@ -112,10 +97,6 @@ def _filter_lib_keys_by_ms1_values_all(libKeys, ms1MzValues):
     filteredKeys = [(mz, peptide) for mz, peptide in libKeys if _is_lib_mz_found_in_ms1(mz, np.array(ms1MzValues))]
     peptides = [key[1] for key in filteredKeys]
     target = 'VPTANVSVVDLTC(UniMod:4)R'
-    #if target in peptides:
-    #    idx = peptides.index(target)
-    #    print(filteredKeys[idx])
-    #    print(ms1MzValues)
     return filteredKeys
 
 def _is_lib_mz_found_in_ms1(libMz, ms1MzValues, tolerance = 0.1): #NOTE
