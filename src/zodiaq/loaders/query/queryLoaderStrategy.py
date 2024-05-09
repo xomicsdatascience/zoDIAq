@@ -24,7 +24,7 @@ class QueryLoaderStrategy(ABC):
         self.filePath = queryFilePath
 
     @abstractmethod
-    def map_query_scan_ids_to_dia_mz_windows(self) -> dict:
+    def count_number_of_ms1_and_ms2_scans_per_cycle(self):
         """
         Identifies m/z windows from each scan, then groups scans by identical m/z windows.
 

@@ -13,8 +13,8 @@ class QueryLoaderContext:
         self.filePath = queryFilePath
         self._strategy = Mzxml(queryFilePath)
 
-    def map_query_scan_ids_to_dia_mz_windows(self) -> dict:
-        return self._strategy.map_query_scan_ids_to_dia_mz_windows()
+    def count_number_of_ms1_and_ms2_scans_per_cycle(self):
+        return self._strategy.count_number_of_ms1_and_ms2_scans_per_cycle()
 
     def extract_metadata_from_query_scans(self) -> dict:
         return self._strategy.extract_metadata_from_query_scans()
@@ -24,3 +24,6 @@ class QueryLoaderContext:
 
     def pool_peaks_of_query_scans(self, scans: list, reader) -> list:
         return self._strategy.pool_peaks_of_query_scans(scans, reader)
+
+    def identify_mz_window_highest_and_lowest_bound(self, scans: list, reader) -> list:
+        return self._strategy.identify_mz_window_highest_and_lowest_bound(scans, reader)

@@ -66,6 +66,8 @@ class Identifier:
         self._queryContext = QueryLoaderContext(queryFile)
         printer("Begin matching library spectra to query spectra")
         matchDf = self._match_library_to_query_spectra()
+        if len(matchDf) == 0:
+            return "No matches found between library and query spectra."
         printer(f"Total number of peaks matched (pre-correction): {len(matchDf.index)}")
         if self._correction_process_is_to_be_applied():
             matchDf = self._apply_correction_to_match_dataframe(matchDf)
@@ -105,6 +107,9 @@ class Identifier:
             )
             matchDf = eliminate_low_count_matches(matchDf)
             matchDfs.append(matchDf)
+        print(matchDfs)
+        if len(matchDfs) == 0:
+            return matchDfs
         return pd.concat(matchDfs)
 
     def _score_spectra_matches(self, matchDf):
