@@ -107,7 +107,6 @@ class Identifier:
             )
             matchDf = eliminate_low_count_matches(matchDf)
             matchDfs.append(matchDf)
-        print(matchDfs)
         if len(matchDfs) == 0:
             return matchDfs
         return pd.concat(matchDfs)
