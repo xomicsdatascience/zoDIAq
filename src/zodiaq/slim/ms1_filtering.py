@@ -4,7 +4,7 @@ from zodiaq.identification.matchingFunctions import (
 )
 import numpy as np
 
-def placehoder_filter_library_keys_by_ms1_mz_precursor_values(ms1Spectrum, libKeys):
+def passthrough_filter_library_keys_by_ms1_mz_precursor_values(ms1Spectrum, libKeys):
     return libKeys
 
 def filter_library_keys_by_ms1_mz_precursor_values(ms1Spectrum, libKeys):

@@ -1,7 +1,7 @@
 import numpy as np
 from zodiaq.identification.matchingFunctions import calculate_parts_per_million_relative_difference
 
-def placeholder_sum_spectra_into_single_spectrum(mixedSpectra, type='ms2'):
+def passthrough_sum_spectra_into_single_spectrum(mixedSpectra, type='ms2'):
     return mixedSpectra
 
 def sum_spectra_into_single_spectrum(mixedSpectra, type='ms2'):
