@@ -17,7 +17,7 @@ def generate_pooled_library_and_query_spectra_by_mz_windows(libDict, queryContex
             matchingMs1Scans = allScans[i::ms1Count + ms2Count]
             print(matchingMs1Scans)
             ms1MergedSpectra = queryContext.pool_peaks_of_query_scans(matchingMs1Scans, reader)
-            summedMs1Spectrum = sum_spectra_into_single_spectrum(ms1MergedSpectra)   # sum ms1 scans HERE
+            summedMs1Spectrum = sum_spectra_into_single_spectrum(ms1MergedSpectra, type='ms1')   # sum ms1 scans HERE
             for j in range(ms1Count, ms1Count + number_of_ms2_scans_per_ms1_scan):
                 startIndex = (i * (number_of_ms2_scans_per_ms1_scan)) + j
                 matchingMs2Scans = allScans[startIndex::ms1Count + ms2Count]
@@ -30,7 +30,7 @@ def generate_pooled_library_and_query_spectra_by_mz_windows(libDict, queryContex
                 if len(pooledLibraryPeaks) == 0:
                     continue
                 ms2MergedSpectra = queryContext.pool_peaks_of_query_scans(matchingMs2Scans, reader)
-                summedMs2Spectrum = sum_spectra_into_single_spectrum(ms2MergedSpectra)  # sum ms2 scans HERE
+                summedMs2Spectrum = sum_spectra_into_single_spectrum(ms2MergedSpectra, type='ms2')  # sum ms2 scans HERE
                 yield pooledLibraryPeaks, summedMs2Spectrum
 
 
