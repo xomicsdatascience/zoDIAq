@@ -22,9 +22,13 @@ def generate_pooled_library_and_query_spectra_by_mz_windows(libDict, queryContex
                 startIndex = (i * (number_of_ms2_scans_per_ms1_scan)) + j
                 matchingMs2Scans = allScans[startIndex::ms1Count + ms2Count]
                 print(f'--->{matchingMs2Scans}')
+                libKeys = sorted(libDict.keys())
+                ## NOTE: This can be commented out if desired.
+                ###############
                 lowestWindowBound, highestWindowBound = queryContext.identify_mz_window_highest_and_lowest_bound(matchingMs2Scans, reader)
                 libKeys = _find_keys_of_library_spectra_in_mz_window(lowestWindowBound, highestWindowBound,
-                                                                     libDict.keys())
+                                                                     libKeys)
+                ###############
                 libKeys = filter_library_keys_by_ms1_mz_precursor_values(summedMs1Spectrum, libKeys)  # filter by ms1 scan peaks HERE
                 pooledLibraryPeaks = _pool_library_spectra_by_mz_window(libKeys, libDict)
                 if len(pooledLibraryPeaks) == 0:
