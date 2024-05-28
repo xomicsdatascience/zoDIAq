@@ -8,7 +8,7 @@ import pandas as pd
 
 
 def create_spectral_fdr_output_from_full_output_sorted_by_desired_score(
-    fullDf, fdrCutoff=0.01
+    fullDf, fdrCutoff=0.1
 ):
     fdrs = calculate_fdr_rates_of_decoy_array(fullDf["isDecoy"])
     spectralDf = fullDf.copy()
@@ -20,7 +20,7 @@ def create_spectral_fdr_output_from_full_output_sorted_by_desired_score(
 
 
 def create_peptide_fdr_output_from_full_output_sorted_by_desired_score(
-    fullDf, fdrCutoff=0.01
+    fullDf, fdrCutoff=0.1
 ):
     peptideDf = drop_duplicate_values_from_df_in_given_column(fullDf, "peptide")
     fdrs = calculate_fdr_rates_of_decoy_array(peptideDf["isDecoy"])
@@ -159,7 +159,7 @@ def create_dataframe_where_peptides_match_to_one_or_more_leading_proteins(
 
 
 def identify_leading_protein_to_fdr_dictionary_for_leading_proteins_below_fdr_cutoff(
-    df, fdrCutoff=0.01
+    df, fdrCutoff=0.1
 ):
     df = drop_duplicate_values_from_df_in_given_column(df, column="leadingProtein")
     df["FDR"] = calculate_fdr_rates_of_decoy_array(df["isDecoy"])
