@@ -219,9 +219,9 @@ def reduce__identify_minimum_number_of_most_connected_proteins(
     """
     leadingProteins = set()
     for _, clusterDf in peptideProteinConnectionsDf.groupby("cluster"):
-        clusterDf[
-            "originalProteinCount"
-        ] = label_proteins_by_original_protein_count_for_breaking_ties(clusterDf)
+        clusterDf["originalProteinCount"] = (
+            label_proteins_by_original_protein_count_for_breaking_ties(clusterDf)
+        )
         (
             sortedClusterDf,
             initialAcceptedProteins,
