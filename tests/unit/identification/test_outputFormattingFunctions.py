@@ -48,7 +48,7 @@ def test__output_formatting_functions__format_output_line(identifierOutputData):
         "peaksCount": 5,
         "CV": 6,
         "windowWidth": 7,
-        "retentionTime":12,
+        "retentionTime": 12,
     }
     matchDict = {
         "cosineSimilarityScore": 8,

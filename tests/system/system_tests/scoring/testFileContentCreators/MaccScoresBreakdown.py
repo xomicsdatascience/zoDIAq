@@ -97,9 +97,9 @@ class MaccScoresBreakdown(BaselineScoresBreakdown):
         proteinDf = peptideDf.copy()
         proteinDf = proteinDf.reindex(list(proteinDf.index) + [1]).sort_index()
         leadingProteins = list(proteinDf["protein"])
-        leadingProteins[
-            : len(self.idPickerLeadingProteins)
-        ] = self.idPickerLeadingProteins
+        leadingProteins[: len(self.idPickerLeadingProteins)] = (
+            self.idPickerLeadingProteins
+        )
         proteinDf["leadingProtein"] = leadingProteins
         proteinDf["proteinCosine"] = proteinDf["cosine"]
         numUniqueLeadingProteins = len(set(self.idPickerLeadingProteins))

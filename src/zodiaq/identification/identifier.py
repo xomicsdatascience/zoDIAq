@@ -166,10 +166,11 @@ class Identifier:
             matchDf["ppmDifference"], self._commandLineArgs["correctionDegree"]
         )
         toleranceMinimumCutoff = 5
-        if not self._commandLineArgs["correctionDegree"] and tolerance < toleranceMinimumCutoff:
-            _, tolerance = calculate_ppm_offset_tolerance(
-                matchDf["ppmDifference"], 0.5
-            )
+        if (
+            not self._commandLineArgs["correctionDegree"]
+            and tolerance < toleranceMinimumCutoff
+        ):
+            _, tolerance = calculate_ppm_offset_tolerance(matchDf["ppmDifference"], 0.5)
         queryFile = self._queryContext.filePath.split("/")[-1]
         outFile = os.path.splitext(queryFile)[0] + "_correctionHistogram.png"
         if self._commandLineArgs["histogram"]:
